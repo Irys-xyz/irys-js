@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Wallet, hexlify } from "ethers";
+import { Wallet } from "ethers";
 import { IRYS_CHAIN_ID, MAX_CHUNK_SIZE } from "../src/common/constants";
 import Merkle from "../src/common/merkle";
 import NodeCryptoDriver from "../src/common/node-driver";
@@ -16,7 +16,7 @@ async function main() {
   const x = new URL(joinPaths(url.pathname, "/tx"), url);
   console.log(x.toString());
   const api = new Api({ url, timeout: 9999999 });
-  const storageConfig = new StorageConfig(
+  const storageConfig = StorageConfig.fromSnakeConfig(
     (await api.get("/network/config")).data
   );
 
