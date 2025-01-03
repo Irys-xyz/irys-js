@@ -50,7 +50,7 @@ export class StorageConfig implements StorageConfigInterface {
     const props = storageConfigProps.reduce<Record<string, string>>(
       (props, k) => {
         const v = config[camelToSnake(k)];
-        if (v !== undefined) props[k] = v as any;
+        if (v !== undefined) props[k] = Number(v) as any;
         return props;
       },
       {}
