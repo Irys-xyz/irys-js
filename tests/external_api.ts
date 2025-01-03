@@ -6,15 +6,14 @@ import NodeCryptoDriver from "../src/common/node-driver";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
 import { UnsignedTransaction } from "../src/common/transaction";
 import { createFixedUint8Array, sleep } from "../src/common/utils";
-import Api, { joinPaths } from "../src/common/api";
+import Api from "../src/common/api";
 import { StorageConfig } from "../src/common/storageConfig";
 
 async function main() {
   const crypto = new NodeCryptoDriver();
 
   const url = new URL("http://irys-node.jtr.local:8080/v1");
-  const x = new URL(joinPaths(url.pathname, "/tx"), url);
-  console.log(x.toString());
+
   const api = new Api({ url, timeout: 9999999 });
   const storageConfig = StorageConfig.fromSnakeConfig(
     (await api.get("/network/config")).data
@@ -93,7 +92,7 @@ async function main() {
   if (headerReq.data.data_root !== bs58) throw new Error("data_root mismatch");
 
   for (let i = 0; i < chunks.length; i++) {
-    // TODO: fix this once Dan fixes chunk promotion
+    // TODO: fix this once @DanMacDonald fixes chunk promotion
     const chunkReq = await api.get(
       `/chunk/data_root/${/* tx.ledgerNum */ 1}/${bs58}/${i}`
     );
