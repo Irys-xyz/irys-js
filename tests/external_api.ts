@@ -12,7 +12,7 @@ import { StorageConfig } from "../src/common/storageConfig";
 async function main() {
   const crypto = new NodeCryptoDriver();
 
-  const url = new URL("http://localhost:8080/v1");
+  const url = new URL("http://172.17.0.5:8080/v1");
 
   const api = new Api({ url, timeout: 9999999 });
   const storageConfig = StorageConfig.fromSnakeConfig(
@@ -60,6 +60,8 @@ async function main() {
 
   const serializedHeader = signedTx.getHeaderSerialized();
 
+  console.log(`serialized tx header: ${serializedHeader}`);
+
   // post the tx header
   const res = await api.post("/tx", serializedHeader, {
     headers: { "Content-Type": "application/json" },
@@ -74,10 +76,10 @@ async function main() {
   for (let i = 0; i < chunks.length; i++) {
     const chunk = signedTx.getChunk(i, data);
     const ser = chunk.serialize();
-    const res = await api.post("/chunk", ser, {
+    await api.post("/chunk", ser, {
       headers: { "Content-Type": "application/json" },
     });
-    console.log(res);
+    console.log(`posted chunk ${i}`);
   }
 
   // wait 2 s
@@ -86,9 +88,8 @@ async function main() {
   // get tx header and the chunk(s)
   const bs58Enc = encodeBase58(signedTx.id);
   const headerReq = await api.get(`/tx/${bs58Enc}`);
-  console.log(headerReq.data);
-  const bs58 = encodeBase58(signedTx.dataRoot);
 
+  const bs58 = encodeBase58(signedTx.dataRoot);
   if (headerReq.data.data_root !== bs58) throw new Error("data_root mismatch");
 
   for (let i = 0; i < chunks.length; i++) {
@@ -96,8 +97,11 @@ async function main() {
     const chunkReq = await api.get(
       `/chunk/data_root/${/* tx.ledgerNum */ 1}/${bs58}/${i}`
     );
-    console.log(chunkReq);
+    console.log(
+      `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`
+    );
   }
+  console.log("Done!");
 }
 
 (async function () {

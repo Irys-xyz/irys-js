@@ -1,8 +1,4 @@
-import {
-  MERKLE_HASH_SIZE,
-  MERKLE_NOTE_SIZE,
-  MIN_CHUNK_SIZE,
-} from "./constants";
+import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
 import type CryptoInterface from "./crypto-interface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./transaction";

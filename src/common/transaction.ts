@@ -185,10 +185,9 @@ export class UnsignedTransaction
           fields.push(this.permFee);
         }
 
-        console.log("fields:", fields);
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
-        console.log("prehash: ", prehash);
+
         return Promise.resolve(prehash);
 
       default:
@@ -261,8 +260,10 @@ export class SignedTransaction
   }
 
   public getHeaderSerialized(): string {
-    return JSON.stringify(this.header, (_, v) =>
-      typeof v === "bigint" ? v.toString() : v
+    return JSON.stringify(
+      this.header,
+      (_, v) => (typeof v === "bigint" ? v.toString() : v),
+      4
     );
   }
 
@@ -336,10 +337,9 @@ export class SignedTransaction
           fields.push(this.permFee);
         }
 
-        console.log("fields:", fields);
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
-        console.log("prehash: ", prehash);
+
         return Promise.resolve(prehash);
 
       default:
