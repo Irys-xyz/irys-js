@@ -12,11 +12,11 @@ import { StorageConfig } from "../src/common/storageConfig";
 async function main() {
   const crypto = new NodeCryptoDriver();
 
-  const url = new URL("http://irys-node.jtr.local:8080/v1");
+  const url = new URL("http://localhost:8080/v1");
   const x = new URL(joinPaths(url.pathname, "/tx"), url);
   console.log(x.toString());
   const api = new Api({ url, timeout: 9999999 });
-  const storageConfig = StorageConfig.fromSnakeConfig(
+  const storageConfig = new StorageConfig(
     (await api.get("/network/config")).data
   );
 

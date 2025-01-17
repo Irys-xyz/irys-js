@@ -273,14 +273,14 @@ export class SignedTransaction
       version: this.version,
       anchor: encodeBase58(this.anchor),
       signer: encodeBase58(this.signer),
-      data_root: encodeBase58(this.dataRoot),
-      data_size: this.dataSize,
-      term_fee: this.termFee,
-      ledger_num: this.ledgerNum,
-      chain_id: this.chainId,
+      dataRoot: encodeBase58(this.dataRoot),
+      dataSize: this.dataSize,
+      termFee: this.termFee,
+      ledgerNum: this.ledgerNum,
+      chainId: this.chainId,
       signature: encodeBase58(this.signature),
-      bundle_format: this.bundleFormat,
-      perm_fee: this.permFee,
+      bundleFormat: this.bundleFormat,
+      permFee: this.permFee,
     };
   }
 

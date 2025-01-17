@@ -45,16 +45,16 @@ export class StorageConfig implements StorageConfigInterface {
     }
   }
 
-  // creates a StorageConfig from a snake_case JSON object (i.e from the API)
-  static fromSnakeConfig(config: Record<string, string>): StorageConfig {
-    const props = storageConfigProps.reduce<Record<string, string>>(
-      (props, k) => {
-        const v = config[camelToSnake(k)];
-        if (v !== undefined) props[k] = v as any;
-        return props;
-      },
-      {}
-    );
-    return new StorageConfig(props as Partial<StorageConfigInterface>);
-  }
+  // // creates a StorageConfig from a snake_case JSON object (i.e from the API)
+  // static fromSnakeConfig(config: Record<string, string>): StorageConfig {
+  //   const props = storageConfigProps.reduce<Record<string, string>>(
+  //     (props, k) => {
+  //       const v = config[camelToSnake(k)];
+  //       if (v !== undefined) props[k] = v as any;
+  //       return props;
+  //     },
+  //     {}
+  //   );
+  //   return new StorageConfig(props as Partial<StorageConfigInterface>);
+  // }
 }
