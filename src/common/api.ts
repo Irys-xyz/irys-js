@@ -66,7 +66,7 @@ export default class Api {
       timeout: config.timeout ?? 20000,
       logging: config.logging ?? false,
       logger: config.logger ?? console.log,
-      // headers: { ...config.headers, "user-agent": `Irys-JS/${Arweave.VERSION}` }, // TODO: check
+      // headers: { ...config.headers, "user-agent": `` }, // TODO: check
       withCredentials: config.withCredentials ?? false,
       retry: { retries: 3, maxTimeout: 5_000 },
     };

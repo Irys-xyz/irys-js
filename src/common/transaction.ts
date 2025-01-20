@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
 
-import type { Address, H256, Signature, u64, u8 } from "./dataTypes";
-import { bufferTob64Url, toFixedUnint8Array } from "./utils";
+import type { Address, H256, Signature, U64, U8 } from "./dataTypes";
+import { bufferTob64Url, jsonSerialize, toFixedUnint8Array } from "./utils";
 import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
 import type Merkle from "./merkle";
 import type { Input } from "rlp";
@@ -23,16 +23,16 @@ export type TransactionInterface =
   | SignedTransactionInterface;
 
 export type UnsignedTransactionInterface = {
-  version: u8;
+  version: U8;
   anchor: H256;
   signer: Address;
   dataRoot: H256;
-  dataSize: u64;
-  termFee: u64;
-  ledgerNum: u64;
-  chainId: u64;
-  bundleFormat?: u64;
-  permFee?: u64;
+  dataSize: U64;
+  termFee: U64;
+  ledgerNum: U64;
+  chainId: U64;
+  bundleFormat?: U64;
+  permFee?: U64;
   chunks?: Chunks;
 };
 
@@ -85,12 +85,12 @@ export class UnsignedTransaction
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
   public dataSize = 0n;
-  public termFee?: u64 = 0n;
-  public chainId?: u64 = IRYS_CHAIN_ID;
+  public termFee?: U64 = 0n;
+  public chainId?: U64 = IRYS_CHAIN_ID;
   protected signature?: Signature = undefined;
-  public bundleFormat?: u64 = undefined;
-  public permFee?: u64 = undefined;
-  public ledgerNum?: u64 = undefined;
+  public bundleFormat?: U64 = undefined;
+  public permFee?: U64 = undefined;
+  public ledgerNum?: U64 = undefined;
 
   protected deps!: { merkle: Merkle };
   // Computed when needed.
@@ -185,10 +185,8 @@ export class UnsignedTransaction
           fields.push(this.permFee);
         }
 
-        console.log("fields:", fields);
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
-        console.log("prehash: ", prehash);
         return Promise.resolve(prehash);
 
       default:
@@ -207,11 +205,11 @@ export class SignedTransaction
   public signer!: Address;
   public dataRoot!: H256;
   public dataSize!: bigint;
-  public termFee!: u64;
-  public ledgerNum!: u64;
-  public chainId!: u64;
-  public bundleFormat?: u64 = undefined;
-  public permFee?: u64 = undefined;
+  public termFee!: U64;
+  public ledgerNum!: U64;
+  public chainId!: U64;
+  public bundleFormat?: U64 = undefined;
+  public permFee?: U64 = undefined;
   public signature!: Signature;
 
   protected deps: { merkle: Merkle };
@@ -261,9 +259,11 @@ export class SignedTransaction
   }
 
   public getHeaderSerialized(): string {
-    return JSON.stringify(this.header, (_, v) =>
-      typeof v === "bigint" ? v.toString() : v
-    );
+    return jsonSerialize(this.header);
+  }
+
+  get txId(): string {
+    return encodeBase58(this.id);
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -336,10 +336,8 @@ export class SignedTransaction
           fields.push(this.permFee);
         }
 
-        console.log("fields:", fields);
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
-        console.log("prehash: ", prehash);
         return Promise.resolve(prehash);
 
       default:

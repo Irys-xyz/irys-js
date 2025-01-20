@@ -1,4 +1,4 @@
-import type { u64 } from "./dataTypes";
+import type { U64 } from "./dataTypes";
 
 // defaults
 export const CHUNK_SIZE = 256 * 1024;
@@ -13,4 +13,4 @@ export const MIN_CHUNK_SIZE = 32 * 1024;
 export const MERKLE_NOTE_SIZE = 32;
 export const MERKLE_HASH_SIZE = 32;
 
-export const IRYS_CHAIN_ID: u64 = 69727973n;
+export const IRYS_CHAIN_ID: U64 = 69727973n;
