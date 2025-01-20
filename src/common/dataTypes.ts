@@ -8,4 +8,6 @@ export type u32 = number;
 export type TxRelativeChunkOffset = u32;
 export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
+export type Base58 = string;
+
 export type PartitionChunkOffset = u32;

@@ -15,7 +15,7 @@ async function main() {
   const url = new URL("http://localhost:8080/v1");
 
   const api = new Api({ url, timeout: 9999999 });
-  const storageConfig = StorageConfig.fromSnakeConfig(
+  const storageConfig = new StorageConfig(
     (await api.get("/network/config")).data
   );
 

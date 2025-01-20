@@ -47,10 +47,10 @@ export class UnpackedChunk implements UnpackedChunkInterface {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   get chunk() {
     return {
-      data_root: encodeBase58(this.dataRoot),
-      data_path: this.dataPath,
-      data_size: this.dataSize,
-      tx_offset: this.txOffset,
+      dataRoot: encodeBase58(this.dataRoot),
+      dataPath: this.dataPath,
+      dataSize: this.dataSize,
+      txOffset: this.txOffset,
       bytes: this.bytes,
     };
   }
