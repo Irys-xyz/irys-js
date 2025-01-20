@@ -1,20 +1,19 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Wallet } from "ethers";
-import { IRYS_CHAIN_ID, MAX_CHUNK_SIZE } from "../src/common/constants";
+import { Wallet, encodeBase58 } from "ethers";
+import { IRYS_CHAIN_ID } from "../src/common/constants";
 import Merkle from "../src/common/merkle";
 import NodeCryptoDriver from "../src/common/node-driver";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
 import { UnsignedTransaction } from "../src/common/transaction";
-import { createFixedUint8Array } from "../src/common/utils";
-import Api, { joinPaths } from "../src/common/api";
+import { createFixedUint8Array, sleep } from "../src/common/utils";
+import Api from "../src/common/api";
 import { StorageConfig } from "../src/common/storageConfig";
 
 async function main() {
   const crypto = new NodeCryptoDriver();
 
   const url = new URL("http://localhost:8080/v1");
-  const x = new URL(joinPaths(url.pathname, "/tx"), url);
-  console.log(x.toString());
+
   const api = new Api({ url, timeout: 9999999 });
   const storageConfig = new StorageConfig(
     (await api.get("/network/config")).data
@@ -23,19 +22,6 @@ async function main() {
   const merkle = new Merkle({
     deps: { crypto, storageConfig },
   });
-
-  // const txProps: Partial<UnsignedTransactionInterface> = {
-  // anchor: createFixedUint8Array(32).fill(1),
-  // signer: createFixedUint8Array(20).fill(0),
-  // dataRoot: createFixedUint8Array(32).fill(3),
-  // dataSize: 1024n,
-  // termFee: 100n,
-  // permFee: undefined,
-  // ledgerNum: 0n,
-  // bundleFormat: undefined,
-  // version: 0,
-  // chainId: IRYS_CHAIN_ID,
-  // };
 
   const txProps: Partial<UnsignedTransactionInterface> = {
     anchor: createFixedUint8Array(32).fill(1),
@@ -62,7 +48,7 @@ async function main() {
   const wallet = new Wallet(priv);
   console.log(await wallet.getAddress());
 
-  const data = new Uint8Array(MAX_CHUNK_SIZE * 2.5).fill(69);
+  const data = new Uint8Array(storageConfig.chunkSize * 2.5).fill(69);
 
   await tx.prepareChunks(data);
 
@@ -73,6 +59,8 @@ async function main() {
   }
 
   const serializedHeader = signedTx.getHeaderSerialized();
+
+  console.log(`serialized tx header: ${serializedHeader}`);
 
   // post the tx header
   const res = await api.post("/tx", serializedHeader, {
@@ -88,12 +76,32 @@ async function main() {
   for (let i = 0; i < chunks.length; i++) {
     const chunk = signedTx.getChunk(i, data);
     const ser = chunk.serialize();
-    // console.log("CHUNK", i, ser);
-    const res = await api.post("/chunk", ser, {
+    await api.post("/chunk", ser, {
       headers: { "Content-Type": "application/json" },
     });
-    console.log(res);
+    console.log(`posted chunk ${i}`);
   }
+
+  // wait 2 s
+  await sleep(2_000);
+
+  // get tx header and the chunk(s)
+  const bs58Enc = encodeBase58(signedTx.id);
+  const headerReq = await api.get(`/tx/${bs58Enc}`);
+
+  const bs58 = encodeBase58(signedTx.dataRoot);
+  if (headerReq.data.data_root !== bs58) throw new Error("data_root mismatch");
+
+  for (let i = 0; i < chunks.length; i++) {
+    // TODO: fix this once @DanMacDonald fixes chunk promotion
+    const chunkReq = await api.get(
+      `/chunk/data_root/${/* tx.ledgerNum */ 1}/${bs58}/${i}`
+    );
+    console.log(
+      `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`
+    );
+  }
+  console.log("Done!");
 }
 
 (async function () {

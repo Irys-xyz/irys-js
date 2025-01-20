@@ -1,8 +1,4 @@
-import {
-  MERKLE_HASH_SIZE,
-  MERKLE_NOTE_SIZE,
-  MIN_CHUNK_SIZE,
-} from "./constants";
+import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
 import type CryptoInterface from "./crypto-interface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./transaction";
@@ -66,16 +62,16 @@ export class Merkle {
     let cursor = 0;
 
     while (rest.byteLength >= this.storageConfig.chunkSize) {
-      let chunkSize = this.storageConfig.chunkSize;
+      const chunkSize = this.storageConfig.chunkSize;
 
       // If the total bytes left will produce a chunk < MIN_CHUNK_SIZE,
       // then adjust the amount we put in this 2nd last chunk.
 
-      const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
-      if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
-        chunkSize = Math.ceil(rest.byteLength / 2);
-        // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
-      }
+      // const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
+      // if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
+      //   chunkSize = Math.ceil(rest.byteLength / 2);
+      //   // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
+      // }
 
       const chunk = rest.slice(0, chunkSize);
       const dataHash = await this.deps.crypto.hash(chunk);

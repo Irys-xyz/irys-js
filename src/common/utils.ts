@@ -284,3 +284,6 @@ export function camelToSnake(camelCase: string): string {
     .toLowerCase()
     .replace(/^_/, ""); // Remove leading underscore if present
 }
+
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
