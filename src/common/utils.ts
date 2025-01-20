@@ -239,3 +239,5 @@ export function jsonSerialize(obj: any): string {
     typeof v === "bigint" ? v.toString() : v
   );
 }
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));

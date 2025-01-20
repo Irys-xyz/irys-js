@@ -187,6 +187,7 @@ export class UnsignedTransaction
 
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
+
         return Promise.resolve(prehash);
 
       default:
@@ -338,6 +339,7 @@ export class SignedTransaction
 
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
+
         return Promise.resolve(prehash);
 
       default:

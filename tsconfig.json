@@ -1,7 +1,7 @@
 {
   "include": [
     "src",
-    "tests/external_api.ts",
+    "tests",
   ],
   "exclude": [
     "node_modules",
