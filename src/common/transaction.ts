@@ -97,7 +97,7 @@ export class UnsignedTransaction
   protected signature?: Signature = undefined;
   public bundleFormat?: U64 = 0n;
   public permFee?: U64 = undefined;
-  public ledgerId?: U32 = undefined;
+  public ledgerId?: U32 = 0;
   public irys!: IrysClient;
   // Computed when needed.
   public chunks?: Chunks;

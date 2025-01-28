@@ -7,7 +7,7 @@ import { IrysClient } from "../src/node";
 async function main(): Promise<void> {
   const irys = await new IrysClient().node("http://172.17.0.5:8080/v1");
 
-  const tx = irys.createTransaction().ledger(0);
+  const tx = irys.createTransaction();
 
   const provider = irys.api.rpcProvider;
   // dev test wallet 1
