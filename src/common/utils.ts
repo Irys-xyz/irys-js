@@ -1,6 +1,5 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
-import BigNumber from "bignumber.js";
 import { webcrypto } from "crypto";
 import type { FixedUint8Array } from "./dataTypes";
 
@@ -82,14 +81,6 @@ export function b64UrlDecode(b64UrlString: string): string {
   return b64UrlString.concat("=".repeat(padding));
 }
 
-export function winstonToAr(winston: BigNumber.Value): BigNumber {
-  return new BigNumber(winston).shiftedBy(-12);
-}
-
-export function arToWinston(ar: BigNumber.Value): BigNumber {
-  return new BigNumber(ar).shiftedBy(12);
-}
-
 // TODO: TEMP
 
 export async function hash(data: Uint8Array): Promise<Uint8Array> {
@@ -154,23 +145,25 @@ export function bigIntToBuffer(note: bigint, size: number): Buffer {
     hex.padStart(size * 2, "0").slice(0, size * 2),
     "hex"
   );
-  // if(buf.length != NOTE_TS_SIZE) console.warn("buf len")
   return buf;
 }
 
-// export function bigIntToBuffer(note: bigint, size: number): Buffer {
-//   // taken from the bigint-buffer package
-//   // TODO: use that package as it has a much faster C impl
-//   const hex = note.toString(16);
-//   let s = hex.padStart(size * 2, "0").slice(0, size * 2);
+// clamped versions
+export function bigIntToBytes(value: bigint, numBytes: number): Uint8Array {
+  const bytes = new Uint8Array(numBytes);
+  for (let i = 0; i < numBytes; i++) {
+    bytes[i] = Number((value >> BigInt(i * 8)) & BigInt(0xff));
+  }
+  return bytes;
+}
 
-//   // const buf = Buffer.from(
-
-//   //   "hex"
-//   // );
-//   // if(buf.length != NOTE_TS_SIZE) console.warn("buf len")
-//   // return buf;
-// }
+export function bytesToBigInt(bytes: Uint8Array): bigint {
+  let result = BigInt(0);
+  for (let i = 0; i < bytes.length; i++) {
+    result |= BigInt(bytes[i]) << BigInt(i * 8);
+  }
+  return result;
+}
 
 export function longToNByteArray(N: number, long: number): Uint8Array {
   const byteArray = new Uint8Array(N);
@@ -210,50 +203,6 @@ export function byteArrayToLong(byteArray: Uint8Array): number {
   return value;
 }
 
-// function numberToTrimmedBEUint8Array(num: number): Uint8Array {
-//   // Convert to array of bytes in BE format
-//   const bytes = [];
-//   while (num > 0) {
-//     bytes.unshift(num & 0xff);
-//     num = Math.floor(num / 256);
-//   }
-
-//   // Handle zero specially
-//   if (bytes.length === 0) {
-//     return new Uint8Array([0]);
-//   }
-
-//   return new Uint8Array(bytes);
-// }
-
-// export function bigintToTrimmedBEUint8Array(num: bigint) {
-//   if (num < 0n) {
-//     throw new Error("Number must be non-negative");
-//   }
-
-//   // Handle zero specially
-//   if (num === 0n) {
-//     return new Uint8Array([0]);
-//   }
-
-//   // Convert to array of bytes in BE format
-//   const bytes = [];
-//   while (num > 0n) {
-//     bytes.unshift(Number(num & 0xffn));
-//     num = num >> 8n;
-//   }
-
-//   return new Uint8Array(bytes);
-// }
-
-// export function uint8ArrayToBigInt2(array: Uint8Array) {
-//   let result = 0n;
-//   for (const byte of array) {
-//     result = (result << 8n) | BigInt(byte);
-//   }
-//   return result;
-// }
-
 /**
  * Converts a snake_case string to camelCase
  * @param snakeCase The snake_case string to convert
@@ -285,5 +234,10 @@ export function camelToSnake(camelCase: string): string {
     .replace(/^_/, ""); // Remove leading underscore if present
 }
 
+export function jsonSerialize(obj: any): string {
+  return JSON.stringify(obj, (_, v) =>
+    typeof v === "bigint" ? v.toString() : v
+  );
+}
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

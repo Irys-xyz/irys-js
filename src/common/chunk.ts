@@ -5,7 +5,7 @@ import type {
   H256,
   PartitionChunkOffset,
   TxRelativeChunkOffset,
-  u64,
+  U64,
 } from "./dataTypes";
 
 export enum ChunkFormat {
@@ -15,7 +15,7 @@ export enum ChunkFormat {
 
 export type UnpackedChunkInterface = {
   dataRoot: H256;
-  dataSize: u64;
+  dataSize: U64;
   dataPath: Base64Url;
   txOffset: TxRelativeChunkOffset;
   bytes: Base64Url;
@@ -31,7 +31,7 @@ const unpackedChunkProperties = [
 
 export class UnpackedChunk implements UnpackedChunkInterface {
   public dataRoot!: H256;
-  public dataSize!: u64;
+  public dataSize!: U64;
   public dataPath!: Base64Url;
   public txOffset!: TxRelativeChunkOffset;
   public bytes!: Base64Url;
