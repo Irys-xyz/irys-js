@@ -6,6 +6,10 @@ import type {
 } from "axios";
 import Axios from "axios";
 import AsyncRetry from "async-retry";
+import { JsonRpcProvider } from "ethers";
+
+export const isApiConfig = (o: URL | ApiConfig | string): o is ApiConfig =>
+  typeof o !== "string" && "url" in o;
 
 export interface ApiConfig {
   url: URL;
@@ -24,12 +28,23 @@ export type ApiRequestConfig = {
 
 export default class Api {
   protected _instance?: AxiosInstance;
+  protected rpcInstance?: JsonRpcProvider;
+
   public cookieMap = new Map();
 
   public config!: ApiConfig;
 
   constructor(config?: ApiConfig) {
     if (config) this.applyConfig(config);
+  }
+
+  public get executionRpcUrl(): URL {
+    return buildUrl(this.config.url, ["execution-rpc"]);
+  }
+
+  public get rpcProvider(): JsonRpcProvider {
+    this.rpcInstance ??= new JsonRpcProvider(this.executionRpcUrl.toString());
+    return this.rpcInstance;
   }
 
   public applyConfig(config: ApiConfig): void {
@@ -59,8 +74,8 @@ export default class Api {
 
   private mergeDefaults(config: ApiConfig): ApiConfig {
     config.headers ??= {};
-    if (config.network && !Object.keys(config.headers).includes("x-network"))
-      config.headers["x-network"] = config.network;
+    // if (config.network && !Object.keys(config.headers).includes("x-network"))
+    //   config.headers["x-network"] = config.network;
     return {
       url: config.url,
       timeout: config.timeout ?? 20000,
@@ -139,12 +154,7 @@ export default class Api {
     config?: ApiRequestConfig
   ): Promise<AxiosResponse<T>> {
     const instance = this.instance;
-    const url =
-      config?.url ??
-      new URL(
-        joinPaths(this.config.url.pathname, path),
-        this.config.url
-      ).toString();
+    const url = config?.url ?? buildUrl(this.config.url, [path]).toString();
     return AsyncRetry((_) => instance({ ...config, url }), {
       ...this.config.retry,
       ...config?.retry,
@@ -152,10 +162,11 @@ export default class Api {
   }
 }
 
-export function joinPaths(...parts: string[]): string {
+export function buildUrl(base: URL, parts: string[]): URL {
   // Remove leading/trailing slashes and filter out empty parts
-  const cleanParts = parts
+  const cleanParts = [base.pathname]
+    .concat(parts)
     .map((part) => part.replace(/^\/+|\/+$/g, ""))
     .filter(Boolean);
-  return cleanParts.join("/");
+  return new URL(cleanParts.join("/"), base);
 }

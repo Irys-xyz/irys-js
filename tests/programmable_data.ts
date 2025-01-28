@@ -1,31 +1,13 @@
-import { Contract, Wallet, encodeBase58, ethers } from "ethers";
+import { Contract, Wallet, ethers } from "ethers";
 import { IRYS_CHAIN_ID } from "../src/common/constants";
-import Merkle from "../src/common/merkle";
-import NodeCryptoDriver from "../src/common/node-driver";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
-import { UnsignedTransaction } from "../src/common/transaction";
-import { createFixedUint8Array } from "../src/common/utils";
-import Api, { joinPaths } from "../src/common/api";
-import { ProgrammableData } from "../src/common/programmable_data";
-import { StorageConfig } from "../src/common/storageConfig";
+import { createFixedUint8Array, sleep } from "../src/common/utils";
 import path from "path";
 import { readFileSync } from "fs";
+import { IrysClient } from "../src/node";
 
 async function main(): Promise<void> {
-  const crypto = new NodeCryptoDriver();
-
-  const url = new URL("http://172.17.0.4:8080");
-
-  const apiUrl = new URL(joinPaths(url.pathname, "/v1"), url);
-
-  const api = new Api({ url: apiUrl, timeout: 9999999 });
-  const storageConfig = new StorageConfig(
-    (await api.get("/network/config")).data
-  );
-
-  const merkle = new Merkle({
-    deps: { crypto, storageConfig },
-  });
+  const irys = await new IrysClient().node("http://172.17.0.5:8080/v1");
 
   const txProps: Partial<UnsignedTransactionInterface> = {
     anchor: createFixedUint8Array(32).fill(1),
@@ -40,12 +22,9 @@ async function main(): Promise<void> {
     chainId: IRYS_CHAIN_ID,
   };
 
-  const tx = new UnsignedTransaction({
-    deps: { merkle },
-    attributes: txProps,
-  });
+  const tx = irys.createTransaction(txProps);
 
-  const provider = new ethers.JsonRpcProvider(url.toString());
+  const provider = irys.api.rpcProvider;
   // dev test wallet 1
   // safe to commit, random & public already
   const priv =
@@ -68,55 +47,37 @@ async function main(): Promise<void> {
 
   await tx.prepareChunks(data);
 
-  const signedTx = await tx.sign(wallet.signingKey);
+  const signedTx = await tx.sign(priv);
 
   if (!(await signedTx.validateSignature())) {
     throw new Error("Invalid signature");
   }
 
-  const serializedHeader = signedTx.getHeaderSerialized();
+  await signedTx.uploadHeader();
+  await signedTx.uploadChunks(data);
 
-  // post the tx header
-  const res = await api.post("/tx", serializedHeader, {
-    headers: { "Content-Type": "application/json" },
-    timeout: 100000,
-    retry: { retries: 0 },
-  });
-
-  if (res.status !== 200) {
-    throw new Error("Unexpected tx status");
-  }
-  const txId = encodeBase58(signedTx.id);
-  const chunks = signedTx.chunks.chunks;
-
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = signedTx.getChunk(i, data);
-    const ser = chunk.serialize();
-    // console.log("CHUNK", i, ser);
-    const res = await api.post("/chunk", ser, {
-      headers: { "Content-Type": "application/json" },
-    });
-    console.log(res);
-  }
+  const txId = signedTx.txId;
 
   // wait for chunks to migrate
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (
-      await api
+      await irys.api
         .get(`/tx/${txId}/local/data_start_offset`)
         .then((r) => r.status === 200)
         .catch((_) => false)
-    )
+    ) {
       break;
+    }
+    console.log("waiting for promotion...");
+    await sleep(100);
   }
 
   const transferTx =
     await contract.readPdChunkIntoStorage.populateTransaction();
 
-  const accessList = await new ProgrammableData({ api, storageConfig })
-    .createTransaction()
-    .read(signedTx.txId, 0, data.length)
+  const accessList = await irys.programmableData
+    .read(txId, 0, data.length)
     .toAccessList();
 
   // Add custom transaction parameters including access list

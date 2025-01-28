@@ -132,11 +132,13 @@ export class ProgrammableData {
     this.storageConfig = storageConfig;
   }
 
-  public createTransaction(): ReadBuilder {
-    return new ReadBuilder({
+  // create a *new* read builder with this read
+  public read(txId: Base58, offset: U8, length: U8): ReadBuilder {
+    const rb = new ReadBuilder({
       api: this.api,
       storageConfig: this.storageConfig,
     });
+    return rb.read(txId, offset, length);
   }
 }
 

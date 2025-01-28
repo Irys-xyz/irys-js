@@ -2,7 +2,7 @@
 import { Wallet, encodeBase58 } from "ethers";
 import { IRYS_CHAIN_ID } from "../src/common/constants";
 import Merkle from "../src/common/merkle";
-import NodeCryptoDriver from "../src/common/node-driver";
+import NodeCryptoDriver from "../src/node/cryptoDriver";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
 import { UnsignedTransaction } from "../src/common/transaction";
 import { createFixedUint8Array, sleep } from "../src/common/utils";

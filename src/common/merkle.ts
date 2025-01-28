@@ -1,5 +1,5 @@
 import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
-import type CryptoInterface from "./crypto-interface";
+import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./transaction";
 import { concatBuffers } from "./utils";
@@ -115,7 +115,7 @@ export class Merkle {
   }
 
   /**
-   * Builds an arweave merkle tree and gets the root hash for the given input.
+   * Builds a merkle tree and gets the root hash for the given input.
    */
   public async computeRootHash(data: Uint8Array): Promise<Uint8Array> {
     const rootNode = await this.generateTree(data);
@@ -131,28 +131,18 @@ export class Merkle {
     return rootNode;
   }
 
-  /**
-   * Generates the data_root, chunks & proofs
-   * needed for a transaction.
-   *
-   * This also checks if the last chunk is a zero-length
-   * chunk and discards that chunk and proof if so.
-   * (we do not need to upload this zero length chunk)
-   *
-   * @param data
-   */
   public async generateTransactionChunks(data: Uint8Array): Promise<Chunks> {
     const chunks = await this.chunkData(data);
     const leaves = await this.generateLeaves(chunks);
     const root = await this.buildLayers(leaves);
     const proofs = await this.generateProofs(root);
 
-    // Discard the last chunk & proof if it's zero length.
-    const lastChunk = chunks.slice(-1)[0];
-    if (lastChunk.maxByteRange - lastChunk.minByteRange === 0) {
-      chunks.splice(chunks.length - 1, 1);
-      proofs.splice(proofs.length - 1, 1);
-    }
+    // // Discard the last chunk & proof if it's zero length.
+    // const lastChunk = chunks.slice(-1)[0];
+    // if (lastChunk.maxByteRange - lastChunk.minByteRange === 0) {
+    //   chunks.splice(chunks.length - 1, 1);
+    //   proofs.splice(proofs.length - 1, 1);
+    // }
 
     return {
       dataRoot: root.id,
@@ -357,7 +347,7 @@ export class Merkle {
   }
 
   /**
-   * Inspect an arweave chunk proof.
+   * Inspect a chunk proof.
    * Takes proof, parses, reads and displays the values for console logging.
    * One proof section per line
    * Format: left,right,offset => hash

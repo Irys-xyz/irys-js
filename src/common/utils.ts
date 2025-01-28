@@ -1,7 +1,8 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
-import { webcrypto } from "crypto";
 import type { FixedUint8Array } from "./dataTypes";
+import { decodeBase58, encodeBase58 } from "ethers/utils";
+import BigNumber from "bignumber.js";
 
 export type Base64UrlString = string;
 
@@ -81,14 +82,14 @@ export function b64UrlDecode(b64UrlString: string): string {
   return b64UrlString.concat("=".repeat(padding));
 }
 
-// TODO: TEMP
+// // TODO: TEMP
 
-export async function hash(data: Uint8Array): Promise<Uint8Array> {
-  // createHash("SHA-256").update(data).digest();
-  return webcrypto.subtle
-    .digest("SHA-256", data)
-    .then((v) => new Uint8Array(v));
-}
+// export async function hash(data: Uint8Array): Promise<Uint8Array> {
+//   // createHash("SHA-256").update(data).digest();
+//   return webcrypto.subtle
+//     .digest("SHA-256", data)
+//     .then((v) => new Uint8Array(v));
+// }
 
 export function createFixedUint8Array<N extends number>(
   length: N
@@ -241,3 +242,23 @@ export function jsonSerialize(obj: any): string {
 }
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+export const irysToExecAddr = (irysAddr: string): string =>
+  "0x" + decodeBase58(irysAddr.toLowerCase()).toString(16);
+export const execToIrysAddr = (execAddr: string): string =>
+  execAddr.startsWith("0x")
+    ? encodeBase58(execAddr)
+    : encodeBase58("0x" + execAddr);
+
+export const toIrysAddr = (addr: string): string =>
+  addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
+export const toExecAddr = (addr: string): string =>
+  addr.startsWith("0x") ? addr : irysToExecAddr(addr);
+
+export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
+  return new BigNumber(mIrys).shiftedBy(-18);
+}
+
+export function irysTomIrys(irys: BigNumber.Value): BigNumber {
+  return new BigNumber(irys).shiftedBy(18);
+}

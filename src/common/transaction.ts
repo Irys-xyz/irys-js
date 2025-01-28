@@ -6,7 +6,7 @@ import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
 import type Merkle from "./merkle";
 import type { Input } from "rlp";
 import { encode } from "rlp";
-import type { SigningKey } from "ethers";
+import { SigningKey } from "ethers";
 import {
   computeAddress,
   encodeBase58,
@@ -17,6 +17,9 @@ import {
 } from "ethers";
 import { IRYS_CHAIN_ID } from "./constants";
 import { UnpackedChunk } from "./chunk";
+import type Api from "./api";
+import type { StorageConfig } from "./storageConfig";
+import { AxiosResponse } from "axios";
 
 export type TransactionInterface =
   | UnsignedTransactionInterface
@@ -92,7 +95,7 @@ export class UnsignedTransaction
   public permFee?: U64 = undefined;
   public ledgerNum?: U64 = undefined;
 
-  protected deps!: { merkle: Merkle };
+  protected deps!: { merkle: Merkle; api: Api; storageConfig: StorageConfig };
   // Computed when needed.
   public chunks?: Chunks;
 
@@ -101,7 +104,7 @@ export class UnsignedTransaction
     deps,
   }: {
     attributes: Partial<UnsignedTransactionInterface>;
-    deps: { merkle: Merkle };
+    deps: { merkle: Merkle; api: Api; storageConfig: StorageConfig };
   }) {
     // super();
     this.deps = deps;
@@ -121,13 +124,14 @@ export class UnsignedTransaction
       throw new Error(`Missing required properties: ${missing.join(", ")}`);
   }
 
-  public async sign(key: SigningKey): Promise<SignedTransaction> {
+  public async sign(key: SigningKey | string): Promise<SignedTransaction> {
+    const signingKey = typeof key === "string" ? new SigningKey(key) : key;
     this.signer ??= toFixedUnint8Array(
-      getBytes(computeAddress(key.publicKey)),
+      getBytes(computeAddress(signingKey.publicKey)),
       20
     );
     const prehash = await this.getSignatureData();
-    const signature = await key.sign(prehash);
+    const signature = signingKey.sign(prehash);
     this.signature = toFixedUnint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error();
@@ -213,7 +217,7 @@ export class SignedTransaction
   public permFee?: U64 = undefined;
   public signature!: Signature;
 
-  protected deps: { merkle: Merkle };
+  protected deps: { merkle: Merkle; api: Api; storageConfig: StorageConfig };
 
   // Computed when needed.
   public chunks!: Chunks;
@@ -223,7 +227,7 @@ export class SignedTransaction
     deps,
   }: {
     attributes: SignedTransactionInterface;
-    deps: { merkle: Merkle };
+    deps: { merkle: Merkle; api: Api; storageConfig: StorageConfig };
   }) {
     // super();
     this.deps = deps;
@@ -300,6 +304,30 @@ export class SignedTransaction
       bytes: bufferTob64Url(data.slice(chunk.minByteRange, chunk.maxByteRange)),
       txOffset: idx,
     });
+  }
+
+  public async uploadHeader(): Promise<AxiosResponse> {
+    const res = await this.deps.api.post("/tx", this.getHeaderSerialized(), {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.status !== 200) {
+      throw new Error(`Error uploading tx: ${res.statusText}`);
+    }
+    return res;
+  }
+
+  public async uploadChunks(data: Uint8Array): Promise<void> {
+    for (let i = 0; i < this.chunks.chunks.length; i++) {
+      const chunk = this.getChunk(i, data);
+      const ser = chunk.serialize();
+
+      const res = await this.deps.api.post("/chunk", ser, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.status !== 200) {
+        throw new Error(`Error uploading chunk: ${res.statusText}`);
+      }
+    }
   }
 
   // Validate the signature by computing the prehash and recovering the signer's address using the prehash and the signature.
