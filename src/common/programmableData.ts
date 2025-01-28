@@ -1,27 +1,19 @@
 import { hexlify } from "ethers";
-import type Api from "./api";
 import type { Base58, U8 } from "./dataTypes";
 import { ByteRangeSpecifier, ChunkRangeSpecifier } from "./rangeSpecifier";
-import type { StorageConfig } from "./storageConfig";
-import { jsonSerialize } from "./utils";
+import { jsonBigIntSerialize } from "./utils";
+import type { IrysClient } from "./irys";
+import { Utils } from "./utilities";
 
 export const PD_PRECOMPILE_ADDRESS =
   "0x0000000000000000000000000000000000000500";
 
 export class ReadBuilder {
   protected readRanges: { txId: string; start: U8; length: U8 }[];
-  public api: Api;
-  public storageConfig: StorageConfig;
+  public irys: IrysClient;
 
-  constructor({
-    api,
-    storageConfig,
-  }: {
-    api: Api;
-    storageConfig: StorageConfig;
-  }) {
-    this.api = api;
-    this.storageConfig = storageConfig;
+  constructor(irys: IrysClient) {
+    this.irys = irys;
     this.readRanges = [];
   }
 
@@ -53,25 +45,25 @@ export class ReadBuilder {
 
     for (const { txId, start, length } of this.readRanges) {
       // get the data start for this tx from cache, populating if we haven't seen this tx before.
-      const dataStart =
-        dataStartCache.get(txId) ??
+      let dataStart = 0n;
+      if (dataStartCache.has(txId)) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        dataStartCache
-          .set(
-            txId,
-            await this.api
-              .get(`/tx/${txId}/local/data_start_offset`)
-              .then((r) => {
-                if (r.status !== 200)
-                  throw new Error(
-                    "Unable to find tx - do you need to wait for promotion?"
-                  );
-                return BigInt(r.data.dataStartOffset as string);
-              })
-          )
-          .get(txId)!;
+        dataStart = dataStartCache.get(txId)!;
+      } else {
+        const txMeta = (
+          await Utils.checkAndThrow(this.irys.api.get(`/tx/${txId}`))
+        ).data;
+        if (txMeta.ledgerId !== 0)
+          throw new Error(
+            `Transaction ${txId} is not permanent (ledger 0) and cannot be used.`
+          );
+        dataStart = await Utils.checkAndThrow(
+          await this.irys.api.get(`/tx/${txId}/local/data_start_offset`)
+        ).then((r) => BigInt(r.data.dataStartOffset as string));
+        dataStartCache.set(txId, dataStart);
+      }
 
-      const chunkSize = this.storageConfig.chunkSize;
+      const chunkSize = this.irys.storageConfig.chunkSize;
       const startChunkOffset = Math.floor(start / chunkSize);
       const chunkRelativeByteOffset = start % chunkSize;
       // ceil here so we account for the chunk we read into with the byte offset
@@ -94,7 +86,7 @@ export class ReadBuilder {
       );
       if (index === -1)
         throw new Error(
-          `Unable to resolve merged chunk range for byte read - please report this!\n ${jsonSerialize(
+          `Unable to resolve merged chunk range for byte read - please report this!\n ${jsonBigIntSerialize(
             r
           )}`
         );
@@ -107,7 +99,9 @@ export class ReadBuilder {
     });
     const chunkSpecifiers = merged.map((r) => {
       const [start, end] = r;
-      const chunksPerPart = BigInt(this.storageConfig.numChunksInPartition);
+      const chunksPerPart = BigInt(
+        this.irys.storageConfig.numChunksInPartition
+      );
       // bigint division rounds down
       const partitionIndex = start / chunksPerPart;
       // safety: `numChunksInPartition` should never be higher than 2^53
@@ -124,26 +118,15 @@ export class ReadBuilder {
   }
 }
 export class ProgrammableData {
-  public api: Api;
-  public storageConfig: StorageConfig;
+  public irys: IrysClient;
 
-  constructor({
-    api,
-    storageConfig,
-  }: {
-    api: Api;
-    storageConfig: StorageConfig;
-  }) {
-    this.api = api;
-    this.storageConfig = storageConfig;
+  constructor(irys: IrysClient) {
+    this.irys = irys;
   }
 
   // create a *new* read builder with this read
   public read(txId: Base58, offset: U8, length: U8): ReadBuilder {
-    const rb = new ReadBuilder({
-      api: this.api,
-      storageConfig: this.storageConfig,
-    });
+    const rb = new ReadBuilder(this.irys);
     return rb.read(txId, offset, length);
   }
 }

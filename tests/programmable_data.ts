@@ -1,7 +1,5 @@
 import { Contract, Wallet, ethers } from "ethers";
-import { IRYS_CHAIN_ID } from "../src/common/constants";
-import type { UnsignedTransactionInterface } from "../src/common/transaction";
-import { createFixedUint8Array, sleep } from "../src/common/utils";
+import { sleep } from "../src/common/utils";
 import path from "path";
 import { readFileSync } from "fs";
 import { IrysClient } from "../src/node";
@@ -9,20 +7,7 @@ import { IrysClient } from "../src/node";
 async function main(): Promise<void> {
   const irys = await new IrysClient().node("http://172.17.0.5:8080/v1");
 
-  const txProps: Partial<UnsignedTransactionInterface> = {
-    anchor: createFixedUint8Array(32).fill(1),
-    // signer: createFixedUint8Array(20).fill(0),
-    dataRoot: createFixedUint8Array(32).fill(3),
-    dataSize: 1024n,
-    termFee: 100n,
-    permFee: 1n,
-    ledgerNum: 0n,
-    bundleFormat: 0n,
-    version: 0,
-    chainId: IRYS_CHAIN_ID,
-  };
-
-  const tx = irys.createTransaction(txProps);
+  const tx = irys.createTransaction().ledger(0);
 
   const provider = irys.api.rpcProvider;
   // dev test wallet 1
@@ -41,9 +26,9 @@ async function main(): Promise<void> {
   const contract = new Contract(contractAddress, abi, wallet);
 
   const read1 = await contract.getStorage();
-  console.log(read1);
+  console.log("initial read: ", read1);
 
-  const data = Buffer.from("hello, world!");
+  const data = Buffer.from("Hirys, World!");
 
   await tx.prepareChunks(data);
 
@@ -94,8 +79,8 @@ async function main(): Promise<void> {
   console.log("transaction hash:", signedPdTx.hash);
   const pdTxReceipt = await signedPdTx.wait();
   console.log(pdTxReceipt);
+
   const read2 = await contract.getStorage();
-  console.log(read2);
 
   console.log(
     `retrieved data: ${Buffer.from(read2.slice(2), "hex").toString()}`

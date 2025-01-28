@@ -7,6 +7,7 @@ import { ProgrammableData } from "./programmableData";
 import { StorageConfig } from "./storageConfig";
 import type { UnsignedTransactionInterface } from "./transaction";
 import { UnsignedTransaction } from "./transaction";
+import { Utils } from "./utilities";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -21,6 +22,7 @@ export class IrysClient {
   public storageConfig!: StorageConfig;
   public cryptoDriver: CryptoInterface;
   public programmableData!: ProgrammableData;
+  public utils!: Utils;
 
   constructor(config: IrysConfig) {
     this.config = config;
@@ -34,6 +36,7 @@ export class IrysClient {
     this.storageConfig = new StorageConfig(
       (await this.api.get("/network/config")).data
     );
+    this.utils = new Utils(this);
 
     this.merkle = new Merkle({
       deps: {
@@ -42,10 +45,7 @@ export class IrysClient {
       },
     });
 
-    this.programmableData = new ProgrammableData({
-      api: this.api,
-      storageConfig: this.storageConfig,
-    });
+    this.programmableData = new ProgrammableData(this);
 
     return this;
   }
@@ -55,15 +55,8 @@ export class IrysClient {
   }
 
   public createTransaction(
-    attributes: Partial<UnsignedTransactionInterface>
+    attributes?: Partial<UnsignedTransactionInterface>
   ): UnsignedTransaction {
-    return new UnsignedTransaction({
-      attributes,
-      deps: {
-        merkle: this.merkle,
-        api: this.api,
-        storageConfig: this.storageConfig,
-      },
-    });
+    return new UnsignedTransaction(this, attributes);
   }
 }

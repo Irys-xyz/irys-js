@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
-import type { FixedUint8Array } from "./dataTypes";
+import type { Base58, FixedUint8Array } from "./dataTypes";
 import { decodeBase58, encodeBase58 } from "ethers/utils";
 import BigNumber from "bignumber.js";
 
@@ -235,13 +235,16 @@ export function camelToSnake(camelCase: string): string {
     .replace(/^_/, ""); // Remove leading underscore if present
 }
 
-export function jsonSerialize(obj: any): string {
+export function jsonBigIntSerialize(obj: any): string {
   return JSON.stringify(obj, (_, v) =>
     typeof v === "bigint" ? v.toString() : v
   );
 }
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+export const decodeBase58ToBuf = (string: Base58): Buffer =>
+  Buffer.from(decodeBase58(string).toString(16), "hex");
 
 export const irysToExecAddr = (irysAddr: string): string =>
   "0x" + decodeBase58(irysAddr.toLowerCase()).toString(16);
