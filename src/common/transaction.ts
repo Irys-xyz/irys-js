@@ -1,12 +1,17 @@
 /* eslint-disable no-case-declarations */
 
-import type { Address, H256, Signature, U64, U8 } from "./dataTypes";
-import { bufferTob64Url, jsonSerialize, toFixedUnint8Array } from "./utils";
+import type { Address, H256, Signature, U32, U64, U8 } from "./dataTypes";
+import {
+  bufferTob64Url,
+  createFixedUint8Array,
+  decodeBase58ToBuf,
+  jsonBigIntSerialize,
+  toFixedUnint8Array,
+} from "./utils";
 import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
-import type Merkle from "./merkle";
 import type { Input } from "rlp";
 import { encode } from "rlp";
-import type { SigningKey } from "ethers";
+import { SigningKey } from "ethers";
 import {
   computeAddress,
   encodeBase58,
@@ -17,6 +22,8 @@ import {
 } from "ethers";
 import { IRYS_CHAIN_ID } from "./constants";
 import { UnpackedChunk } from "./chunk";
+import type { AxiosResponse } from "axios";
+import type { IrysClient } from "./irys";
 
 export type TransactionInterface =
   | UnsignedTransactionInterface
@@ -29,7 +36,7 @@ export type UnsignedTransactionInterface = {
   dataRoot: H256;
   dataSize: U64;
   termFee: U64;
-  ledgerNum: U64;
+  ledgerId: U32;
   chainId: U64;
   bundleFormat?: U64;
   permFee?: U64;
@@ -58,7 +65,7 @@ const requiredUnsignedTxHeaderProps = [
   "dataRoot",
   "dataSize",
   "termFee",
-  "ledgerNum",
+  "ledgerId",
   "chainId",
 ];
 const requiredSignedTxHeaderProps = [
@@ -88,24 +95,20 @@ export class UnsignedTransaction
   public termFee?: U64 = 0n;
   public chainId?: U64 = IRYS_CHAIN_ID;
   protected signature?: Signature = undefined;
-  public bundleFormat?: U64 = undefined;
+  public bundleFormat?: U64 = 0n;
   public permFee?: U64 = undefined;
-  public ledgerNum?: U64 = undefined;
-
-  protected deps!: { merkle: Merkle };
+  public ledgerId?: U32 = 0;
+  public irys!: IrysClient;
   // Computed when needed.
   public chunks?: Chunks;
 
-  public constructor({
-    attributes,
-    deps,
-  }: {
-    attributes: Partial<UnsignedTransactionInterface>;
-    deps: { merkle: Merkle };
-  }) {
+  public constructor(
+    irys: IrysClient,
+    attributes?: Partial<UnsignedTransactionInterface>
+  ) {
     // super();
-    this.deps = deps;
-    Object.assign(this, attributes);
+    this.irys = irys;
+    if (attributes) Object.assign(this, attributes);
   }
 
   get missingProperties(): string[] {
@@ -115,19 +118,72 @@ export class UnsignedTransaction
     }, []);
   }
 
+  public ledger(ledgerId: number): this {
+    this.ledgerId = ledgerId;
+    return this;
+  }
+
+  public async fillFee(): Promise<this> {
+    if (this.ledgerId === undefined)
+      throw new Error("missing required field ledgerId");
+    // if we're ledger 0, get term & perm fee
+    if (this.ledgerId === 0) {
+      this.permFee = await this.irys.utils.getPrice(this.dataSize, 0);
+      this.termFee = await this.irys.utils.getPrice(this.dataSize, 1);
+    } else {
+      this.termFee = await this.irys.utils.getPrice(
+        this.dataSize,
+        this.ledgerId
+      );
+    }
+    return this;
+  }
+
+  public async getFees(): Promise<{ termFee: U64; permFee: U64 }> {
+    await this.fillFee();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return { termFee: this.termFee!, permFee: this.permFee! };
+  }
+
+  public async getFee(): Promise<U64> {
+    await this.fillFee();
+    return this.termFee! + this.permFee!;
+  }
+
+  public async fillAnchor(): Promise<this> {
+    if (this.anchor) return this;
+
+    const apiAnchor = await this.irys.api.get("/block/latest");
+    if (apiAnchor.data.blockHash) {
+      this.anchor = toFixedUnint8Array(
+        decodeBase58ToBuf(apiAnchor.data.blockHash),
+        32
+      );
+    } else {
+      this.anchor = createFixedUint8Array(32).fill(1);
+    }
+
+    return this;
+  }
+
   throwOnMissing(): void {
     const missing = this.missingProperties;
     if (missing.length)
       throw new Error(`Missing required properties: ${missing.join(", ")}`);
   }
 
-  public async sign(key: SigningKey): Promise<SignedTransaction> {
+  public async sign(key: SigningKey | string): Promise<SignedTransaction> {
+    const signingKey = typeof key === "string" ? new SigningKey(key) : key;
     this.signer ??= toFixedUnint8Array(
-      getBytes(computeAddress(key.publicKey)),
+      getBytes(computeAddress(signingKey.publicKey)),
       20
     );
+
+    if (!this.anchor) await this.fillAnchor();
+    if (!this.termFee) await this.fillFee();
+
     const prehash = await this.getSignatureData();
-    const signature = await key.sign(prehash);
+    const signature = signingKey.sign(prehash);
     this.signature = toFixedUnint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error();
@@ -135,16 +191,16 @@ export class UnsignedTransaction
     const idBytes = getBytes(keccak256(signature.serialized));
     this.id = toFixedUnint8Array(idBytes, 32);
 
-    return new SignedTransaction({
-      attributes: this as any as SignedTransactionInterface,
-      deps: this.deps,
-    });
+    return new SignedTransaction(
+      this.irys,
+      this as any as SignedTransactionInterface
+    );
   }
 
   // prepares some data into chunks, associating them with this transaction instance
   public async prepareChunks(data: Uint8Array): Promise<void> {
     if (!this.chunks && data.byteLength > 0) {
-      this.chunks = await this.deps.merkle.generateTransactionChunks(data);
+      this.chunks = await this.irys.merkle.generateTransactionChunks(data);
       this.dataSize = BigInt(data.byteLength);
       this.dataRoot = toFixedUnint8Array(this.chunks.dataRoot, 32);
     }
@@ -173,7 +229,7 @@ export class UnsignedTransaction
           this.dataRoot,
           this.dataSize,
           this.termFee,
-          this.ledgerNum,
+          this.ledgerId,
           this.chainId,
         ];
 
@@ -207,26 +263,19 @@ export class SignedTransaction
   public dataRoot!: H256;
   public dataSize!: bigint;
   public termFee!: U64;
-  public ledgerNum!: U64;
+  public ledgerId!: U32;
   public chainId!: U64;
   public bundleFormat?: U64 = undefined;
   public permFee?: U64 = undefined;
   public signature!: Signature;
-
-  protected deps: { merkle: Merkle };
+  public irys: IrysClient;
 
   // Computed when needed.
   public chunks!: Chunks;
 
-  public constructor({
-    attributes,
-    deps,
-  }: {
-    attributes: SignedTransactionInterface;
-    deps: { merkle: Merkle };
-  }) {
+  public constructor(irys: IrysClient, attributes: SignedTransactionInterface) {
     // super();
-    this.deps = deps;
+    this.irys = irys;
     // safer than object.assign, given we will be getting passed a class instance
     // this should "copy" over all header properties & chunks
     for (const k of fullSignedTxProps) {
@@ -260,7 +309,7 @@ export class SignedTransaction
   }
 
   public getHeaderSerialized(): string {
-    return jsonSerialize(this.header);
+    return jsonBigIntSerialize(this.header);
   }
 
   get txId(): string {
@@ -277,7 +326,7 @@ export class SignedTransaction
       dataRoot: encodeBase58(this.dataRoot),
       dataSize: this.dataSize,
       termFee: this.termFee,
-      ledgerNum: this.ledgerNum,
+      ledgerId: this.ledgerId,
       chainId: this.chainId,
       signature: encodeBase58(this.signature),
       bundleFormat: this.bundleFormat,
@@ -300,6 +349,31 @@ export class SignedTransaction
       bytes: bufferTob64Url(data.slice(chunk.minByteRange, chunk.maxByteRange)),
       txOffset: idx,
     });
+  }
+
+  public async uploadHeader(): Promise<AxiosResponse> {
+    const h = this.getHeaderSerialized();
+    const res = await this.irys.api.post("/tx", h, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.status !== 200) {
+      throw new Error(`Error uploading tx: ${res.statusText}`);
+    }
+    return res;
+  }
+
+  public async uploadChunks(data: Uint8Array): Promise<void> {
+    for (let i = 0; i < this.chunks.chunks.length; i++) {
+      const chunk = this.getChunk(i, data);
+      const ser = chunk.serialize();
+
+      const res = await this.irys.api.post("/chunk", ser, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.status !== 200) {
+        throw new Error(`Error uploading chunk: ${res.statusText}`);
+      }
+    }
   }
 
   // Validate the signature by computing the prehash and recovering the signer's address using the prehash and the signature.
@@ -325,7 +399,7 @@ export class SignedTransaction
           this.dataRoot,
           this.dataSize,
           this.termFee,
-          this.ledgerNum,
+          this.ledgerId,
           this.chainId,
         ];
 

@@ -5,7 +5,6 @@ import {
   NUM_CHUNKS_IN_RECALL_RANGE,
   NUM_PARTITIONS_PER_SLOT,
 } from "./constants";
-import { camelToSnake } from "./utils";
 
 // fragment of the Node's StorageConfig
 // only concensus relevant parameters
@@ -45,7 +44,6 @@ export class StorageConfig implements StorageConfigInterface {
     }
   }
 
-
   // // creates a StorageConfig from a snake_case JSON object (i.e from the API)
   // static fromSnakeConfig(config: Record<string, string>): StorageConfig {
   //   const props = storageConfigProps.reduce<Record<string, string>>(
@@ -58,5 +56,4 @@ export class StorageConfig implements StorageConfigInterface {
   //   );
   //   return new StorageConfig(props as Partial<StorageConfigInterface>);
   // }
-
 }
