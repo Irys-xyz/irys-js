@@ -8,6 +8,7 @@ import { StorageConfig } from "./storageConfig";
 import type { UnsignedTransactionInterface } from "./transaction";
 import { UnsignedTransaction } from "./transaction";
 import { Utils } from "./utilities";
+import { Account } from "./account";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -23,6 +24,7 @@ export class IrysClient {
   public cryptoDriver: CryptoInterface;
   public programmableData!: ProgrammableData;
   public utils!: Utils;
+  public account!: Account;
 
   constructor(config: IrysConfig) {
     this.config = config;
@@ -37,6 +39,7 @@ export class IrysClient {
       (await this.api.get("/network/config")).data
     );
     this.utils = new Utils(this);
+    this.account = new Account(this);
 
     this.merkle = new Merkle({
       deps: {

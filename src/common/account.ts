@@ -1,16 +1,16 @@
-import type Api from "./api";
+import type { IrysClient } from "./irys";
 import type { U64 } from "./dataTypes";
 import { toExecAddr, toIrysAddr } from "./utils";
 
 export class Account /* extends ExecWallet */ {
-  public api: Api;
+  public irys: IrysClient;
 
-  constructor({ api }: { api: Api }) {
-    this.api = api;
+  constructor(irys: IrysClient) {
+    this.irys = irys;
   }
 
   public async getBalance(address: string): Promise<U64> {
-    return await this.api.rpcProvider.getBalance(toExecAddr(address));
+    return await this.irys.api.rpcProvider.getBalance(toExecAddr(address));
   }
 
   public toExecutionAddress(address: string): string {
