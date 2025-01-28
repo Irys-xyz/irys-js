@@ -139,6 +139,17 @@ export class UnsignedTransaction
     return this;
   }
 
+  public async getFees(): Promise<{ termFee: U64; permFee: U64 }> {
+    await this.fillFee();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return { termFee: this.termFee!, permFee: this.permFee! };
+  }
+
+  public async getFee(): Promise<U64> {
+    await this.fillFee();
+    return this.termFee! + this.permFee!;
+  }
+
   public async fillAnchor(): Promise<this> {
     if (this.anchor) return this;
 

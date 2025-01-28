@@ -1,6 +1,7 @@
 import type { IrysClient } from "./irys";
-import type { U64 } from "./dataTypes";
+import type { Base58, U64 } from "./dataTypes";
 import { toExecAddr, toIrysAddr } from "./utils";
+import { Wallet } from "ethers/wallet";
 
 export class Account /* extends ExecWallet */ {
   public irys: IrysClient;
@@ -11,6 +12,11 @@ export class Account /* extends ExecWallet */ {
 
   public async getBalance(address: string): Promise<U64> {
     return await this.irys.api.rpcProvider.getBalance(toExecAddr(address));
+  }
+
+  public getAddresses(key: string): { irys: Base58; exec: string } {
+    const wallet = new Wallet(key);
+    return { irys: toIrysAddr(wallet.address), exec: wallet.address };
   }
 
   //   public transfer(to: string, amount: bigint, wallet: Wallet | string) {
