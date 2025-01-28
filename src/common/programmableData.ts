@@ -61,7 +61,13 @@ export class ReadBuilder {
             txId,
             await this.api
               .get(`/tx/${txId}/local/data_start_offset`)
-              .then((r) => BigInt(r.data.dataStartOffset as string))
+              .then((r) => {
+                if (r.status !== 200)
+                  throw new Error(
+                    "Unable to find tx - do you need to wait for promotion?"
+                  );
+                return BigInt(r.data.dataStartOffset as string);
+              })
           )
           .get(txId)!;
 
