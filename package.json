@@ -4,9 +4,9 @@
     "repository": "https://github.com/Irys-xyz/irys-js",
     "author": "JesseTheRobot <jesse@irys.xyz>",
     "license": "MIT",
-    "main": "./build/cjs/cjsIndex.js",
+    "main": "./build/cjs/node/index.js",
     "browser": "./build/esm/web/index.js",
-    "module": "./build/esm/esmIndex.js",
+    "module": "./build/esm/node/index.js",
     "exports": {
         "./node": {
             "require": {
@@ -55,18 +55,18 @@
             }
         },
         "./bundle": {
-            "types": "./build/esm/esmIndex.d.ts",
+            "types": "./build/esm/index.d.ts",
             "default": "./build/bundle.js"
         },
         ".": {
             "browser": "./build/esm/web/index.js",
             "require": {
                 "node": "./build/cjs/node/index.js",
-                "default": "./build/cjs/cjsIndex.js"
+                "default": "./build/cjs/node/index.js"
             },
             "import": {
                 "node": "./build/esm/node/index.js",
-                "default": "./build/esm/esmIndex.js"
+                "default": "./build/esm/node/index.js"
             }
         },
         "./*": {
