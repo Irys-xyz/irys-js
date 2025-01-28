@@ -11,7 +11,7 @@ import { JsonRpcProvider } from "ethers";
 export const isApiConfig = (o: URL | ApiConfig | string): o is ApiConfig =>
   typeof o !== "string" && "url" in o;
 
-export interface ApiConfig {
+export type ApiConfig = {
   url: URL;
   timeout?: number;
   logging?: boolean;
@@ -20,7 +20,7 @@ export interface ApiConfig {
   headers?: Record<string, string>;
   withCredentials?: boolean;
   retry?: AsyncRetry.Options;
-}
+};
 
 export type ApiRequestConfig = {
   retry?: AsyncRetry.Options;

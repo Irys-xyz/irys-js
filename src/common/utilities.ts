@@ -1,6 +1,6 @@
-import { AxiosResponse } from "axios";
-import { IrysClient } from "./irys";
-import { Resolvable } from "./types";
+import type { AxiosResponse } from "axios";
+import type { IrysClient } from "./irys";
+import type { Resolvable } from "./types";
 
 export class Utils {
   public irys: IrysClient;

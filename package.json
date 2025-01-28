@@ -78,8 +78,8 @@
         "build/**/*"
     ],
     "scripts": {
-        "lint": "eslint ./src -c ./.eslintrc.json --ext .ts,.tsx",
-        "lint:fix": "eslint ./src -c ./.eslintrc.json --ext .ts,.tsx --fix",
+        "lint": "eslint ./src -c ./.eslintrc.js --ext .ts,.tsx",
+        "lint:fix": "eslint ./src -c ./.eslintrc.js --ext .ts,.tsx --fix",
         "watch": "tsc --watch -p tsconfig.json",
         "test": "jest",
         "clean": "rm -rf ./build",
