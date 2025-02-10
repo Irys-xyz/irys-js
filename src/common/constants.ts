@@ -13,4 +13,4 @@ export const MIN_CHUNK_SIZE = 32 * 1024;
 export const MERKLE_NOTE_SIZE = 32;
 export const MERKLE_HASH_SIZE = 32;
 
-export const IRYS_CHAIN_ID: U64 = 1270n;
+export const IRYS_TESTNET_CHAIN_ID: U64 = 1270n;

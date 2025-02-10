@@ -1,27 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Wallet, encodeBase58 } from "ethers";
-import { IRYS_CHAIN_ID } from "../src/common/constants";
-import Merkle from "../src/common/merkle";
-import NodeCryptoDriver from "../src/node/cryptoDriver";
+import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
-import { UnsignedTransaction } from "../src/common/transaction";
 import { createFixedUint8Array, sleep } from "../src/common/utils";
-import Api from "../src/common/api";
-import { StorageConfig } from "../src/common/storageConfig";
+import IrysClient from "../src/node";
 
 async function main() {
-  const crypto = new NodeCryptoDriver();
-
-  const url = new URL("http://localhost:8080/v1");
-
-  const api = new Api({ url, timeout: 9999999 });
-  const storageConfig = new StorageConfig(
-    (await api.get("/network/config")).data
-  );
-
-  const merkle = new Merkle({
-    deps: { crypto, storageConfig },
-  });
+  const irys = await new IrysClient().node("http://172.17.0.9:8080/v1");
 
   const txProps: Partial<UnsignedTransactionInterface> = {
     anchor: createFixedUint8Array(32).fill(1),
@@ -30,16 +15,13 @@ async function main() {
     dataSize: 1024n,
     termFee: 100n,
     permFee: 1n,
-    ledgerNum: 0n,
+    ledgerId: 0,
     bundleFormat: 0n,
     version: 0,
-    chainId: IRYS_CHAIN_ID,
+    chainId: IRYS_TESTNET_CHAIN_ID,
   };
 
-  const tx = new UnsignedTransaction({
-    deps: { merkle },
-    attributes: txProps,
-  });
+  const tx = irys.createTransaction(txProps);
 
   // dev test wallet 1
   // safe to commit, random & public already
@@ -48,7 +30,7 @@ async function main() {
   const wallet = new Wallet(priv);
   console.log(await wallet.getAddress());
 
-  const data = new Uint8Array(storageConfig.chunkSize * 2.5).fill(69);
+  const data = new Uint8Array(irys.storageConfig.chunkSize * 2.5).fill(69);
 
   await tx.prepareChunks(data);
 
@@ -63,7 +45,7 @@ async function main() {
   console.log(`serialized tx header: ${serializedHeader}`);
 
   // post the tx header
-  const res = await api.post("/tx", serializedHeader, {
+  const res = await irys.api.post("/tx", serializedHeader, {
     headers: { "Content-Type": "application/json" },
   });
 
@@ -76,7 +58,7 @@ async function main() {
   for (let i = 0; i < chunks.length; i++) {
     const chunk = signedTx.getChunk(i, data);
     const ser = chunk.serialize();
-    await api.post("/chunk", ser, {
+    await irys.api.post("/chunk", ser, {
       headers: { "Content-Type": "application/json" },
     });
     console.log(`posted chunk ${i}`);
@@ -87,14 +69,14 @@ async function main() {
 
   // get tx header and the chunk(s)
   const bs58Enc = encodeBase58(signedTx.id);
-  const headerReq = await api.get(`/tx/${bs58Enc}`);
+  const headerReq = await irys.api.get(`/tx/${bs58Enc}`);
 
   const bs58 = encodeBase58(signedTx.dataRoot);
   if (headerReq.data.data_root !== bs58) throw new Error("data_root mismatch");
 
   for (let i = 0; i < chunks.length; i++) {
     // TODO: fix this once @DanMacDonald fixes chunk promotion
-    const chunkReq = await api.get(
+    const chunkReq = await irys.api.get(
       `/chunk/data_root/${/* tx.ledgerNum */ 1}/${bs58}/${i}`
     );
     console.log(

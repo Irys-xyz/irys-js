@@ -1,6 +1,6 @@
 import type { ApiConfig } from "../common/api";
 import { isApiConfig } from "../common/api";
-import { IRYS_CHAIN_ID } from "../common/constants";
+import { IRYS_TESTNET_CHAIN_ID } from "../common/constants";
 import type CryptoInterface from "../common/cryptoInterface";
 import type { U64 } from "../common/dataTypes";
 import type { AnyUrl } from "../common/types";
@@ -25,7 +25,7 @@ export class IrysClientBuilder {
             : { url: new URL(url) }
           : { url: new URL("https://testnet-rpc.irys.xyz/v1/") },
       ],
-      chainId: IRYS_CHAIN_ID,
+      chainId: IRYS_TESTNET_CHAIN_ID,
       cryptoDriver: new NodeCryptoDriver(),
     };
   }

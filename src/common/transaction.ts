@@ -20,7 +20,7 @@ import {
   keccak256,
   recoverAddress,
 } from "ethers";
-import { IRYS_CHAIN_ID } from "./constants";
+import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import { UnpackedChunk } from "./chunk";
 import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys";
@@ -93,7 +93,7 @@ export class UnsignedTransaction
   public dataRoot?: H256 = undefined;
   public dataSize = 0n;
   public termFee?: U64 = 0n;
-  public chainId?: U64 = IRYS_CHAIN_ID;
+  public chainId?: U64 = IRYS_TESTNET_CHAIN_ID;
   protected signature?: Signature = undefined;
   public bundleFormat?: U64 = 0n;
   public permFee?: U64 = undefined;
