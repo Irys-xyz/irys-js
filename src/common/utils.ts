@@ -265,3 +265,39 @@ export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
 export function irysTomIrys(irys: BigNumber.Value): BigNumber {
   return new BigNumber(irys).shiftedBy(18);
 }
+
+export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
+  typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===
+  "function";
+
+// basic promise pool
+export async function promisePool<T, N>(
+  iter: Iterable<T> | AsyncIterable<T>,
+  fn: (item: T, index: number) => Promise<N>,
+  opts?: { concurrency?: number; itemCb?: (idx: number, item: N) => void }
+): Promise<N[]> {
+  const promises: Promise<N>[] = [];
+  const concurrency = opts?.concurrency ?? 10;
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const itemCb = opts?.itemCb ?? ((_1, _2): void => {});
+
+  let processing = 0;
+  for await (const item of iter) {
+    while (processing >= concurrency) {
+      await Promise.race(promises);
+    }
+    processing++;
+
+    const promise = (async (): Promise<any> => {
+      const idx = promises.length;
+      return await fn(item, idx).then((r) => {
+        itemCb(idx, r);
+        processing--;
+        return r;
+      });
+    })();
+
+    promises.push(promise);
+  }
+  return await Promise.all(promises);
+}

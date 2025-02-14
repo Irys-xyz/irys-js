@@ -1,8 +1,10 @@
+import { chunker } from "./chunker";
 import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
 import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./transaction";
-import { concatBuffers } from "./utils";
+import type { Data } from "./types";
+import { concatBuffers, promisePool } from "./utils";
 
 export type MerkleChunk = {
   dataHash: Uint8Array;
@@ -55,25 +57,17 @@ export class Merkle {
    * The last chunk will be a bit smaller as it contains the remainder
    * from the chunking process.
    */
-  public async chunkData(data: Uint8Array): Promise<MerkleChunk[]> {
+  public async chunkData(
+    data: Data
+  ): Promise<{ chunks: MerkleChunk[]; dataSize: number }> {
     const chunks: MerkleChunk[] = [];
 
-    let rest = data;
+    // let rest = data as Uint8Array;
     let cursor = 0;
 
-    while (rest.byteLength >= this.storageConfig.chunkSize) {
-      const chunkSize = this.storageConfig.chunkSize;
-
-      // If the total bytes left will produce a chunk < MIN_CHUNK_SIZE,
-      // then adjust the amount we put in this 2nd last chunk.
-
-      // const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
-      // if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
-      //   chunkSize = Math.ceil(rest.byteLength / 2);
-      //   // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
-      // }
-
-      const chunk = rest.slice(0, chunkSize);
+    for await (const chunk of chunker(this.storageConfig.chunkSize, {
+      flush: true,
+    })(data)) {
       const dataHash = await this.deps.crypto.hash(chunk);
       cursor += chunk.byteLength;
       chunks.push({
@@ -81,36 +75,56 @@ export class Merkle {
         minByteRange: cursor - chunk.byteLength,
         maxByteRange: cursor,
       });
-      rest = rest.slice(chunkSize);
     }
+    return { chunks, dataSize: cursor };
 
-    chunks.push({
-      dataHash: await this.deps.crypto.hash(rest),
-      minByteRange: cursor,
-      maxByteRange: cursor + rest.byteLength,
-    });
+    // while (rest.byteLength >= this.storageConfig.chunkSize) {
+    //   const chunkSize = this.storageConfig.chunkSize;
 
-    return chunks;
+    //   // If the total bytes left will produce a chunk < MIN_CHUNK_SIZE,
+    //   // then adjust the amount we put in this 2nd last chunk.
+
+    //   // const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
+    //   // if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
+    //   //   chunkSize = Math.ceil(rest.byteLength / 2);
+    //   //   // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
+    //   // }
+
+    //   const chunk = rest.slice(0, chunkSize);
+
+    //   rest = rest.slice(chunkSize);
+    // }
+
+    // chunks.push({
+    //   dataHash: await this.deps.crypto.hash(rest),
+    //   minByteRange: cursor,
+    //   maxByteRange: cursor + rest.byteLength,
+    // });
+
+    // return chunks;
   }
 
-  public async generateLeaves(chunks: MerkleChunk[]): Promise<LeafNode[]> {
-    return Promise.all(
-      chunks.map(
-        async ({ dataHash, minByteRange, maxByteRange }): Promise<LeafNode> => {
-          return {
-            type: "leaf",
-            id: await this.hash(
-              await Promise.all([
-                this.hash(dataHash),
-                this.hash(intToBuffer(maxByteRange)),
-              ])
-            ),
-            dataHash: dataHash,
-            minByteRange,
-            maxByteRange,
-          };
-        }
-      )
+  public async generateLeaves(
+    chunks: MerkleChunk[],
+    concurrency = 10
+  ): Promise<LeafNode[]> {
+    return await promisePool(
+      chunks,
+      async ({ dataHash, minByteRange, maxByteRange }): Promise<LeafNode> => {
+        return {
+          type: "leaf",
+          id: await this.hash(
+            await Promise.all([
+              this.hash(dataHash),
+              this.hash(intToBuffer(maxByteRange)),
+            ])
+          ),
+          dataHash: dataHash,
+          minByteRange,
+          maxByteRange,
+        };
+      },
+      { concurrency }
     );
   }
 
@@ -124,15 +138,16 @@ export class Merkle {
   }
 
   public async generateTree(data: Uint8Array): Promise<MerkleNode> {
-    const rootNode = await this.buildLayers(
-      await this.generateLeaves(await this.chunkData(data))
-    );
+    const { chunks } = await this.chunkData(data);
+    const rootNode = await this.buildLayers(await this.generateLeaves(chunks));
 
     return rootNode;
   }
 
-  public async generateTransactionChunks(data: Uint8Array): Promise<Chunks> {
-    const chunks = await this.chunkData(data);
+  public async generateTransactionChunks(
+    data: Data
+  ): Promise<{ chunks: Chunks; dataSize: number }> {
+    const { chunks, dataSize } = await this.chunkData(data);
     const leaves = await this.generateLeaves(chunks);
     const root = await this.buildLayers(leaves);
     const proofs = await this.generateProofs(root);
@@ -145,9 +160,12 @@ export class Merkle {
     // }
 
     return {
-      dataRoot: root.id,
-      chunks,
-      proofs,
+      chunks: {
+        dataRoot: root.id,
+        chunks,
+        proofs,
+      },
+      dataSize,
     };
   }
 
