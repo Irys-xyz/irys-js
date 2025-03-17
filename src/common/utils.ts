@@ -1,7 +1,6 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
 import type { Base58, FixedUint8Array } from "./dataTypes";
-// @ts-expect-error imports
 import bs58 from "bs58";
 import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
