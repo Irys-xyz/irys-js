@@ -1,27 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import { Wallet, encodeBase58 } from "ethers";
-import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
-import type { UnsignedTransactionInterface } from "../src/common/transaction";
-import { createFixedUint8Array, sleep } from "../src/common/utils";
+import { Wallet } from "ethers";
+import { encodeBase58, sleep } from "../src/common/utils";
 import IrysClient from "../src/node";
 
 async function main() {
-  const irys = await new IrysClient().node("http://172.17.0.9:8080/v1");
+  const irys = await new IrysClient().node("http://testnet-rpc.irys.xyz/v1");
 
-  const txProps: Partial<UnsignedTransactionInterface> = {
-    anchor: createFixedUint8Array(32).fill(1),
-    // signer: createFixedUint8Array(20).fill(0),
-    dataRoot: createFixedUint8Array(32).fill(3),
-    dataSize: 1024n,
-    termFee: 100n,
-    permFee: 1n,
-    ledgerId: 0,
-    bundleFormat: 0n,
-    version: 0,
-    chainId: IRYS_TESTNET_CHAIN_ID,
-  };
-
-  const tx = irys.createTransaction(txProps);
+  const tx = irys.createTransaction();
 
   // dev test wallet 1
   // safe to commit, random & public already
@@ -53,16 +38,7 @@ async function main() {
     throw new Error("Unexpected tx status");
   }
 
-  const chunks = signedTx.chunks.chunks;
-
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = signedTx.getChunk(i, data);
-    const ser = chunk.serialize();
-    await irys.api.post("/chunk", ser, {
-      headers: { "Content-Type": "application/json" },
-    });
-    console.log(`posted chunk ${i}`);
-  }
+  await signedTx.uploadChunks(data);
 
   // wait 2 s
   await sleep(2_000);
@@ -72,12 +48,11 @@ async function main() {
   const headerReq = await irys.api.get(`/tx/${bs58Enc}`);
 
   const bs58 = encodeBase58(signedTx.dataRoot);
-  if (headerReq.data.data_root !== bs58) throw new Error("data_root mismatch");
+  if (headerReq.data.dataRoot !== bs58) throw new Error("data_root mismatch");
 
-  for (let i = 0; i < chunks.length; i++) {
-    // TODO: fix this once @DanMacDonald fixes chunk promotion
+  for (let i = 0; i < signedTx.chunks.chunks.length; i++) {
     const chunkReq = await irys.api.get(
-      `/chunk/data_root/${/* tx.ledgerNum */ 1}/${bs58}/${i}`
+      `/chunk/data_root/${tx.ledgerId}/${bs58}/${i}`
     );
     console.log(
       `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`

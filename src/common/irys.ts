@@ -35,7 +35,7 @@ export class IrysClient {
     this.api = new Api(this.config.api);
     // get storage config
     // TODO: validate chainID
-    this.storageConfig = new StorageConfig(
+    this.storageConfig ??= new StorageConfig(
       (await this.api.get("/network/config")).data
     );
     this.utils = new Utils(this);

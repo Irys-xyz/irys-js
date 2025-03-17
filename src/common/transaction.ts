@@ -22,7 +22,7 @@ import {
   recoverAddress,
 } from "ethers";
 import { IRYS_TESTNET_CHAIN_ID } from "./constants";
-import { UnpackedChunk } from "./chunk";
+import { UnpackedChunk, chunkEndByteOffset } from "./chunk";
 import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys";
 import type { Data } from "./types";
@@ -333,48 +333,38 @@ export class SignedTransaction
   }
 
   // Returns an unpacked chunk, slicing from the provided full data
-  public getChunkFullData(idx: number, fullData: Uint8Array): UnpackedChunk {
+  public async getChunk(
+    idx: number,
+    fullData: Uint8Array
+  ): Promise<UnpackedChunk> {
     if (!this.chunks) {
       throw new Error(`Chunks have not been prepared`);
     }
     const proof = this.chunks.proofs[idx];
     const chunk = this.chunks.chunks[idx];
 
-    return new UnpackedChunk({
-      dataRoot: this.dataRoot,
-      dataSize: this.dataSize,
-      dataPath: bufferTob64Url(proof.proof),
-      bytes: bufferTob64Url(
-        fullData.slice(chunk.minByteRange, chunk.maxByteRange)
-      ),
-      txOffset: idx,
-    });
-  }
-
-  // Returns an unpacked chunk, passing through the provided data
-  // warning: does not validate that the provided data is correct for this chunk!
-  public async getChunk(idx: number, data: Uint8Array): Promise<UnpackedChunk> {
-    if (!this.chunks) {
-      throw new Error(`Chunks have not been prepared`);
-    }
-    const proof = this.chunks.proofs[idx];
-    const chunk = this.chunks.chunks[idx];
     if (
       !(await this.irys.merkle.validatePath(
         this.dataRoot,
-        idx,
-        chunk.minByteRange,
-        chunk.maxByteRange,
+        Number(
+          chunkEndByteOffset(
+            idx,
+            this.dataSize,
+            this.irys.storageConfig.chunkSize
+          )
+        ),
+        0,
+        Number(this.dataSize),
         proof.proof
       ))
     )
       throw new Error("Invalid chunk, check your data");
-
+    const sliced = fullData.slice(chunk.minByteRange, chunk.maxByteRange);
     return new UnpackedChunk({
       dataRoot: this.dataRoot,
       dataSize: this.dataSize,
       dataPath: bufferTob64Url(proof.proof),
-      bytes: bufferTob64Url(data),
+      bytes: bufferTob64Url(sliced),
       txOffset: idx,
     });
   }
@@ -391,6 +381,7 @@ export class SignedTransaction
   }
 
   // Upload this transactions' chunks to the connected node
+  // uploads using bound concurrency & retries
   public async uploadChunks(
     data: Data,
     opts?: {
@@ -402,15 +393,20 @@ export class SignedTransaction
     await promisePool(
       chunker(this.irys.storageConfig.chunkSize, { flush: true })(data),
       (chunkData, idx) =>
-        AsyncRetry(async (bail) => {
-          const chunk = await this.getChunk(idx, chunkData);
-          // TODO: skip uploading if this chunk exists on the node.
-          const res = await this.irys.api.post("/chunk", chunk.serialize(), {
-            headers: { "Content-Type": "application/json" },
-          });
-          if (res.status !== 200)
-            bail(new Error(`Error uploading chunk ${idx}: ${res.statusText}`));
-        }, opts?.retry),
+        AsyncRetry(
+          async (bail) => {
+            const chunk = await this.getChunk(idx, chunkData);
+            // TODO: skip uploading if this chunk exists on the node.
+            const res = await this.irys.api.post("/chunk", chunk.serialize(), {
+              headers: { "Content-Type": "application/json" },
+            });
+            if (res.status >= 400)
+              bail(
+                new Error(`Error uploading chunk ${idx}: ${res.statusText}`)
+              );
+          },
+          { retries: 3, minTimeout: 300, maxTimeout: 1000, ...opts?.retry }
+        ),
       { concurrency: opts?.concurrency ?? 10, itemCb: opts?.onProgress }
     );
   }

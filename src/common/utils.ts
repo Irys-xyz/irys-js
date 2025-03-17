@@ -1,8 +1,10 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
 import type { Base58, FixedUint8Array } from "./dataTypes";
-import { decodeBase58, encodeBase58 } from "ethers/utils";
+// @ts-expect-error imports
+import bs58 from "bs58";
 import BigNumber from "bignumber.js";
+import { getBytes, hexlify } from "ethers/utils";
 
 export type Base64UrlString = string;
 
@@ -240,18 +242,28 @@ export function jsonBigIntSerialize(obj: any): string {
     typeof v === "bigint" ? v.toString() : v
   );
 }
+
+// div_ceil, implemented manually due to BigInt / BigInt flooring by default
+export function bigIntDivCeil(dividend: bigint, divisor: bigint): bigint {
+  return dividend % divisor === 0n
+    ? dividend / divisor
+    : (dividend + divisor - 1n) / divisor;
+}
+
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-export const decodeBase58ToBuf = (string: Base58): Buffer =>
-  Buffer.from(decodeBase58(string).toString(16), "hex");
+export const decodeBase58ToBuf = (string: Base58): Uint8Array =>
+  bs58.decode(string);
+
+export const encodeBase58 = (bytes: Uint8Array): Base58 => bs58.encode(bytes);
 
 export const irysToExecAddr = (irysAddr: string): string =>
-  "0x" + decodeBase58(irysAddr.toLowerCase()).toString(16);
+  hexlify(decodeBase58ToBuf(irysAddr.toLowerCase()));
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
-    ? encodeBase58(execAddr)
-    : encodeBase58("0x" + execAddr);
+    ? encodeBase58(getBytes(execAddr))
+    : encodeBase58(getBytes("0x" + execAddr));
 
 export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;

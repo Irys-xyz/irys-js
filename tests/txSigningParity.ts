@@ -2,6 +2,7 @@ import { hexlify } from "ethers/utils";
 import type { UnsignedTransactionInterface } from "../src/common/transaction";
 import { createFixedUint8Array } from "../src/common/utils";
 import IrysClient from "../src/node";
+import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
 
 async function main(): Promise<void> {
   const irys = await new IrysClient().node("http://172.17.0.6:8080/v1");
@@ -15,7 +16,7 @@ async function main(): Promise<void> {
     ledgerId: 0,
     bundleFormat: 0n,
     version: 0,
-    chainId: 1275n,
+    chainId: IRYS_TESTNET_CHAIN_ID,
   };
 
   const tx = irys.createTransaction(txProps);

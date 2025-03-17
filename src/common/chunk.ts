@@ -7,6 +7,7 @@ import type {
   TxRelativeChunkOffset,
   U64,
 } from "./dataTypes";
+import { bigIntDivCeil, jsonBigIntSerialize } from "./utils";
 
 export enum ChunkFormat {
   PackedChunk = "packed",
@@ -29,12 +30,28 @@ const unpackedChunkProperties = [
   "bytes",
 ];
 
+// Computes a chunk's end byte offset
+// (this is used for the merkle proof)
+export function chunkEndByteOffset(
+  txOffset: number,
+  dataSize: U64,
+  chunkSize: number
+): U64 {
+  const bnChunkSize = BigInt(chunkSize);
+  const biTxOffset = BigInt(txOffset);
+  const lastIndex = bigIntDivCeil(dataSize, bnChunkSize);
+  if (biTxOffset === lastIndex - 1n) {
+    return dataSize - 1n;
+  } else {
+    return (biTxOffset + 1n) * bnChunkSize - 1n;
+  }
+}
 export class UnpackedChunk implements UnpackedChunkInterface {
-  public dataRoot!: H256;
-  public dataSize!: U64;
-  public dataPath!: Base64Url;
-  public txOffset!: TxRelativeChunkOffset;
-  public bytes!: Base64Url;
+  public dataRoot!: H256; // root hash
+  public dataSize!: U64; // total size of the data stored by this data_root in bytes
+  public dataPath!: Base64Url; // raw bytes of the merkle proof that connect the chunk hash to the data root
+  public txOffset!: TxRelativeChunkOffset; // 0-based index of the chunk in the transaction
+  public bytes!: Base64Url; // Raw bytes to be stored. should be network constant `chunk_size` unless it's the very last chunk
 
   constructor(attributes: UnpackedChunkInterface) {
     for (const k of unpackedChunkProperties) {
@@ -42,6 +59,10 @@ export class UnpackedChunk implements UnpackedChunkInterface {
         k as keyof UnpackedChunkInterface
       ] as any;
     }
+  }
+
+  public byteOffset(chunkSize: number): U64 {
+    return chunkEndByteOffset(this.txOffset, this.dataSize, chunkSize);
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -56,9 +77,7 @@ export class UnpackedChunk implements UnpackedChunkInterface {
   }
 
   public serialize(): string {
-    return JSON.stringify(this.chunk, (_, v) =>
-      typeof v === "bigint" ? v.toString() : v
-    );
+    return jsonBigIntSerialize(this.chunk);
   }
 }
 

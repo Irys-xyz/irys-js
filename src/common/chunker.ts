@@ -45,32 +45,24 @@ export class ChunkBuffer {
 
 export function chunker(
   chunkSize: number,
-  {
-    flush,
-  }: {
-    flush: boolean;
-  } = { flush: false }
+  { flush = true }: { flush?: boolean } = {}
 ) {
   return async function* (
     data: Uint8Array | AsyncIterable<Uint8Array>
   ): AsyncIterable<Uint8Array> {
     const chunkBuffer = new ChunkBuffer();
+
     if (isAsyncIter(data)) {
       for await (const chunk of data) {
         chunkBuffer.push(chunk);
-
-        while (true) {
-          const sizedChunk = chunkBuffer.pop(chunkSize);
-          if (!sizedChunk) {
-            break;
-          }
-
-          yield sizedChunk;
-        }
+        yield* yieldCompleteChunks(chunkBuffer, chunkSize);
       }
     } else {
       chunkBuffer.push(data);
     }
+
+    yield* yieldCompleteChunks(chunkBuffer, chunkSize);
+
     if (flush) {
       const flushedBuffer = chunkBuffer.flush();
       if (flushedBuffer.byteLength > 0) {
@@ -78,4 +70,15 @@ export function chunker(
       }
     }
   };
+}
+
+async function* yieldCompleteChunks(
+  buffer: ChunkBuffer,
+  size: number
+): AsyncGenerator<Uint8Array> {
+  while (true) {
+    const chunk = buffer.pop(size);
+    if (!chunk) break;
+    yield chunk;
+  }
 }

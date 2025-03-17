@@ -65,7 +65,7 @@ export class Merkle {
     // let rest = data as Uint8Array;
     let cursor = 0;
 
-    for await (const chunk of chunker(this.storageConfig.chunkSize, {
+    for await (const chunk of chunker(+this.storageConfig.chunkSize, {
       flush: true,
     })(data)) {
       const dataHash = await this.deps.crypto.hash(chunk);
@@ -216,7 +216,7 @@ export class Merkle {
     proof: Uint8Array = new Uint8Array(),
     depth = 0
   ): MerkleProof | MerkleProof[] {
-    if (node.type == "leaf") {
+    if (node.type === "leaf") {
       return {
         offset: node.maxByteRange - 1,
         proof: concatBuffers([
@@ -227,7 +227,7 @@ export class Merkle {
       };
     }
 
-    if (node.type == "branch") {
+    if (node.type === "branch") {
       const partialProof = concatBuffers([
         proof,
         node.leftChild!.id!,
@@ -270,7 +270,7 @@ export class Merkle {
       return this.validatePath(id, 0, 0, rightBound, path);
     }
 
-    if (path.length == MERKLE_HASH_SIZE + MERKLE_NOTE_SIZE) {
+    if (path.length === MERKLE_HASH_SIZE + MERKLE_NOTE_SIZE) {
       const pathData = path.slice(0, MERKLE_HASH_SIZE);
       const endOffsetBuffer = path.slice(
         pathData.length,
