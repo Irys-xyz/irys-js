@@ -7,7 +7,7 @@ import {
   decodeBase58ToBuf,
   jsonBigIntSerialize,
   promisePool,
-  toFixedUnint8Array,
+  toFixedUint8Array,
 } from "./utils";
 import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
 import type { Input } from "rlp";
@@ -157,7 +157,7 @@ export class UnsignedTransaction
   public async fillAnchor(): Promise<this> {
     const apiAnchor = await this.irys.api.get("/block/latest");
     if (apiAnchor.data.blockHash) {
-      this.anchor = toFixedUnint8Array(
+      this.anchor = toFixedUint8Array(
         decodeBase58ToBuf(apiAnchor.data.blockHash),
         32
       );
@@ -176,7 +176,7 @@ export class UnsignedTransaction
 
   public async sign(key: SigningKey | string): Promise<SignedTransaction> {
     const signingKey = typeof key === "string" ? new SigningKey(key) : key;
-    this.signer ??= toFixedUnint8Array(
+    this.signer ??= toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
       20
     );
@@ -186,12 +186,12 @@ export class UnsignedTransaction
 
     const prehash = await this.getSignatureData();
     const signature = signingKey.sign(prehash);
-    this.signature = toFixedUnint8Array(getBytes(signature.serialized), 65);
+    this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error();
     }
     const idBytes = getBytes(keccak256(signature.serialized));
-    this.id = toFixedUnint8Array(idBytes, 32);
+    this.id = toFixedUint8Array(idBytes, 32);
 
     return new SignedTransaction(
       this.irys,
@@ -200,17 +200,20 @@ export class UnsignedTransaction
   }
 
   // prepares some data into chunks, associating them with this transaction instance
-  public async prepareChunks(data: Data): Promise<void> {
+  // note: this will *consume any provided async iterable* - you will need to provide a second instance for the `uploadChunks` function
+  // if your data is small enough, I recommend converting it to a buffer/Uint8Array beforehand
+  public async prepareChunks(data: Data): Promise<this> {
     const { chunks, dataSize } =
       await this.irys.merkle.generateTransactionChunks(data);
     if (dataSize === 0) {
       this.chunks = undefined;
       this.dataRoot = undefined;
-      return;
+      return this;
     }
     this.chunks = chunks;
     this.dataSize = BigInt(dataSize);
-    this.dataRoot = toFixedUnint8Array(this.chunks.dataRoot, 32);
+    this.dataRoot = toFixedUint8Array(this.chunks.dataRoot, 32);
+    return this;
   }
 
   // / returns the "signature data" aka the prehash (hash of all the tx fields)
