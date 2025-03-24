@@ -6,7 +6,7 @@ import { PackedChunk } from "../src/common/chunk";
 import { arrayCompare } from "../src/common/merkle";
 
 async function main() {
-  const irys = await new IrysClient().node("http:/172.17.0.6:8080/v1");
+  const irys = await new IrysClient().node("http:/172.17.0.3:8080/v1");
 
   const tx = irys.createTransaction();
 
@@ -26,20 +26,7 @@ async function main() {
     throw new Error("Invalid signature");
   }
 
-  const serializedHeader = signedTx.getHeaderSerialized();
-
-  console.log(`serialized tx header: ${serializedHeader}`);
-
-  // post the tx header
-  const res = await irys.api.post("/tx", serializedHeader, {
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (res.status !== 200) {
-    throw new Error("Unexpected tx status");
-  }
-
-  await signedTx.uploadChunks(data);
+  await signedTx.upload(data);
 
   // wait 2 s
   await sleep(2_000);

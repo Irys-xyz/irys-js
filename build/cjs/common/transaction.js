@@ -114,7 +114,7 @@ class UnsignedTransaction {
             throw new Error();
         }
         const idBytes = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(signature.serialized));
-        this.id = (0, utils_1.toFixedUint8Array)(idBytes, 32);
+        this.id = (0, ethers_2.encodeBase58)((0, utils_1.toFixedUint8Array)(idBytes, 32));
         return new SignedTransaction(this.irys, this);
     }
     // prepares some data into chunks, associating them with this transaction instance
@@ -198,27 +198,28 @@ class SignedTransaction {
             return acc;
         }, {});
     }
-    getHeaderSerialized() {
-        return (0, utils_1.jsonBigIntSerialize)(this.header);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    toJSON() {
+        return (0, utils_1.jsonBigIntSerialize)(this.encode());
     }
     get txId() {
-        return (0, ethers_2.encodeBase58)(this.id);
+        return this.id;
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    get header() {
+    encode() {
         return {
-            id: (0, ethers_2.encodeBase58)(this.id),
+            id: this.id,
             version: this.version,
             anchor: (0, ethers_2.encodeBase58)(this.anchor),
             signer: (0, ethers_2.encodeBase58)(this.signer),
             dataRoot: (0, ethers_2.encodeBase58)(this.dataRoot),
-            dataSize: this.dataSize,
-            termFee: this.termFee,
+            dataSize: this.dataSize.toString(),
+            termFee: this.termFee.toString(),
             ledgerId: this.ledgerId,
-            chainId: this.chainId,
+            chainId: this.chainId.toString(),
             signature: (0, ethers_2.encodeBase58)(this.signature),
-            bundleFormat: this.bundleFormat,
-            permFee: this.permFee,
+            bundleFormat: this.bundleFormat?.toString(),
+            permFee: this.permFee?.toString(),
         };
     }
     // Returns an unpacked chunk, slicing from the provided full data
@@ -256,15 +257,17 @@ class SignedTransaction {
             txOffset: idx,
         });
     }
-    async uploadHeader() {
-        const h = this.getHeaderSerialized();
-        const res = await this.irys.api.post("/tx", h, {
+    // Uploads the transaction's header and chunks
+    async upload(data, opts) {
+        await this.uploadHeader(opts);
+        await this.uploadChunks(data, opts);
+    }
+    async uploadHeader(apiConfig) {
+        return await this.irys.api.post("/tx", this.toJSON(), {
+            ...apiConfig,
             headers: { "Content-Type": "application/json" },
+            validateStatus: (s) => s < 400,
         });
-        if (res.status !== 200) {
-            throw new Error(`Error uploading tx: ${res.statusText}`);
-        }
-        return res;
     }
     // Upload this transactions' chunks to the connected node
     // uploads using bound concurrency & retries

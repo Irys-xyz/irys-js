@@ -1,4 +1,4 @@
-import type { Address, H256, Signature, U32, U64, U8 } from "./dataTypes.js";
+import type { Address, Base58, H256, Signature, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import { type MerkleChunk, type MerkleProof } from "./merkle.js";
 import { SigningKey } from "ethers";
 import { UnpackedChunk } from "./chunk.js";
@@ -6,6 +6,7 @@ import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys.js";
 import type { Data } from "./types.js";
 import AsyncRetry from "async-retry";
+import type { ApiRequestConfig } from "./api.js";
 export type TransactionInterface = UnsignedTransactionInterface | SignedTransactionInterface;
 export type UnsignedTransactionInterface = {
     version: U8;
@@ -20,11 +21,26 @@ export type UnsignedTransactionInterface = {
     permFee?: U64;
     chunks?: Chunks;
 };
-export type SignedTransactionInterface = UnsignedTransactionInterface & SignedTransactionSubInterface;
-export type SignedTransactionSubInterface = {
-    id: H256;
+export type SignedTransactionInterface = UnsignedTransactionInterface & {
+    id: Base58;
     signature: Signature;
     chunks: Chunks;
+};
+export type EncodedUnsignedTransactionInterface = {
+    version: U8;
+    anchor: Base58<H256>;
+    signer: Base58<Address>;
+    dataRoot: Base58<H256>;
+    dataSize: UTF8<U64>;
+    termFee: UTF8<U64>;
+    ledgerId: U32;
+    chainId: UTF8<U64>;
+    bundleFormat?: UTF8<U64>;
+    permFee?: UTF8<U64>;
+};
+export type EncodedSignedTransactionInterface = EncodedUnsignedTransactionInterface & {
+    id: Base58<H256>;
+    signature: Base58<Signature>;
 };
 export type Chunks = {
     dataRoot: Uint8Array;
@@ -33,14 +49,14 @@ export type Chunks = {
 };
 export declare class UnsignedTransaction implements Partial<UnsignedTransactionInterface> {
     version: number;
-    protected id?: H256;
+    id?: Base58<H256>;
     anchor?: H256;
     signer?: Address;
     dataRoot?: H256;
     dataSize: bigint;
     termFee?: U64;
     chainId?: U64;
-    protected signature?: Signature;
+    signature?: Signature;
     bundleFormat?: U64;
     permFee?: U64;
     ledgerId?: U32;
@@ -62,7 +78,7 @@ export declare class UnsignedTransaction implements Partial<UnsignedTransactionI
     getSignatureData(): Promise<Uint8Array>;
 }
 export declare class SignedTransaction implements SignedTransactionInterface {
-    id: H256;
+    id: Base58;
     version: number;
     anchor: H256;
     signer: Address;
@@ -80,25 +96,17 @@ export declare class SignedTransaction implements SignedTransactionInterface {
     get missingProperties(): string[];
     throwOnMissing(): void;
     getHeader(): SignedTransactionInterface;
-    getHeaderSerialized(): string;
+    toJSON(): string;
     get txId(): string;
-    get header(): {
-        id: string;
-        version: number;
-        anchor: string;
-        signer: string;
-        dataRoot: string;
-        dataSize: bigint;
-        termFee: bigint;
-        ledgerId: number;
-        chainId: bigint;
-        signature: string;
-        bundleFormat: bigint | undefined;
-        permFee: bigint | undefined;
-    };
+    encode(): EncodedSignedTransactionInterface;
     getChunk(idx: number, fullData: Uint8Array): Promise<UnpackedChunk>;
     getChunkPassthrough(idx: number, data: Uint8Array): Promise<UnpackedChunk>;
-    uploadHeader(): Promise<AxiosResponse>;
+    upload(data: Data, opts?: {
+        retry?: AsyncRetry.Options;
+        concurrency?: number;
+        onProgress?: (idx: number) => void;
+    }): Promise<void>;
+    uploadHeader(apiConfig?: ApiRequestConfig): Promise<AxiosResponse>;
     uploadChunks(data: Data, opts?: {
         retry?: AsyncRetry.Options;
         concurrency?: number;

@@ -1,6 +1,15 @@
 /* eslint-disable no-case-declarations */
 
-import type { Address, H256, Signature, U32, U64, U8 } from "./dataTypes";
+import type {
+  Address,
+  Base58,
+  H256,
+  Signature,
+  U32,
+  U64,
+  U8,
+  UTF8,
+} from "./dataTypes";
 import {
   createFixedUint8Array,
   decodeBase58ToBuf,
@@ -27,6 +36,7 @@ import type { IrysClient } from "./irys";
 import type { Data } from "./types";
 import { chunker } from "./chunker";
 import AsyncRetry from "async-retry";
+import type { ApiRequestConfig } from "./api";
 
 export type TransactionInterface =
   | UnsignedTransactionInterface
@@ -46,14 +56,30 @@ export type UnsignedTransactionInterface = {
   chunks?: Chunks;
 };
 
-export type SignedTransactionInterface = UnsignedTransactionInterface &
-  SignedTransactionSubInterface;
-
-export type SignedTransactionSubInterface = {
-  id: H256;
+export type SignedTransactionInterface = UnsignedTransactionInterface & {
+  id: Base58;
   signature: Signature;
   chunks: Chunks;
 };
+
+export type EncodedUnsignedTransactionInterface = {
+  version: U8;
+  anchor: Base58<H256>;
+  signer: Base58<Address>;
+  dataRoot: Base58<H256>;
+  dataSize: UTF8<U64>;
+  termFee: UTF8<U64>;
+  ledgerId: U32;
+  chainId: UTF8<U64>;
+  bundleFormat?: UTF8<U64>;
+  permFee?: UTF8<U64>;
+};
+
+export type EncodedSignedTransactionInterface =
+  EncodedUnsignedTransactionInterface & {
+    id: Base58<H256>;
+    signature: Base58<Signature>;
+  };
 
 export type Chunks = {
   dataRoot: Uint8Array;
@@ -90,14 +116,14 @@ export class UnsignedTransaction
   implements Partial<UnsignedTransactionInterface>
 {
   public version = 0;
-  protected id?: H256 = undefined;
+  public id?: Base58<H256> = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
   public dataSize = 0n;
   public termFee?: U64 = 0n;
   public chainId?: U64 = IRYS_TESTNET_CHAIN_ID;
-  protected signature?: Signature = undefined;
+  public signature?: Signature = undefined;
   public bundleFormat?: U64 = 0n;
   public permFee?: U64 = undefined;
   public ledgerId?: U32 = 0;
@@ -190,7 +216,7 @@ export class UnsignedTransaction
       throw new Error();
     }
     const idBytes = getBytes(keccak256(signature.serialized));
-    this.id = toFixedUint8Array(idBytes, 32);
+    this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
 
     return new SignedTransaction(
       this.irys,
@@ -256,7 +282,7 @@ export class SignedTransaction
   // extends BaseObject
   implements SignedTransactionInterface
 {
-  public id!: H256;
+  public id!: Base58;
   public version!: number;
   public anchor!: H256;
   public signer!: Address;
@@ -269,8 +295,6 @@ export class SignedTransaction
   public permFee?: U64 = undefined;
   public signature!: Signature;
   public irys: IrysClient;
-
-  // Computed when needed.
   public chunks!: Chunks;
 
   public constructor(irys: IrysClient, attributes: SignedTransactionInterface) {
@@ -308,29 +332,30 @@ export class SignedTransaction
     }, {}) as SignedTransactionInterface;
   }
 
-  public getHeaderSerialized(): string {
-    return jsonBigIntSerialize(this.header);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  public toJSON(): string {
+    return jsonBigIntSerialize(this.encode());
   }
 
   get txId(): string {
-    return encodeBase58(this.id);
+    return this.id;
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  public get header() {
+  public encode(): EncodedSignedTransactionInterface {
     return {
-      id: encodeBase58(this.id),
+      id: this.id,
       version: this.version,
       anchor: encodeBase58(this.anchor),
       signer: encodeBase58(this.signer),
       dataRoot: encodeBase58(this.dataRoot),
-      dataSize: this.dataSize,
-      termFee: this.termFee,
+      dataSize: this.dataSize.toString(),
+      termFee: this.termFee.toString(),
       ledgerId: this.ledgerId,
-      chainId: this.chainId,
+      chainId: this.chainId.toString(),
       signature: encodeBase58(this.signature),
-      bundleFormat: this.bundleFormat,
-      permFee: this.permFee,
+      bundleFormat: this.bundleFormat?.toString(),
+      permFee: this.permFee?.toString(),
     };
   }
 
@@ -408,15 +433,27 @@ export class SignedTransaction
     });
   }
 
-  public async uploadHeader(): Promise<AxiosResponse> {
-    const h = this.getHeaderSerialized();
-    const res = await this.irys.api.post("/tx", h, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (res.status !== 200) {
-      throw new Error(`Error uploading tx: ${res.statusText}`);
+  // Uploads the transaction's header and chunks
+  public async upload(
+    data: Data,
+    opts?: {
+      retry?: AsyncRetry.Options;
+      concurrency?: number;
+      onProgress?: (idx: number) => void;
     }
-    return res;
+  ): Promise<void> {
+    await this.uploadHeader(opts);
+    await this.uploadChunks(data, opts);
+  }
+
+  public async uploadHeader(
+    apiConfig?: ApiRequestConfig
+  ): Promise<AxiosResponse> {
+    return await this.irys.api.post("/tx", this.toJSON(), {
+      ...apiConfig,
+      headers: { "Content-Type": "application/json" },
+      validateStatus: (s) => s < 400,
+    });
   }
 
   // Upload this transactions' chunks to the connected node

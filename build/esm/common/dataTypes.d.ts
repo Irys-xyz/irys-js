@@ -14,5 +14,6 @@ export type TxRelativeChunkOffset = U32;
 export type PartitionChunkOffset = U32;
 export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
-export type Base58 = string;
+export type Base58<T = never> = string;
 export type Base64 = string;
+export type UTF8<T = never> = string;

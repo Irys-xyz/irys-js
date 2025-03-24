@@ -113,7 +113,7 @@ export class UnsignedTransaction {
             throw new Error();
         }
         const idBytes = getBytes(keccak256(signature.serialized));
-        this.id = toFixedUint8Array(idBytes, 32);
+        this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
         return new SignedTransaction(this.irys, this);
     }
     // prepares some data into chunks, associating them with this transaction instance
@@ -177,7 +177,6 @@ export class SignedTransaction {
     permFee = undefined;
     signature;
     irys;
-    // Computed when needed.
     chunks;
     constructor(irys, attributes) {
         // super();
@@ -209,27 +208,28 @@ export class SignedTransaction {
             return acc;
         }, {});
     }
-    getHeaderSerialized() {
-        return jsonBigIntSerialize(this.header);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    toJSON() {
+        return jsonBigIntSerialize(this.encode());
     }
     get txId() {
-        return encodeBase58(this.id);
+        return this.id;
     }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    get header() {
+    encode() {
         return {
-            id: encodeBase58(this.id),
+            id: this.id,
             version: this.version,
             anchor: encodeBase58(this.anchor),
             signer: encodeBase58(this.signer),
             dataRoot: encodeBase58(this.dataRoot),
-            dataSize: this.dataSize,
-            termFee: this.termFee,
+            dataSize: this.dataSize.toString(),
+            termFee: this.termFee.toString(),
             ledgerId: this.ledgerId,
-            chainId: this.chainId,
+            chainId: this.chainId.toString(),
             signature: encodeBase58(this.signature),
-            bundleFormat: this.bundleFormat,
-            permFee: this.permFee,
+            bundleFormat: this.bundleFormat?.toString(),
+            permFee: this.permFee?.toString(),
         };
     }
     // Returns an unpacked chunk, slicing from the provided full data
@@ -267,15 +267,17 @@ export class SignedTransaction {
             txOffset: idx,
         });
     }
-    async uploadHeader() {
-        const h = this.getHeaderSerialized();
-        const res = await this.irys.api.post("/tx", h, {
+    // Uploads the transaction's header and chunks
+    async upload(data, opts) {
+        await this.uploadHeader(opts);
+        await this.uploadChunks(data, opts);
+    }
+    async uploadHeader(apiConfig) {
+        return await this.irys.api.post("/tx", this.toJSON(), {
+            ...apiConfig,
             headers: { "Content-Type": "application/json" },
+            validateStatus: (s) => s < 400,
         });
-        if (res.status !== 200) {
-            throw new Error(`Error uploading tx: ${res.statusText}`);
-        }
-        return res;
     }
     // Upload this transactions' chunks to the connected node
     // uploads using bound concurrency & retries
