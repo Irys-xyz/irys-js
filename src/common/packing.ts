@@ -1,24 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createHash, webcrypto } from "crypto";
-import type {
-  Address,
-  FixedUint8Array,
-  H256,
-  U64,
-} from "../../common/dataTypes";
-import {
-  bigIntDivCeil,
-  bigIntToBytes,
-  concatBuffers,
-  createFixedUint8Array,
-  toFixedUint8Array,
-} from "../../common/utils";
-import { SHA_HASH_SIZE } from "../../common/constants";
-import { getBytes } from "ethers/utils";
-import { arrayCompare } from "../../common/merkle";
-import { PackedChunk } from "../../common/chunk";
-import { UnpackedChunk } from "../../common/chunk";
-import IrysClient from "..";
+import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
+import { bigIntDivCeil, bigIntToBytes, concatBuffers } from "./utils";
+import { SHA_HASH_SIZE } from "./constants";
+import type { PackedChunk } from "./chunk";
+import { UnpackedChunk } from "./chunk";
 
 export async function computeEntropyChunk(
   packingAddress: Address,
@@ -31,10 +16,9 @@ export async function computeEntropyChunk(
   let previousSegment = await computeSeedHash(
     packingAddress,
     partitionOffset,
-    partitionHash, //  toFixedUnint8Array(decodeBase58ToBuf(chunk.partitionHash), 32)
+    partitionHash,
     chainId
   );
-  //   console.log("PSEG", previousSegment);
   const outputEntropy = new Uint8Array(chunkSize);
   let outputCursor = 0;
   let hashCount = chunkSize / SHA_HASH_SIZE;
@@ -76,9 +60,8 @@ export async function computeSeedHash(
   return hasher.digest();
 }
 
-async function unpackChunk(
+export async function unpackChunk(
   chunk: PackedChunk,
-  // storageConfig: StorageConfig,
   chunkSize: number,
   entropyPackingIterations: number,
   chainId: bigint
@@ -95,7 +78,6 @@ async function unpackChunk(
   let data = packingXor(entropy, chunk.bytes, chunkSize);
 
   const bnChunkSize = BigInt(chunkSize);
-  // const biTxOffset = BigInt(txOffset);
   const numChunksInTx = Number(bigIntDivCeil(chunk.dataSize, bnChunkSize));
 
   if (chunk.txOffset === numChunksInTx - 1) {
@@ -119,7 +101,7 @@ function packingXor(
   data: Uint8Array,
   chunkSize: number
 ): Uint8Array {
-  if (entropy.byteLength !== chunkSize)
+  if (entropy.byteLength !== +chunkSize)
     throw new Error("Entropy needs to be exactly chunkSize bytes");
   if (data.byteLength > entropy.byteLength)
     throw new Error("Data cannot be longer than entropy");
@@ -199,94 +181,3 @@ export async function computeSeedHashWebCrypto(
   );
   return res2;
 }
-
-async function testEntropyGen(): Promise<void> {
-  const parityChunkHash = new Uint8Array([
-    105, 169, 178, 202, 79, 182, 172, 129, 31, 175, 161, 124, 40, 79, 26, 37,
-    178, 3, 78, 115, 102, 77, 87, 122, 52, 48, 204, 162, 92, 96, 231, 161,
-  ]);
-  const chainId = 1275n;
-  const chunkSize = 256 * 1024;
-  const miningAddress = toFixedUint8Array(
-    getBytes("0x64f1a2829e0e698c18e7792d6e74f67d89aa0a32"),
-    20
-  );
-  const chunkOffset = 7n;
-  const partitionHash = createFixedUint8Array(32).fill(2);
-  const iterations = 1_000_000;
-  const now = performance.now();
-  const entropyChunk = await computeEntropyChunk(
-    miningAddress,
-    chunkOffset,
-    partitionHash,
-    iterations,
-    chunkSize,
-    chainId
-  );
-  const chunkHash = createHash("sha-256").update(entropyChunk).digest();
-  if (!arrayCompare(chunkHash, parityChunkHash))
-    throw new Error("Entropy chunk parity mismatch!");
-  console.log(performance.now() - now);
-
-  const then = performance.now();
-  const entropyChunkWeb = await computeEntropyChunkWebCrypto(
-    miningAddress,
-    chunkOffset,
-    partitionHash,
-    iterations,
-    chunkSize,
-    chainId
-  );
-  const chunkHash2 = createHash("sha-256").update(entropyChunkWeb).digest();
-  if (!arrayCompare(chunkHash2, parityChunkHash))
-    throw new Error("Web Entropy chunk parity mismatch!");
-  console.log(performance.now() - then);
-}
-
-async function testPacking(): Promise<void> {
-  const chainId = 1275n;
-  const chunkSize = 256 * 1024;
-  const miningAddress = toFixedUint8Array(
-    getBytes("0x64f1a2829e0e698c18e7792d6e74f67d89aa0a32"),
-    20
-  );
-  const chunkOffset = 7n;
-  const partitionHash = createFixedUint8Array(32).fill(2);
-  const iterations = 1_000_000;
-
-  const expectedData = new Uint8Array([1, 2, 3, 4, 5]);
-  const entropy = await computeEntropyChunk(
-    miningAddress,
-    chunkOffset,
-    partitionHash,
-    iterations,
-    chunkSize,
-    chainId
-  );
-  const packedData = packingXor(entropy, expectedData, chunkSize);
-
-  const packedChunk = new PackedChunk(await new IrysClient(), {
-    dataRoot: createFixedUint8Array(32),
-    dataSize: BigInt(expectedData.byteLength),
-    dataPath: new Uint8Array(10),
-    txOffset: 0,
-    bytes: packedData,
-    packingAddress: miningAddress,
-    partitionOffset: Number(chunkOffset),
-    partitionHash: partitionHash,
-  });
-
-  const unpackedChunk = await unpackChunk(
-    packedChunk,
-    chunkSize,
-    iterations,
-    chainId
-  );
-
-  console.log(arrayCompare(unpackedChunk.bytes, expectedData));
-}
-
-(async function (): Promise<void> {
-  // await testEntropyGen();
-  await testPacking();
-})();

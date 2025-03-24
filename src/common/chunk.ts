@@ -2,22 +2,28 @@ import { encodeBase58 } from "ethers";
 import type {
   Address,
   Base58,
-  Base64,
+  Base64Url,
   H256,
   PartitionChunkOffset,
   TxRelativeChunkOffset,
   U64,
 } from "./dataTypes";
 import {
+  b64UrlToBuffer,
   bigIntDivCeil,
+  bufferTob64Url,
   decodeBase58ToBuf,
   jsonBigIntSerialize,
   toFixedUint8Array,
 } from "./utils";
-import { fromByteArray, toByteArray } from "base64-js";
+import type { IrysClient } from "./irys";
+import { unpackChunk } from "./packing";
+import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 
 export enum ChunkFormat {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   PackedChunk = "packed",
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   UnpackedChunk = "unpacked",
 }
 
@@ -32,9 +38,9 @@ export type UnpackedChunkInterface = {
 export type EncodedUnpackedChunkInterface = {
   dataRoot: Base58;
   dataSize: U64;
-  dataPath: Base64;
+  dataPath: Base64Url;
   txOffset: TxRelativeChunkOffset;
-  bytes: Base64;
+  bytes: Base64Url;
 };
 
 const unpackedChunkProperties = [
@@ -83,24 +89,25 @@ export class UnpackedChunk implements UnpackedChunkInterface {
   public encode(): EncodedUnpackedChunkInterface {
     return {
       dataRoot: encodeBase58(this.dataRoot),
-      dataPath: fromByteArray(this.dataPath),
+      dataPath: bufferTob64Url(this.dataPath),
       dataSize: this.dataSize,
       txOffset: this.txOffset,
-      bytes: fromByteArray(this.bytes),
+      bytes: bufferTob64Url(this.bytes),
     };
   }
 
   public static decode(data: EncodedUnpackedChunkInterface): UnpackedChunk {
     return new UnpackedChunk({
       dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
-      dataPath: toByteArray(data.dataPath),
+      dataPath: b64UrlToBuffer(data.dataPath),
       dataSize: BigInt(data.dataSize),
       txOffset: data.txOffset,
-      bytes: toByteArray(data.bytes),
+      bytes: b64UrlToBuffer(data.bytes),
     });
   }
 
-  public serialize(): string {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  public toJSON(): string {
     return jsonBigIntSerialize(this.encode());
   }
 }
@@ -124,7 +131,7 @@ export const packedChunkProperties = [
   "partitionOffset",
   "partitionHash",
 ];
-// TODO: implement
+
 export class PackedChunk implements PackedChunkInterface {
   public dataRoot!: H256;
   public dataSize!: bigint;
@@ -134,31 +141,41 @@ export class PackedChunk implements PackedChunkInterface {
   public packingAddress!: Address;
   public partitionOffset!: number;
   public partitionHash!: H256;
+  public irys: IrysClient;
 
-  constructor(attributes: Partial<PackedChunkInterface>) {
+  constructor(irys: IrysClient, attributes: Partial<PackedChunkInterface>) {
     Object.assign(this, attributes);
+    this.irys = irys;
   }
 
   public encode(): EncodedPackedChunkInterface {
     return {
       dataRoot: encodeBase58(this.dataRoot),
-      dataPath: fromByteArray(this.dataPath),
+      dataPath: bufferTob64Url(this.dataPath),
       dataSize: this.dataSize,
       txOffset: this.txOffset,
-      bytes: fromByteArray(this.bytes),
+      bytes: bufferTob64Url(this.bytes),
       packingAddress: encodeBase58(this.packingAddress),
       partitionOffset: this.partitionOffset,
       partitionHash: encodeBase58(this.partitionHash),
     };
   }
 
-  public static decode(data: EncodedPackedChunkInterface): PackedChunk {
-    return new PackedChunk({
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  public toJSON(): string {
+    return jsonBigIntSerialize(this.encode());
+  }
+
+  public static decode(
+    irys: IrysClient,
+    data: EncodedPackedChunkInterface
+  ): PackedChunk {
+    return new PackedChunk(irys, {
       dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
-      dataPath: toByteArray(data.dataPath),
+      dataPath: b64UrlToBuffer(data.dataPath),
       dataSize: BigInt(data.dataSize),
       txOffset: data.txOffset,
-      bytes: toByteArray(data.bytes),
+      bytes: b64UrlToBuffer(data.bytes),
       packingAddress: toFixedUint8Array(
         decodeBase58ToBuf(data.packingAddress),
         20
@@ -169,5 +186,14 @@ export class PackedChunk implements PackedChunkInterface {
         32
       ),
     });
+  }
+
+  public async unpack(): Promise<UnpackedChunk> {
+    return unpackChunk(
+      this,
+      this.irys.storageConfig.chunkSize,
+      this.irys.storageConfig.entropyPackingIterations,
+      IRYS_TESTNET_CHAIN_ID
+    );
   }
 }

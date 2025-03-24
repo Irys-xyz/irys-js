@@ -89,7 +89,10 @@
         "bundle:web:prod": "npx webpack --config-name web-prod",
         "web:test": "concurrently \"npm run bundle:web\" \"npm run bundle:web:test\" && opener ./tests/web/web.html",
         "prod:build": "npm run dev:build ",
-        "prod:build2": "npm run dev:build && npm run bundle:web:prod && ts-node scripts/embedVersion.ts"
+        "prod:build2": "npm run dev:build && npm run bundle:web:prod && ts-node scripts/embedVersion.ts",
+        "ensure-build": "(node -e \"if (!require('fs').existsSync(__dirname + '/build')) {process.exit(1)}\" || npm run prod:build)",
+        "prepack": "npm run ensure-build",
+        "prepare": "npm run ensure-build"
     },
     "devDependencies": {
         "@types/async-retry": "^1.4.5",

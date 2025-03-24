@@ -2,7 +2,6 @@
 
 import type { Address, H256, Signature, U32, U64, U8 } from "./dataTypes";
 import {
-  bufferTob64Url,
   createFixedUint8Array,
   decodeBase58ToBuf,
   jsonBigIntSerialize,
@@ -362,12 +361,49 @@ export class SignedTransaction
       ))
     )
       throw new Error("Invalid chunk, check your data");
-    const sliced = fullData.slice(chunk.minByteRange, chunk.maxByteRange);
+    const sliced = fullData.subarray(chunk.minByteRange, chunk.maxByteRange);
     return new UnpackedChunk({
       dataRoot: this.dataRoot,
       dataSize: this.dataSize,
-      dataPath: bufferTob64Url(proof.proof),
-      bytes: bufferTob64Url(sliced),
+      dataPath: proof.proof,
+      bytes: sliced,
+      txOffset: idx,
+    });
+  }
+
+  // Returns an unpacked chunk, passing through the provided data as the chunk's full data
+  public async getChunkPassthrough(
+    idx: number,
+    data: Uint8Array
+  ): Promise<UnpackedChunk> {
+    if (!this.chunks) {
+      throw new Error(`Chunks have not been prepared`);
+    }
+    const proof = this.chunks.proofs[idx];
+    // const chunk = this.chunks.chunks[idx];
+
+    if (
+      !(await this.irys.merkle.validatePath(
+        this.dataRoot,
+        Number(
+          chunkEndByteOffset(
+            idx,
+            this.dataSize,
+            this.irys.storageConfig.chunkSize
+          )
+        ),
+        0,
+        Number(this.dataSize),
+        proof.proof
+      ))
+    )
+      throw new Error("Invalid chunk, check your data");
+
+    return new UnpackedChunk({
+      dataRoot: this.dataRoot,
+      dataSize: this.dataSize,
+      dataPath: proof.proof,
+      bytes: data,
       txOffset: idx,
     });
   }
@@ -398,9 +434,10 @@ export class SignedTransaction
       (chunkData, idx) =>
         AsyncRetry(
           async (bail) => {
-            const chunk = await this.getChunk(idx, chunkData);
+            const chunk = await this.getChunkPassthrough(idx, chunkData);
             // TODO: skip uploading if this chunk exists on the node.
-            const res = await this.irys.api.post("/chunk", chunk.serialize(), {
+            const serializedChunk = chunk.toJSON();
+            const res = await this.irys.api.post("/chunk", serializedChunk, {
               headers: { "Content-Type": "application/json" },
             });
             if (res.status >= 400)
