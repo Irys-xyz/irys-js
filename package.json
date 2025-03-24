@@ -92,7 +92,8 @@
         "prod:build2": "npm run dev:build && npm run bundle:web:prod && ts-node scripts/embedVersion.ts",
         "ensure-build": "(node -e \"if (!require('fs').existsSync(__dirname + '/build')) {process.exit(1)}\" || npm run prod:build)",
         "prepack": "npm run ensure-build",
-        "prepare": "npm run ensure-build"
+        "prepare": "npm run ensure-build",
+        "postinstall": "npm run ensure-build"
     },
     "devDependencies": {
         "@types/async-retry": "^1.4.5",
