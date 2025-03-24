@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createHash, webcrypto } from "crypto";
 import type {
   Address,
@@ -200,7 +199,7 @@ export async function computeSeedHashWebCrypto(
   return res2;
 }
 
-async function testEntropyGen(): Promise<void> {
+export async function testEntropyGen(): Promise<void> {
   const parityChunkHash = new Uint8Array([
     105, 169, 178, 202, 79, 182, 172, 129, 31, 175, 161, 124, 40, 79, 26, 37,
     178, 3, 78, 115, 102, 77, 87, 122, 52, 48, 204, 162, 92, 96, 231, 161,
