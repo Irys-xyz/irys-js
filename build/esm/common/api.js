@@ -110,12 +110,12 @@ export default class Api {
         });
     }
 }
-export function buildUrl(base, parts) {
+export function buildUrl(base, paths) {
     // Remove leading/trailing slashes and filter out empty parts
     const cleanParts = [base.pathname]
-        .concat(parts)
+        .concat(paths)
         .map((part) => part.replace(/^\/+|\/+$/g, ""))
         .filter(Boolean);
-    return new URL(cleanParts.join("/"), base);
+    return new URL(cleanParts.join("/"), base.origin);
 }
 //# sourceMappingURL=api.js.map

@@ -113,13 +113,13 @@ class Api {
     }
 }
 exports.default = Api;
-function buildUrl(base, parts) {
+function buildUrl(base, paths) {
     // Remove leading/trailing slashes and filter out empty parts
     const cleanParts = [base.pathname]
-        .concat(parts)
+        .concat(paths)
         .map((part) => part.replace(/^\/+|\/+$/g, ""))
         .filter(Boolean);
-    return new URL(cleanParts.join("/"), base);
+    return new URL(cleanParts.join("/"), base.origin);
 }
 exports.buildUrl = buildUrl;
 //# sourceMappingURL=api.js.map

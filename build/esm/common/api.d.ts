@@ -34,4 +34,4 @@ export default class Api {
     get instance(): AxiosInstance;
     request<T = any>(path: string, config?: ApiRequestConfig): Promise<AxiosResponse<T>>;
 }
-export declare function buildUrl(base: URL, parts: string[]): URL;
+export declare function buildUrl(base: URL, paths: string[]): URL;
