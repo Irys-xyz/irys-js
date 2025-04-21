@@ -15,4 +15,8 @@ export type TxRelativeChunkOffset = U32;
 export type PartitionChunkOffset = U32;
 export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
-export type Base58 = string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type Base58<T = never> = string;
+export type Base64 = string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type UTF8<T = never> = string;

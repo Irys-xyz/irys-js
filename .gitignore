@@ -2,7 +2,6 @@ node_modules
 .env
 wallet.json
 .vscode
-build
 temp
 test.ts
 yarn.lock

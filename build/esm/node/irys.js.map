@@ -1,0 +1,1 @@
+{"version":3,"file":"irys.js","sourceRoot":"","sources":["../../../src/node/irys.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,UAAU,EAAE,MAAM,gBAAgB,CAAC;AAE5C,MAAM,OAAO,cAAe,SAAQ,UAAU;IAC5C,YAAY,MAAkB;QAC5B,KAAK,CAAC,MAAM,CAAC,CAAC;IAChB,CAAC;IAEM,KAAK,CAAC,KAAK;QAChB,OAAO,KAAK,CAAC,KAAK,EAAE,CAAC;IACvB,CAAC;CACF"}

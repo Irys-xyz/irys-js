@@ -1,0 +1,12 @@
+import type { U64 } from "./dataTypes.js";
+export declare const CHUNK_SIZE: number;
+export declare const NUM_CHUNKS_IN_PARTITION = 10;
+export declare const NUM_CHUNKS_IN_RECALL_RANGE = 2;
+export declare const NUM_PARTITIONS_PER_SLOT = 1;
+export declare const ENTROPY_PACKING_INTERATIONS = 2000;
+export declare const MAX_CHUNK_SIZE: number;
+export declare const MIN_CHUNK_SIZE: number;
+export declare const MERKLE_NOTE_SIZE = 32;
+export declare const MERKLE_HASH_SIZE = 32;
+export declare const SHA_HASH_SIZE = 32;
+export declare const IRYS_TESTNET_CHAIN_ID: U64;

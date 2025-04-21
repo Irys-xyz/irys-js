@@ -98,14 +98,14 @@ export function createFixedUint8Array<N extends number>(
   return new Uint8Array(length) as FixedUint8Array<N>;
 }
 
-export function isFixedUnint8Array<N extends number>(
+export function isFixedUint8Array<N extends number>(
   array: Uint8Array,
   length: N
 ): array is FixedUint8Array<N> {
   return array.length === length;
 }
 
-export function toFixedUnint8Array<N extends number>(
+export function toFixedUint8Array<N extends number>(
   array: Uint8Array,
   length: N
 ): FixedUint8Array<N> {
@@ -150,7 +150,7 @@ export function bigIntToBuffer(note: bigint, size: number): Buffer {
   return buf;
 }
 
-// clamped versions
+// clamped versions - LE encoding
 export function bigIntToBytes(value: bigint, numBytes: number): Uint8Array {
   const bytes = new Uint8Array(numBytes);
   for (let i = 0; i < numBytes; i++) {

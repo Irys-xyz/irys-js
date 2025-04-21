@@ -1,13 +1,21 @@
 /* eslint-disable no-case-declarations */
 
-import type { Address, H256, Signature, U32, U64, U8 } from "./dataTypes";
+import type {
+  Address,
+  Base58,
+  H256,
+  Signature,
+  U32,
+  U64,
+  U8,
+  UTF8,
+} from "./dataTypes";
 import {
-  bufferTob64Url,
   createFixedUint8Array,
   decodeBase58ToBuf,
   jsonBigIntSerialize,
   promisePool,
-  toFixedUnint8Array,
+  toFixedUint8Array,
 } from "./utils";
 import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
 import type { Input } from "rlp";
@@ -28,6 +36,7 @@ import type { IrysClient } from "./irys";
 import type { Data } from "./types";
 import { chunker } from "./chunker";
 import AsyncRetry from "async-retry";
+import type { ApiRequestConfig } from "./api";
 
 export type TransactionInterface =
   | UnsignedTransactionInterface
@@ -47,14 +56,30 @@ export type UnsignedTransactionInterface = {
   chunks?: Chunks;
 };
 
-export type SignedTransactionInterface = UnsignedTransactionInterface &
-  SignedTransactionSubInterface;
-
-export type SignedTransactionSubInterface = {
-  id: H256;
+export type SignedTransactionInterface = UnsignedTransactionInterface & {
+  id: Base58;
   signature: Signature;
   chunks: Chunks;
 };
+
+export type EncodedUnsignedTransactionInterface = {
+  version: U8;
+  anchor: Base58<H256>;
+  signer: Base58<Address>;
+  dataRoot: Base58<H256>;
+  dataSize: UTF8<U64>;
+  termFee: UTF8<U64>;
+  ledgerId: U32;
+  chainId: UTF8<U64>;
+  bundleFormat?: UTF8<U64>;
+  permFee?: UTF8<U64>;
+};
+
+export type EncodedSignedTransactionInterface =
+  EncodedUnsignedTransactionInterface & {
+    id: Base58<H256>;
+    signature: Base58<Signature>;
+  };
 
 export type Chunks = {
   dataRoot: Uint8Array;
@@ -91,14 +116,14 @@ export class UnsignedTransaction
   implements Partial<UnsignedTransactionInterface>
 {
   public version = 0;
-  protected id?: H256 = undefined;
+  public id?: Base58<H256> = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
   public dataSize = 0n;
   public termFee?: U64 = 0n;
   public chainId?: U64 = IRYS_TESTNET_CHAIN_ID;
-  protected signature?: Signature = undefined;
+  public signature?: Signature = undefined;
   public bundleFormat?: U64 = 0n;
   public permFee?: U64 = undefined;
   public ledgerId?: U32 = 0;
@@ -157,7 +182,7 @@ export class UnsignedTransaction
   public async fillAnchor(): Promise<this> {
     const apiAnchor = await this.irys.api.get("/block/latest");
     if (apiAnchor.data.blockHash) {
-      this.anchor = toFixedUnint8Array(
+      this.anchor = toFixedUint8Array(
         decodeBase58ToBuf(apiAnchor.data.blockHash),
         32
       );
@@ -176,7 +201,7 @@ export class UnsignedTransaction
 
   public async sign(key: SigningKey | string): Promise<SignedTransaction> {
     const signingKey = typeof key === "string" ? new SigningKey(key) : key;
-    this.signer ??= toFixedUnint8Array(
+    this.signer ??= toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
       20
     );
@@ -186,12 +211,12 @@ export class UnsignedTransaction
 
     const prehash = await this.getSignatureData();
     const signature = signingKey.sign(prehash);
-    this.signature = toFixedUnint8Array(getBytes(signature.serialized), 65);
+    this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error();
     }
     const idBytes = getBytes(keccak256(signature.serialized));
-    this.id = toFixedUnint8Array(idBytes, 32);
+    this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
 
     return new SignedTransaction(
       this.irys,
@@ -200,17 +225,20 @@ export class UnsignedTransaction
   }
 
   // prepares some data into chunks, associating them with this transaction instance
-  public async prepareChunks(data: Data): Promise<void> {
+  // note: this will *consume any provided async iterable* - you will need to provide a second instance for the `uploadChunks` function
+  // if your data is small enough, I recommend converting it to a buffer/Uint8Array beforehand
+  public async prepareChunks(data: Data): Promise<this> {
     const { chunks, dataSize } =
       await this.irys.merkle.generateTransactionChunks(data);
     if (dataSize === 0) {
       this.chunks = undefined;
       this.dataRoot = undefined;
-      return;
+      return this;
     }
     this.chunks = chunks;
     this.dataSize = BigInt(dataSize);
-    this.dataRoot = toFixedUnint8Array(this.chunks.dataRoot, 32);
+    this.dataRoot = toFixedUint8Array(this.chunks.dataRoot, 32);
+    return this;
   }
 
   // / returns the "signature data" aka the prehash (hash of all the tx fields)
@@ -254,7 +282,7 @@ export class SignedTransaction
   // extends BaseObject
   implements SignedTransactionInterface
 {
-  public id!: H256;
+  public id!: Base58;
   public version!: number;
   public anchor!: H256;
   public signer!: Address;
@@ -267,8 +295,6 @@ export class SignedTransaction
   public permFee?: U64 = undefined;
   public signature!: Signature;
   public irys: IrysClient;
-
-  // Computed when needed.
   public chunks!: Chunks;
 
   public constructor(irys: IrysClient, attributes: SignedTransactionInterface) {
@@ -306,29 +332,30 @@ export class SignedTransaction
     }, {}) as SignedTransactionInterface;
   }
 
-  public getHeaderSerialized(): string {
-    return jsonBigIntSerialize(this.header);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  public toJSON(): string {
+    return jsonBigIntSerialize(this.encode());
   }
 
   get txId(): string {
-    return encodeBase58(this.id);
+    return this.id;
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  public get header() {
+  public encode(): EncodedSignedTransactionInterface {
     return {
-      id: encodeBase58(this.id),
+      id: this.id,
       version: this.version,
       anchor: encodeBase58(this.anchor),
       signer: encodeBase58(this.signer),
       dataRoot: encodeBase58(this.dataRoot),
-      dataSize: this.dataSize,
-      termFee: this.termFee,
+      dataSize: this.dataSize.toString(),
+      termFee: this.termFee.toString(),
       ledgerId: this.ledgerId,
-      chainId: this.chainId,
+      chainId: this.chainId.toString(),
       signature: encodeBase58(this.signature),
-      bundleFormat: this.bundleFormat,
-      permFee: this.permFee,
+      bundleFormat: this.bundleFormat?.toString(),
+      permFee: this.permFee?.toString(),
     };
   }
 
@@ -359,25 +386,74 @@ export class SignedTransaction
       ))
     )
       throw new Error("Invalid chunk, check your data");
-    const sliced = fullData.slice(chunk.minByteRange, chunk.maxByteRange);
+    const sliced = fullData.subarray(chunk.minByteRange, chunk.maxByteRange);
     return new UnpackedChunk({
       dataRoot: this.dataRoot,
       dataSize: this.dataSize,
-      dataPath: bufferTob64Url(proof.proof),
-      bytes: bufferTob64Url(sliced),
+      dataPath: proof.proof,
+      bytes: sliced,
       txOffset: idx,
     });
   }
 
-  public async uploadHeader(): Promise<AxiosResponse> {
-    const h = this.getHeaderSerialized();
-    const res = await this.irys.api.post("/tx", h, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (res.status !== 200) {
-      throw new Error(`Error uploading tx: ${res.statusText}`);
+  // Returns an unpacked chunk, passing through the provided data as the chunk's full data
+  public async getChunkPassthrough(
+    idx: number,
+    data: Uint8Array
+  ): Promise<UnpackedChunk> {
+    if (!this.chunks) {
+      throw new Error(`Chunks have not been prepared`);
     }
-    return res;
+    const proof = this.chunks.proofs[idx];
+    // const chunk = this.chunks.chunks[idx];
+
+    if (
+      !(await this.irys.merkle.validatePath(
+        this.dataRoot,
+        Number(
+          chunkEndByteOffset(
+            idx,
+            this.dataSize,
+            this.irys.storageConfig.chunkSize
+          )
+        ),
+        0,
+        Number(this.dataSize),
+        proof.proof
+      ))
+    )
+      throw new Error("Invalid chunk, check your data");
+
+    return new UnpackedChunk({
+      dataRoot: this.dataRoot,
+      dataSize: this.dataSize,
+      dataPath: proof.proof,
+      bytes: data,
+      txOffset: idx,
+    });
+  }
+
+  // Uploads the transaction's header and chunks
+  public async upload(
+    data: Data,
+    opts?: {
+      retry?: AsyncRetry.Options;
+      concurrency?: number;
+      onProgress?: (idx: number) => void;
+    }
+  ): Promise<void> {
+    await this.uploadHeader(opts);
+    await this.uploadChunks(data, opts);
+  }
+
+  public async uploadHeader(
+    apiConfig?: ApiRequestConfig
+  ): Promise<AxiosResponse> {
+    return await this.irys.api.post("/tx", this.toJSON(), {
+      ...apiConfig,
+      headers: { "Content-Type": "application/json" },
+      validateStatus: (s) => s < 400,
+    });
   }
 
   // Upload this transactions' chunks to the connected node
@@ -395,9 +471,10 @@ export class SignedTransaction
       (chunkData, idx) =>
         AsyncRetry(
           async (bail) => {
-            const chunk = await this.getChunk(idx, chunkData);
+            const chunk = await this.getChunkPassthrough(idx, chunkData);
             // TODO: skip uploading if this chunk exists on the node.
-            const res = await this.irys.api.post("/chunk", chunk.serialize(), {
+            const serializedChunk = chunk.toJSON();
+            const res = await this.irys.api.post("/chunk", serializedChunk, {
               headers: { "Content-Type": "application/json" },
             });
             if (res.status >= 400)

@@ -27,7 +27,7 @@ async function main(): Promise<void> {
     "0xdb793353b633df950842415065f769699541160845d73db902eadee6bc5042d0";
 
   const signedTx = await tx.sign(priv);
-  const bs58Sig = signedTx.header.signature;
+  const bs58Sig = signedTx.encode().signature;
   const hexSig = hexlify(signedTx.signature);
 
   console.log("bs58", bs58Sig, "hex", hexSig);
