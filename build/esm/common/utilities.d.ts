@@ -4,7 +4,6 @@ import type { Resolvable } from "./types.js";
 export declare class Utils {
     irys: IrysClient;
     constructor(irysClient: IrysClient);
-    getPrice(size: number | bigint, ledgerId?: bigint | number): Promise<bigint>;
     /**
      * Throws an error if the provided axios reponse has a status code != 200
      * @param response an axios response

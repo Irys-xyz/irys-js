@@ -2,6 +2,22 @@ import Axios from "axios";
 import AsyncRetry from "async-retry";
 import { JsonRpcProvider } from "ethers";
 export const isApiConfig = (o) => typeof o !== "string" && "url" in o;
+// This exists primarily to make route/API changes a lot easier
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export var V1_API_ROUTES;
+(function (V1_API_ROUTES) {
+    V1_API_ROUTES["GET_TX_HEADER"] = "/v1/tx/#";
+    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/is_promoted";
+    V1_API_ROUTES["GET_STORAGE_CONFIG"] = "/v1/network/config";
+    V1_API_ROUTES["GET_INFO"] = "/";
+    V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
+    V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
+    V1_API_ROUTES["GET_LATEST_BLOCK"] = "/v1/block/latest";
+    V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
+    V1_API_ROUTES["POST_TX_HEADER"] = "/v1/tx";
+    V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
+})(V1_API_ROUTES || (V1_API_ROUTES = {}));
+export const API_VERSIONS = ["v1"];
 export default class Api {
     _instance;
     rpcInstance;
@@ -12,7 +28,7 @@ export default class Api {
             this.applyConfig(config);
     }
     get executionRpcUrl() {
-        return buildUrl(this.config.url, ["execution-rpc"]);
+        return buildUrl(this.config.url, [V1_API_ROUTES.EXECUTION_RPC]);
     }
     get rpcProvider() {
         this.rpcInstance ??= new JsonRpcProvider(this.executionRpcUrl.toString());
@@ -42,7 +58,7 @@ export default class Api {
         // if (config.network && !Object.keys(config.headers).includes("x-network"))
         //   config.headers["x-network"] = config.network;
         return {
-            url: config.url,
+            url: normalizeUrl(config.url),
             timeout: config.timeout ?? 20000,
             logging: config.logging ?? false,
             logger: config.logger ?? console.log,
@@ -109,6 +125,13 @@ export default class Api {
             ...config?.retry,
         });
     }
+}
+export function normalizeUrl(url) {
+    const pathComponents = url.pathname.split("/");
+    // strip the "v<number>" suffix if it exists - the client implementation decides what version to use
+    if (/v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
+        pathComponents.pop();
+    return buildUrl(new URL(url.origin), [...pathComponents]);
 }
 export function buildUrl(base, paths) {
     // Remove leading/trailing slashes and filter out empty parts

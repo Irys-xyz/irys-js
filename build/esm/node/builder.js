@@ -32,9 +32,8 @@ export class IrysClientBuilder {
     }
     async build() {
         const client = new NodeIrysClient({
+            ...this.builderConfig,
             api: this.builderConfig.nodes[0],
-            chainId: this.builderConfig.chainId,
-            cryptoDriver: this.builderConfig.cryptoDriver,
         });
         await client.ready();
         return client;
@@ -45,8 +44,8 @@ export class IrysClientBuilder {
         const res = this.build();
         return res.then(onFulfilled, onRejected);
     }
-    async catch(onReject) {
-        return this.then().catch(onReject);
+    async catch(onRejected) {
+        return this.then().catch(onRejected);
     }
     async finally(onFinally) {
         return this.then().finally(onFinally);
