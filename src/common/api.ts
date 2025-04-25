@@ -26,6 +26,23 @@ export type ApiRequestConfig = {
   retry?: AsyncRetry.Options;
 } & AxiosRequestConfig;
 
+// This exists primarily to make route/API changes a lot easier
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export enum V1_API_ROUTES {
+  GET_TX_HEADER = "/v1/tx/#",
+  GET_PROMOTION_STATUS = "/v1/tx/#/is_promoted",
+  GET_STORAGE_CONFIG = "/v1/network/config",
+  GET_INFO = "/",
+  EXECUTION_RPC = "/v1/execution-rpc",
+  GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data_start_offset",
+  GET_LATEST_BLOCK = "/v1/block/latest",
+  GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
+  POST_TX_HEADER = "/v1/tx",
+  POST_CHUNK = "/v1/chunk",
+}
+
+export const API_VERSIONS = ["v1"];
+
 export default class Api {
   protected _instance?: AxiosInstance;
   protected rpcInstance?: JsonRpcProvider;
@@ -39,7 +56,7 @@ export default class Api {
   }
 
   public get executionRpcUrl(): URL {
-    return buildUrl(this.config.url, ["execution-rpc"]);
+    return buildUrl(this.config.url, [V1_API_ROUTES.EXECUTION_RPC]);
   }
 
   public get rpcProvider(): JsonRpcProvider {
@@ -76,8 +93,9 @@ export default class Api {
     config.headers ??= {};
     // if (config.network && !Object.keys(config.headers).includes("x-network"))
     //   config.headers["x-network"] = config.network;
+
     return {
-      url: config.url,
+      url: normalizeUrl(config.url),
       timeout: config.timeout ?? 20000,
       logging: config.logging ?? false,
       logger: config.logger ?? console.log,
@@ -162,6 +180,13 @@ export default class Api {
   }
 }
 
+export function normalizeUrl(url: URL): URL {
+  const pathComponents = url.pathname.split("/");
+  // strip the "v<number>" suffix if it exists - the client implementation decides what version to use
+  if (/v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
+    pathComponents.pop();
+  return buildUrl(new URL(url.origin), [...pathComponents]);
+}
 export function buildUrl(base: URL, paths: string[]): URL {
   // Remove leading/trailing slashes and filter out empty parts
   const cleanParts = [base.pathname]

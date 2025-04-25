@@ -1,4 +1,4 @@
-import type { Address, Base58, H256, Signature, U32, U64, U8, UTF8 } from "./dataTypes.js";
+import type { Address, Base58, H256, Signature, TransactionId, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import { type MerkleChunk, type MerkleProof } from "./merkle.js";
 import { SigningKey } from "ethers";
 import { UnpackedChunk } from "./chunk.js";
@@ -6,7 +6,7 @@ import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys.js";
 import type { Data } from "./types.js";
 import AsyncRetry from "async-retry";
-import type { ApiRequestConfig } from "./api.js";
+import { type ApiRequestConfig } from "./api.js";
 export type TransactionInterface = UnsignedTransactionInterface | SignedTransactionInterface;
 export type UnsignedTransactionInterface = {
     version: U8;
@@ -24,7 +24,7 @@ export type UnsignedTransactionInterface = {
 export type SignedTransactionInterface = UnsignedTransactionInterface & {
     id: Base58;
     signature: Signature;
-    chunks: Chunks;
+    chunks?: Chunks;
 };
 export type EncodedUnsignedTransactionInterface = {
     version: U8;
@@ -41,6 +41,7 @@ export type EncodedUnsignedTransactionInterface = {
 export type EncodedSignedTransactionInterface = EncodedUnsignedTransactionInterface & {
     id: Base58<H256>;
     signature: Base58<Signature>;
+    chunks?: UTF8<Chunks>;
 };
 export type Chunks = {
     dataRoot: Uint8Array;
@@ -49,7 +50,7 @@ export type Chunks = {
 };
 export declare class UnsignedTransaction implements Partial<UnsignedTransactionInterface> {
     version: number;
-    id?: Base58<H256>;
+    id?: TransactionId;
     anchor?: H256;
     signer?: Address;
     dataRoot?: H256;
@@ -78,7 +79,7 @@ export declare class UnsignedTransaction implements Partial<UnsignedTransactionI
     getSignatureData(): Promise<Uint8Array>;
 }
 export declare class SignedTransaction implements SignedTransactionInterface {
-    id: Base58;
+    id: TransactionId;
     version: number;
     anchor: H256;
     signer: Address;
@@ -91,14 +92,16 @@ export declare class SignedTransaction implements SignedTransactionInterface {
     permFee?: U64;
     signature: Signature;
     irys: IrysClient;
-    chunks: Chunks;
+    chunks: Chunks | undefined;
     constructor(irys: IrysClient, attributes: SignedTransactionInterface);
     get missingProperties(): string[];
     throwOnMissing(): void;
     getHeader(): SignedTransactionInterface;
     toJSON(): string;
     get txId(): string;
-    encode(): EncodedSignedTransactionInterface;
+    prepareChunks(data: Data): Promise<this>;
+    encode(withChunks?: boolean): EncodedSignedTransactionInterface;
+    static decode(irys: IrysClient, encoded: EncodedSignedTransactionInterface): SignedTransaction;
     getChunk(idx: number, fullData: Uint8Array): Promise<UnpackedChunk>;
     getChunkPassthrough(idx: number, data: Uint8Array): Promise<UnpackedChunk>;
     upload(data: Data, opts?: {

@@ -1,5 +1,5 @@
 import { encodeBase58 } from "ethers";
-import { b64UrlToBuffer, bigIntDivCeil, bufferTob64Url, decodeBase58ToBuf, jsonBigIntSerialize, toFixedUint8Array, } from "./utils.js";
+import { b64UrlToBuffer, bigIntDivCeil, bufferTob64Url, decodeBase58, jsonBigIntSerialize, toFixedUint8Array, } from "./utils.js";
 import { unpackChunk } from "./packing.js";
 import { IRYS_TESTNET_CHAIN_ID } from "./constants.js";
 export var ChunkFormat;
@@ -54,7 +54,7 @@ export class UnpackedChunk {
     }
     static decode(data) {
         return new UnpackedChunk({
-            dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
+            dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
             dataPath: b64UrlToBuffer(data.dataPath),
             dataSize: BigInt(data.dataSize),
             txOffset: data.txOffset,
@@ -105,14 +105,14 @@ export class PackedChunk {
     }
     static decode(irys, data) {
         return new PackedChunk(irys, {
-            dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
+            dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
             dataPath: b64UrlToBuffer(data.dataPath),
             dataSize: BigInt(data.dataSize),
             txOffset: data.txOffset,
             bytes: b64UrlToBuffer(data.bytes),
-            packingAddress: toFixedUint8Array(decodeBase58ToBuf(data.packingAddress), 20),
+            packingAddress: toFixedUint8Array(decodeBase58(data.packingAddress), 20),
             partitionOffset: data.partitionOffset,
-            partitionHash: toFixedUint8Array(decodeBase58ToBuf(data.partitionHash), 32),
+            partitionHash: toFixedUint8Array(decodeBase58(data.partitionHash), 32),
         });
     }
     async unpack() {

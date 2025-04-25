@@ -9,10 +9,13 @@ import type { UnsignedTransactionInterface } from "./transaction.js";
 import { UnsignedTransaction } from "./transaction.js";
 import { Utils } from "./utilities.js";
 import { Account } from "./account.js";
+import { Network } from "./network.js";
+import { StorageTransactions } from "./storageTransactions.js";
 export type IrysConfig = {
     api: ApiConfig;
     chainId: U64;
     cryptoDriver: CryptoInterface;
+    storageConfig?: StorageConfig;
 };
 export declare class IrysClient {
     config: IrysConfig;
@@ -23,6 +26,8 @@ export declare class IrysClient {
     programmableData: ProgrammableData;
     utils: Utils;
     account: Account;
+    network: Network;
+    storageTransactions: StorageTransactions;
     constructor(config: IrysConfig);
     ready(): Promise<this>;
     get executionRpcUrl(): URL;

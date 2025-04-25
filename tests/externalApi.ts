@@ -6,7 +6,7 @@ import { PackedChunk } from "../src/common/chunk";
 import { arrayCompare } from "../src/common/merkle";
 
 async function main() {
-  const irys = await new IrysClient().node("http:/172.17.0.3:8080/v1");
+  const irys = await new IrysClient().node("http://172.17.0.12:8080");
 
   const tx = irys.createTransaction();
 
@@ -32,14 +32,14 @@ async function main() {
   await sleep(2_000);
 
   // get tx header and the chunk(s)
-  const headerReq = await irys.api.get(`/tx/${signedTx.txId}`);
+  const headerReq = await irys.api.get(`v1/tx/${signedTx.txId}`);
 
   const bs58 = encodeBase58(signedTx.dataRoot);
   if (headerReq.data.dataRoot !== bs58) throw new Error("data_root mismatch");
   let downloadedData = new Uint8Array();
-  for (let i = 0; i < signedTx.chunks.chunks.length; i++) {
+  for (let i = 0; i < (signedTx?.chunks?.chunks?.length ?? 0); i++) {
     const chunkReq = await irys.api.get(
-      `/chunk/data_root/${tx.ledgerId}/${bs58}/${i}`
+      `v1/chunk/data_root/${tx.ledgerId}/${bs58}/${i}`
     );
     console.log(
       `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`

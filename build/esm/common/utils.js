@@ -190,9 +190,12 @@ export function bigIntDivCeil(dividend, divisor) {
         : (dividend + divisor - 1n) / divisor;
 }
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-export const decodeBase58ToBuf = (string) => bs58.decode(string);
+export const decodeBase58 = (string) => bs58.decode(string);
 export const encodeBase58 = (bytes) => bs58.encode(bytes);
-export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58ToBuf(irysAddr.toLowerCase()));
+export function decodeBase58ToFixed(string, length) {
+    return toFixedUint8Array(decodeBase58(string), length);
+}
+export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr.toLowerCase()));
 export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))
     : encodeBase58(getBytes("0x" + execAddr));

@@ -5,7 +5,36 @@ import { StorageConfig } from "./storageConfig.js";
 import { UnsignedTransaction } from "./transaction.js";
 import { Utils } from "./utilities.js";
 import { Account } from "./account.js";
-export class IrysClient {
+import { Network } from "./network.js";
+import { StorageTransactions } from "./storageTransactions.js";
+// // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unsafe-declaration-merging
+// export declare interface IrysClient {
+//   on<U extends keyof IrysClientEvents>(
+//     event: U,
+//     listener: IrysClientEvents[U]
+//   ): this;
+//   emit<U extends keyof IrysClientEvents>(
+//     event: U,
+//     ...args: Parameters<IrysClientEvents[U]>
+//   ): boolean;
+// }
+// type IrysClientEvents = {
+//   chunkUpload: ({
+//     txId,
+//     offset,
+//     index,
+//   }: {
+//     txId: TransactionId;
+//     offset: bigint;
+//     index: number;
+//   }) => void;
+//   debugLog: (msg: string, meta?: any) => void;
+//   infoLog: (msg: string, meta?: any) => void;
+//   warnLog: (msg: string, meta?: any) => void;
+//   errorLog: (msg: string, meta?: any) => void;
+// };
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export class IrysClient /* extends EventEmitter */ {
     config;
     api;
     merkle;
@@ -14,15 +43,22 @@ export class IrysClient {
     programmableData;
     utils;
     account;
+    network;
+    storageTransactions;
     constructor(config) {
+        // super({ captureRejections: true });
         this.config = config;
         this.cryptoDriver = config.cryptoDriver;
+        if (config.storageConfig)
+            this.storageConfig = config.storageConfig;
     }
     async ready() {
         this.api = new Api(this.config.api);
+        this.network = new Network(this.api);
+        this.storageTransactions = new StorageTransactions(this.api);
         // get storage config
-        // TODO: validate chainID
-        this.storageConfig ??= new StorageConfig((await this.api.get("/network/config")).data);
+        // TODO: validate chainID, remove/rework this
+        this.storageConfig ??= StorageConfig.decode(await this.network.getStorageConfig());
         this.utils = new Utils(this);
         this.account = new Account(this);
         this.merkle = new Merkle({

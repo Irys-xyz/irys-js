@@ -9,20 +9,6 @@ export class Utils {
     this.irys = irysClient;
   }
 
-  public async getPrice(
-    size: number | bigint,
-    ledgerId: bigint | number = 0
-  ): Promise<bigint> {
-    return BigInt(
-      (
-        await Utils.checkAndThrow(
-          this.irys.api.get(`/price/${ledgerId.toString()}/${size}`),
-          "getting price for transaction"
-        )
-      ).data
-    );
-  }
-
   /**
    * Throws an error if the provided axios reponse has a status code != 200
    * @param response an axios response
