@@ -252,13 +252,19 @@ export function bigIntDivCeil(dividend: bigint, divisor: bigint): bigint {
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-export const decodeBase58ToBuf = (string: Base58): Uint8Array =>
-  bs58.decode(string);
+export const decodeBase58 = (string: Base58): Uint8Array => bs58.decode(string);
 
 export const encodeBase58 = (bytes: Uint8Array): Base58 => bs58.encode(bytes);
 
+export function decodeBase58ToFixed<N extends number>(
+  string: Base58,
+  length: N
+): FixedUint8Array<N> {
+  return toFixedUint8Array(decodeBase58(string), length);
+}
+
 export const irysToExecAddr = (irysAddr: string): string =>
-  hexlify(decodeBase58ToBuf(irysAddr.toLowerCase()));
+  hexlify(decodeBase58(irysAddr.toLowerCase()));
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))

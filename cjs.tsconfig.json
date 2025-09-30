@@ -1,6 +1,7 @@
 {
     "extends": "./tsconfig.json",
     "compilerOptions": {
+        "declaration": true,
         "module": "Node16",
         "target": "es2021",
         "moduleResolution": "Node16",

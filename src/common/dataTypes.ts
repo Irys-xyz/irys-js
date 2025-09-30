@@ -15,8 +15,15 @@ export type TxRelativeChunkOffset = U32;
 export type PartitionChunkOffset = U32;
 export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
+export type BlockHash = H256;
+
+// the generic is used to hint at the decoded/internal type
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type Base58<T = never> = string;
-export type Base64 = string;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type Base64<T = never> = string;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type UTF8<T = never> = string;
+
+export type TransactionId = Base58<H256>;

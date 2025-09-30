@@ -5,9 +5,6 @@ class Utils {
     constructor(irysClient) {
         this.irys = irysClient;
     }
-    async getPrice(size, ledgerId = 0) {
-        return BigInt((await Utils.checkAndThrow(this.irys.api.get(`/price/${ledgerId.toString()}/${size}`), "getting price for transaction")).data);
-    }
     /**
      * Throws an error if the provided axios reponse has a status code != 200
      * @param response an axios response

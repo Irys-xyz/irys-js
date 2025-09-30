@@ -1,5 +1,5 @@
 /* eslint-disable no-case-declarations */
-import { createFixedUint8Array, decodeBase58ToBuf, jsonBigIntSerialize, promisePool, toFixedUint8Array, } from "./utils.js";
+import { createFixedUint8Array, decodeBase58ToFixed, promisePool, toFixedUint8Array, } from "./utils.js";
 import { arrayCompare } from "./merkle.js";
 import { encode } from "rlp";
 import { SigningKey } from "ethers";
@@ -8,6 +8,7 @@ import { IRYS_TESTNET_CHAIN_ID } from "./constants.js";
 import { UnpackedChunk, chunkEndByteOffset } from "./chunk.js";
 import { chunker } from "./chunker.js";
 import AsyncRetry from "async-retry";
+import { V1_API_ROUTES } from "./api.js";
 const requiredUnsignedTxHeaderProps = [
     "version",
     "anchor",
@@ -67,11 +68,11 @@ export class UnsignedTransaction {
             throw new Error("missing required field ledgerId");
         // if we're ledger 0, get term & perm fee
         if (this.ledgerId === 0) {
-            this.permFee = await this.irys.utils.getPrice(this.dataSize, 0);
-            this.termFee = await this.irys.utils.getPrice(this.dataSize, 1);
+            this.permFee = await this.irys.network.getPrice(this.dataSize, 0);
+            this.termFee = 0n; /* await this.irys.utils.getPrice(this.dataSize, 1); */
         }
         else {
-            this.termFee = await this.irys.utils.getPrice(this.dataSize, this.ledgerId);
+            this.termFee = await this.irys.network.getPrice(this.dataSize, this.ledgerId);
         }
         return this;
     }
@@ -85,9 +86,9 @@ export class UnsignedTransaction {
         return this.termFee + this.permFee;
     }
     async fillAnchor() {
-        const apiAnchor = await this.irys.api.get("/block/latest");
+        const apiAnchor = await this.irys.network.getLatestBlock();
         if (apiAnchor.data.blockHash) {
-            this.anchor = toFixedUint8Array(decodeBase58ToBuf(apiAnchor.data.blockHash), 32);
+            this.anchor = decodeBase58ToFixed(apiAnchor.data.blockHash, 32);
         }
         else {
             this.anchor = createFixedUint8Array(32).fill(1);
@@ -97,10 +98,12 @@ export class UnsignedTransaction {
     throwOnMissing() {
         const missing = this.missingProperties;
         if (missing.length)
-            throw new Error(`Missing required properties: ${missing.join(", ")}`);
+            throw new Error(`Missing required properties: ${missing.join(", ")} - did you call tx.prepareChunks(<data>)?`);
     }
     async sign(key) {
-        const signingKey = typeof key === "string" ? new SigningKey(key) : key;
+        const signingKey = typeof key === "string"
+            ? new SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
+            : key;
         this.signer ??= toFixedUint8Array(getBytes(computeAddress(signingKey.publicKey)), 20);
         if (!this.anchor)
             await this.fillAnchor();
@@ -208,15 +211,28 @@ export class SignedTransaction {
             return acc;
         }, {});
     }
+    // if you want the encoded header without chunks, use `this.encode(false)`
     // eslint-disable-next-line @typescript-eslint/naming-convention
     toJSON() {
-        return jsonBigIntSerialize(this.encode());
+        return JSON.stringify(this.encode(true));
     }
     get txId() {
         return this.id;
     }
+    // prepares some data into chunks, associating them with this transaction instance
+    // note: this will *consume any provided async iterable* - you will need to provide a second instance for the `uploadChunks` function
+    // if your data is small enough, I recommend converting it to a buffer/Uint8Array beforehand
+    async prepareChunks(data) {
+        const { chunks, dataSize } = await this.irys.merkle.generateTransactionChunks(data);
+        this.chunks = chunks;
+        if (this.dataSize !== BigInt(dataSize))
+            throw new Error("regenerated chunks dataSize mismatch");
+        if (!arrayCompare(this.dataRoot, toFixedUint8Array(this.chunks.dataRoot, 32)))
+            throw new Error("regenerated chunks dataRoot mismatch");
+        return this;
+    }
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    encode() {
+    encode(withChunks = false) {
         return {
             id: this.id,
             version: this.version,
@@ -230,7 +246,28 @@ export class SignedTransaction {
             signature: encodeBase58(this.signature),
             bundleFormat: this.bundleFormat?.toString(),
             permFee: this.permFee?.toString(),
+            // TODO: add chunk serialization?
+            chunks: withChunks ? JSON.stringify(this.chunks) : undefined,
         };
+    }
+    static decode(irys, encoded) {
+        return new SignedTransaction(irys, {
+            id: encoded.id,
+            version: encoded.version,
+            anchor: decodeBase58ToFixed(encoded.anchor, 32),
+            signer: decodeBase58ToFixed(encoded.signer, 20),
+            dataRoot: decodeBase58ToFixed(encoded.dataRoot, 32),
+            dataSize: BigInt(encoded.dataSize),
+            termFee: BigInt(encoded.termFee),
+            ledgerId: encoded.ledgerId,
+            chainId: BigInt(encoded.chainId),
+            signature: decodeBase58ToFixed(encoded.signature, 65),
+            bundleFormat: encoded.bundleFormat
+                ? BigInt(encoded.bundleFormat)
+                : undefined,
+            permFee: encoded.permFee ? BigInt(encoded.permFee) : undefined,
+            chunks: encoded.chunks ? JSON.parse(encoded.chunks) : undefined,
+        });
     }
     // Returns an unpacked chunk, slicing from the provided full data
     async getChunk(idx, fullData) {
@@ -273,7 +310,7 @@ export class SignedTransaction {
         await this.uploadChunks(data, opts);
     }
     async uploadHeader(apiConfig) {
-        return await this.irys.api.post("/tx", this.toJSON(), {
+        return await this.irys.api.post(V1_API_ROUTES.POST_TX_HEADER, this.toJSON(), {
             ...apiConfig,
             headers: { "Content-Type": "application/json" },
             validateStatus: (s) => s < 400,
@@ -286,7 +323,7 @@ export class SignedTransaction {
             const chunk = await this.getChunkPassthrough(idx, chunkData);
             // TODO: skip uploading if this chunk exists on the node.
             const serializedChunk = chunk.toJSON();
-            const res = await this.irys.api.post("/chunk", serializedChunk, {
+            const res = await this.irys.api.post(V1_API_ROUTES.POST_CHUNK, serializedChunk, {
                 headers: { "Content-Type": "application/json" },
             });
             if (res.status >= 400)

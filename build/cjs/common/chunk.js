@@ -53,7 +53,7 @@ class UnpackedChunk {
     }
     static decode(data) {
         return new UnpackedChunk({
-            dataRoot: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58ToBuf)(data.dataRoot), 32),
+            dataRoot: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58)(data.dataRoot), 32),
             dataPath: (0, utils_1.b64UrlToBuffer)(data.dataPath),
             dataSize: BigInt(data.dataSize),
             txOffset: data.txOffset,
@@ -96,14 +96,14 @@ class PackedChunk {
     }
     static decode(irys, data) {
         return new PackedChunk(irys, {
-            dataRoot: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58ToBuf)(data.dataRoot), 32),
+            dataRoot: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58)(data.dataRoot), 32),
             dataPath: (0, utils_1.b64UrlToBuffer)(data.dataPath),
             dataSize: BigInt(data.dataSize),
             txOffset: data.txOffset,
             bytes: (0, utils_1.b64UrlToBuffer)(data.bytes),
-            packingAddress: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58ToBuf)(data.packingAddress), 20),
+            packingAddress: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58)(data.packingAddress), 20),
             partitionOffset: data.partitionOffset,
-            partitionHash: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58ToBuf)(data.partitionHash), 32),
+            partitionHash: (0, utils_1.toFixedUint8Array)((0, utils_1.decodeBase58)(data.partitionHash), 32),
         });
     }
     async unpack() {

@@ -5,6 +5,7 @@ import type {
   Base58,
   H256,
   Signature,
+  TransactionId,
   U32,
   U64,
   U8,
@@ -12,8 +13,7 @@ import type {
 } from "./dataTypes";
 import {
   createFixedUint8Array,
-  decodeBase58ToBuf,
-  jsonBigIntSerialize,
+  decodeBase58ToFixed,
   promisePool,
   toFixedUint8Array,
 } from "./utils";
@@ -36,7 +36,7 @@ import type { IrysClient } from "./irys";
 import type { Data } from "./types";
 import { chunker } from "./chunker";
 import AsyncRetry from "async-retry";
-import type { ApiRequestConfig } from "./api";
+import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
 
 export type TransactionInterface =
   | UnsignedTransactionInterface
@@ -59,7 +59,7 @@ export type UnsignedTransactionInterface = {
 export type SignedTransactionInterface = UnsignedTransactionInterface & {
   id: Base58;
   signature: Signature;
-  chunks: Chunks;
+  chunks?: Chunks;
 };
 
 export type EncodedUnsignedTransactionInterface = {
@@ -79,6 +79,7 @@ export type EncodedSignedTransactionInterface =
   EncodedUnsignedTransactionInterface & {
     id: Base58<H256>;
     signature: Base58<Signature>;
+    chunks?: UTF8<Chunks>;
   };
 
 export type Chunks = {
@@ -116,7 +117,7 @@ export class UnsignedTransaction
   implements Partial<UnsignedTransactionInterface>
 {
   public version = 0;
-  public id?: Base58<H256> = undefined;
+  public id?: TransactionId = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
@@ -157,10 +158,10 @@ export class UnsignedTransaction
       throw new Error("missing required field ledgerId");
     // if we're ledger 0, get term & perm fee
     if (this.ledgerId === 0) {
-      this.permFee = await this.irys.utils.getPrice(this.dataSize, 0);
-      this.termFee = await this.irys.utils.getPrice(this.dataSize, 1);
+      this.permFee = await this.irys.network.getPrice(this.dataSize, 0);
+      this.termFee = 0n; /* await this.irys.utils.getPrice(this.dataSize, 1); */
     } else {
-      this.termFee = await this.irys.utils.getPrice(
+      this.termFee = await this.irys.network.getPrice(
         this.dataSize,
         this.ledgerId
       );
@@ -180,12 +181,9 @@ export class UnsignedTransaction
   }
 
   public async fillAnchor(): Promise<this> {
-    const apiAnchor = await this.irys.api.get("/block/latest");
+    const apiAnchor = await this.irys.network.getLatestBlock();
     if (apiAnchor.data.blockHash) {
-      this.anchor = toFixedUint8Array(
-        decodeBase58ToBuf(apiAnchor.data.blockHash),
-        32
-      );
+      this.anchor = decodeBase58ToFixed(apiAnchor.data.blockHash, 32);
     } else {
       this.anchor = createFixedUint8Array(32).fill(1);
     }
@@ -196,11 +194,18 @@ export class UnsignedTransaction
   throwOnMissing(): void {
     const missing = this.missingProperties;
     if (missing.length)
-      throw new Error(`Missing required properties: ${missing.join(", ")}`);
+      throw new Error(
+        `Missing required properties: ${missing.join(
+          ", "
+        )} - did you call tx.prepareChunks(<data>)?`
+      );
   }
 
   public async sign(key: SigningKey | string): Promise<SignedTransaction> {
-    const signingKey = typeof key === "string" ? new SigningKey(key) : key;
+    const signingKey =
+      typeof key === "string"
+        ? new SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
+        : key;
     this.signer ??= toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
       20
@@ -279,10 +284,10 @@ export class UnsignedTransaction
 }
 
 export class SignedTransaction
-  // extends BaseObject
+  // extends UnsignedTransaction
   implements SignedTransactionInterface
 {
-  public id!: Base58;
+  public id!: TransactionId;
   public version!: number;
   public anchor!: H256;
   public signer!: Address;
@@ -295,7 +300,7 @@ export class SignedTransaction
   public permFee?: U64 = undefined;
   public signature!: Signature;
   public irys: IrysClient;
-  public chunks!: Chunks;
+  public chunks: Chunks | undefined;
 
   public constructor(irys: IrysClient, attributes: SignedTransactionInterface) {
     // super();
@@ -332,17 +337,35 @@ export class SignedTransaction
     }, {}) as SignedTransactionInterface;
   }
 
+  // if you want the encoded header without chunks, use `this.encode(false)`
   // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
-    return jsonBigIntSerialize(this.encode());
+    return JSON.stringify(this.encode(true));
   }
 
   get txId(): string {
     return this.id;
   }
 
+  // prepares some data into chunks, associating them with this transaction instance
+  // note: this will *consume any provided async iterable* - you will need to provide a second instance for the `uploadChunks` function
+  // if your data is small enough, I recommend converting it to a buffer/Uint8Array beforehand
+  public async prepareChunks(data: Data): Promise<this> {
+    const { chunks, dataSize } =
+      await this.irys.merkle.generateTransactionChunks(data);
+    this.chunks = chunks;
+
+    if (this.dataSize !== BigInt(dataSize))
+      throw new Error("regenerated chunks dataSize mismatch");
+    if (
+      !arrayCompare(this.dataRoot, toFixedUint8Array(this.chunks.dataRoot, 32))
+    )
+      throw new Error("regenerated chunks dataRoot mismatch");
+    return this;
+  }
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  public encode(): EncodedSignedTransactionInterface {
+  public encode(withChunks = false): EncodedSignedTransactionInterface {
     return {
       id: this.id,
       version: this.version,
@@ -356,7 +379,32 @@ export class SignedTransaction
       signature: encodeBase58(this.signature),
       bundleFormat: this.bundleFormat?.toString(),
       permFee: this.permFee?.toString(),
+      // TODO: add chunk serialization?
+      chunks: withChunks ? JSON.stringify(this.chunks) : undefined,
     };
+  }
+
+  public static decode(
+    irys: IrysClient,
+    encoded: EncodedSignedTransactionInterface
+  ): SignedTransaction {
+    return new SignedTransaction(irys, {
+      id: encoded.id,
+      version: encoded.version,
+      anchor: decodeBase58ToFixed(encoded.anchor, 32),
+      signer: decodeBase58ToFixed(encoded.signer, 20),
+      dataRoot: decodeBase58ToFixed(encoded.dataRoot, 32),
+      dataSize: BigInt(encoded.dataSize),
+      termFee: BigInt(encoded.termFee),
+      ledgerId: encoded.ledgerId,
+      chainId: BigInt(encoded.chainId),
+      signature: decodeBase58ToFixed(encoded.signature, 65),
+      bundleFormat: encoded.bundleFormat
+        ? BigInt(encoded.bundleFormat)
+        : undefined,
+      permFee: encoded.permFee ? BigInt(encoded.permFee) : undefined,
+      chunks: encoded.chunks ? JSON.parse(encoded.chunks) : undefined,
+    });
   }
 
   // Returns an unpacked chunk, slicing from the provided full data
@@ -449,11 +497,15 @@ export class SignedTransaction
   public async uploadHeader(
     apiConfig?: ApiRequestConfig
   ): Promise<AxiosResponse> {
-    return await this.irys.api.post("/tx", this.toJSON(), {
-      ...apiConfig,
-      headers: { "Content-Type": "application/json" },
-      validateStatus: (s) => s < 400,
-    });
+    return await this.irys.api.post(
+      V1_API_ROUTES.POST_TX_HEADER,
+      this.toJSON(),
+      {
+        ...apiConfig,
+        headers: { "Content-Type": "application/json" },
+        validateStatus: (s) => s < 400,
+      }
+    );
   }
 
   // Upload this transactions' chunks to the connected node
@@ -474,9 +526,13 @@ export class SignedTransaction
             const chunk = await this.getChunkPassthrough(idx, chunkData);
             // TODO: skip uploading if this chunk exists on the node.
             const serializedChunk = chunk.toJSON();
-            const res = await this.irys.api.post("/chunk", serializedChunk, {
-              headers: { "Content-Type": "application/json" },
-            });
+            const res = await this.irys.api.post(
+              V1_API_ROUTES.POST_CHUNK,
+              serializedChunk,
+              {
+                headers: { "Content-Type": "application/json" },
+              }
+            );
             if (res.status >= 400)
               bail(
                 new Error(`Error uploading chunk ${idx}: ${res.statusText}`)

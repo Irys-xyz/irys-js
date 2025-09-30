@@ -21,5 +21,14 @@ export class StorageConfig {
             }
         }
     }
+    static decode(encoded) {
+        return new StorageConfig({
+            chunkSize: Number(encoded.chunkSize),
+            numChunksInPartition: Number(encoded.numChunksInPartition),
+            numChunksInRecallRange: Number(encoded.numChunksInRecallRange),
+            numPartitionsInSlot: Number(encoded.numPartitionsInSlot),
+            entropyPackingIterations: Number(encoded.entropyPackingIterations),
+        });
+    }
 }
 //# sourceMappingURL=storageConfig.js.map

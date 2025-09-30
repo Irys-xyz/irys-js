@@ -12,7 +12,7 @@ import {
   b64UrlToBuffer,
   bigIntDivCeil,
   bufferTob64Url,
-  decodeBase58ToBuf,
+  decodeBase58,
   jsonBigIntSerialize,
   toFixedUint8Array,
 } from "./utils";
@@ -98,7 +98,7 @@ export class UnpackedChunk implements UnpackedChunkInterface {
 
   public static decode(data: EncodedUnpackedChunkInterface): UnpackedChunk {
     return new UnpackedChunk({
-      dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
+      dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
       dataPath: b64UrlToBuffer(data.dataPath),
       dataSize: BigInt(data.dataSize),
       txOffset: data.txOffset,
@@ -171,20 +171,14 @@ export class PackedChunk implements PackedChunkInterface {
     data: EncodedPackedChunkInterface
   ): PackedChunk {
     return new PackedChunk(irys, {
-      dataRoot: toFixedUint8Array(decodeBase58ToBuf(data.dataRoot), 32),
+      dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
       dataPath: b64UrlToBuffer(data.dataPath),
       dataSize: BigInt(data.dataSize),
       txOffset: data.txOffset,
       bytes: b64UrlToBuffer(data.bytes),
-      packingAddress: toFixedUint8Array(
-        decodeBase58ToBuf(data.packingAddress),
-        20
-      ),
+      packingAddress: toFixedUint8Array(decodeBase58(data.packingAddress), 20),
       partitionOffset: data.partitionOffset,
-      partitionHash: toFixedUint8Array(
-        decodeBase58ToBuf(data.partitionHash),
-        32
-      ),
+      partitionHash: toFixedUint8Array(decodeBase58(data.partitionHash), 32),
     });
   }
 

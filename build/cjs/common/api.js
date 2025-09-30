@@ -1,12 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildUrl = exports.isApiConfig = void 0;
+exports.buildUrl = exports.normalizeUrl = exports.API_VERSIONS = exports.V1_API_ROUTES = exports.isApiConfig = void 0;
 const tslib_1 = require("tslib");
 const axios_1 = tslib_1.__importDefault(require("axios"));
 const async_retry_1 = tslib_1.__importDefault(require("async-retry"));
 const ethers_1 = require("ethers");
 const isApiConfig = (o) => typeof o !== "string" && "url" in o;
 exports.isApiConfig = isApiConfig;
+// This exists primarily to make route/API changes a lot easier
+// eslint-disable-next-line @typescript-eslint/naming-convention
+var V1_API_ROUTES;
+(function (V1_API_ROUTES) {
+    V1_API_ROUTES["GET_TX_HEADER"] = "/v1/tx/#";
+    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/is_promoted";
+    V1_API_ROUTES["GET_STORAGE_CONFIG"] = "/v1/network/config";
+    V1_API_ROUTES["GET_INFO"] = "/";
+    V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
+    V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
+    V1_API_ROUTES["GET_LATEST_BLOCK"] = "/v1/block/latest";
+    V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
+    V1_API_ROUTES["POST_TX_HEADER"] = "/v1/tx";
+    V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
+})(V1_API_ROUTES || (exports.V1_API_ROUTES = V1_API_ROUTES = {}));
+exports.API_VERSIONS = ["v1"];
 class Api {
     constructor(config) {
         this.cookieMap = new Map();
@@ -14,7 +30,7 @@ class Api {
             this.applyConfig(config);
     }
     get executionRpcUrl() {
-        return buildUrl(this.config.url, ["execution-rpc"]);
+        return buildUrl(this.config.url, [V1_API_ROUTES.EXECUTION_RPC]);
     }
     get rpcProvider() {
         this.rpcInstance ??= new ethers_1.JsonRpcProvider(this.executionRpcUrl.toString());
@@ -44,7 +60,7 @@ class Api {
         // if (config.network && !Object.keys(config.headers).includes("x-network"))
         //   config.headers["x-network"] = config.network;
         return {
-            url: config.url,
+            url: normalizeUrl(config.url),
             timeout: config.timeout ?? 20000,
             logging: config.logging ?? false,
             logger: config.logger ?? console.log,
@@ -113,6 +129,14 @@ class Api {
     }
 }
 exports.default = Api;
+function normalizeUrl(url) {
+    const pathComponents = url.pathname.split("/");
+    // strip the "v<number>" suffix if it exists - the client implementation decides what version to use
+    if (/v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
+        pathComponents.pop();
+    return buildUrl(new URL(url.origin), [...pathComponents]);
+}
+exports.normalizeUrl = normalizeUrl;
 function buildUrl(base, paths) {
     // Remove leading/trailing slashes and filter out empty parts
     const cleanParts = [base.pathname]
