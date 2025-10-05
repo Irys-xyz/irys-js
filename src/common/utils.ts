@@ -167,34 +167,36 @@ export function bytesToBigInt(bytes: Uint8Array): bigint {
   return result;
 }
 
-export function longToNByteArray(N: number, long: number): Uint8Array {
-  const byteArray = new Uint8Array(N);
-  if (long < 0)
+export function numberToBytes(value: number, numBytes: number): Uint8Array {
+  const bytes = new Uint8Array(numBytes);
+  if (value < 0)
     throw new Error("Array is unsigned, cannot represent -ve numbers");
-  if (long > 2 ** (N * 8) - 1)
-    throw new Error(`Number ${long} is too large for an array of ${N} bytes`);
-  for (let index = 0; index < byteArray.length; index++) {
-    const byte = long & 0xff;
-    byteArray[index] = byte;
-    long = (long - byte) / 256;
+  if (value > 2 ** (numBytes * 8) - 1)
+    throw new Error(
+      `Number ${value} is too large for an array of ${numBytes} bytes`
+    );
+
+  for (let i = 0; i < numBytes; i++) {
+    bytes[i] = (value >> (i * 8)) & 0xff;
   }
-  return byteArray;
+
+  return bytes;
 }
 
 export function longTo8ByteArray(long: number): Uint8Array {
-  return longToNByteArray(8, long);
+  return numberToBytes(long, 8);
 }
 
 export function shortTo2ByteArray(short: number): Uint8Array {
-  return longToNByteArray(2, short);
+  return numberToBytes(short, 2);
 }
 
 export function longTo16ByteArray(long: number): Uint8Array {
-  return longToNByteArray(16, long);
+  return numberToBytes(long, 16);
 }
 
 export function longTo32ByteArray(long: number): Uint8Array {
-  return longToNByteArray(32, long);
+  return numberToBytes(long, 32);
 }
 
 export function byteArrayToLong(byteArray: Uint8Array): number {

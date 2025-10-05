@@ -30,7 +30,7 @@ export type ApiRequestConfig = {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export enum V1_API_ROUTES {
   GET_TX_HEADER = "/v1/tx/#",
-  GET_PROMOTION_STATUS = "/v1/tx/#/is_promoted",
+  GET_PROMOTION_STATUS = "/v1/tx/#/promotion_status",
   GET_STORAGE_CONFIG = "/v1/network/config",
   GET_INFO = "/",
   EXECUTION_RPC = "/v1/execution-rpc",
@@ -127,6 +127,11 @@ export default class Api {
         data: body,
         ...config,
         method: "POST",
+        retry: {
+          retries: 0, // default to 0 so the user gets the actual error
+          // TODO: only retry for specific status codes (non 200, 400, i.e 500, 429, etc.)
+          ...config?.retry,
+        },
       });
     } catch (error: any) {
       if (error.response?.status) return error.response;

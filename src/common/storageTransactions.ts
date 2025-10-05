@@ -43,15 +43,12 @@ export class StorageTransactions {
     txId: TransactionId,
     config?: ApiRequestConfig
   ): Promise<PromotionStatus> {
-    const res = await this.getTxId(
+    const res = await this.getTxId<PromotionStatus>(
       txId,
       V1_API_ROUTES.GET_PROMOTION_STATUS,
       config
     );
-    if (res.status === 404) return PromotionStatus.NOT_FOUND;
-    return res.data === "true"
-      ? PromotionStatus.PROMOTED
-      : PromotionStatus.NOT_PROMOTED;
+    return res.data;
   }
 
   protected getTxId<T>(
@@ -63,8 +60,6 @@ export class StorageTransactions {
   }
 }
 
-export enum PromotionStatus {
-  NOT_FOUND,
-  NOT_PROMOTED,
-  PROMOTED,
-}
+export type PromotionStatus = {
+  promotionHeight?: U64;
+};

@@ -6,7 +6,7 @@ import { PackedChunk } from "../src/common/chunk";
 import { arrayCompare } from "../src/common/merkle";
 
 async function main() {
-  const irys = await new IrysClient().node("http://172.17.0.12:8080");
+  const irys = await new IrysClient().node("http://172.17.0.2:8080");
 
   const tx = irys.createTransaction();
 
@@ -26,10 +26,19 @@ async function main() {
     throw new Error("Invalid signature");
   }
 
-  await signedTx.upload(data);
+  const headerRes = await signedTx.upload(data);
+  console.log(headerRes);
+  // // wait 2 s
+  // await sleep(2_000);
 
-  // wait 2 s
-  await sleep(2_000);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const isPromoted = await irys.storageTransactions.getPromotionStatus(
+      signedTx.id
+    );
+    if (isPromoted.promotionHeight) break;
+    await sleep(100);
+  }
 
   // get tx header and the chunk(s)
   const headerReq = await irys.api.get(`v1/tx/${signedTx.txId}`);

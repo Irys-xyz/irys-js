@@ -6,6 +6,7 @@ import type {
   H256,
   Signature,
   TransactionId,
+  U256,
   U32,
   U64,
   U8,
@@ -48,11 +49,12 @@ export type UnsignedTransactionInterface = {
   signer: Address;
   dataRoot: H256;
   dataSize: U64;
-  termFee: U64;
+  headerSize: U64;
+  termFee: U256;
   ledgerId: U32;
   chainId: U64;
   bundleFormat?: U64;
-  permFee?: U64;
+  permFee?: U256;
   chunks?: Chunks;
 };
 
@@ -68,6 +70,7 @@ export type EncodedUnsignedTransactionInterface = {
   signer: Base58<Address>;
   dataRoot: Base58<H256>;
   dataSize: UTF8<U64>;
+  headerSize: UTF8<U64>;
   termFee: UTF8<U64>;
   ledgerId: U32;
   chainId: UTF8<U64>;
@@ -97,6 +100,7 @@ const requiredUnsignedTxHeaderProps = [
   "termFee",
   "ledgerId",
   "chainId",
+  "headerSize",
 ];
 const requiredSignedTxHeaderProps = [
   ...requiredUnsignedTxHeaderProps,
@@ -116,18 +120,19 @@ export class UnsignedTransaction
   // extends BaseObject
   implements Partial<UnsignedTransactionInterface>
 {
-  public version = 0;
+  public version: U8 = 0;
   public id?: TransactionId = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
-  public dataSize = 0n;
-  public termFee?: U64 = 0n;
-  public chainId?: U64 = IRYS_TESTNET_CHAIN_ID;
+  public dataSize: U64 = 0n;
+  public termFee: U256 = 0n;
+  public chainId: U64 = IRYS_TESTNET_CHAIN_ID;
   public signature?: Signature = undefined;
-  public bundleFormat?: U64 = 0n;
-  public permFee?: U64 = undefined;
-  public ledgerId?: U32 = 0;
+  public bundleFormat?: U64 = undefined;
+  public permFee?: U256 = undefined;
+  public ledgerId: U32 = 0;
+  public headerSize: U64 = 0n;
   public irys!: IrysClient;
   // Computed when needed.
   public chunks?: Chunks;
@@ -158,13 +163,15 @@ export class UnsignedTransaction
       throw new Error("missing required field ledgerId");
     // if we're ledger 0, get term & perm fee
     if (this.ledgerId === 0) {
-      this.permFee = await this.irys.network.getPrice(this.dataSize, 0);
-      this.termFee = 0n; /* await this.irys.utils.getPrice(this.dataSize, 1); */
+      const priceInfo = await this.irys.network.getPrice(this.dataSize, 0);
+      this.permFee = priceInfo.permFee;
+      this.termFee = priceInfo.termFee;
     } else {
-      this.termFee = await this.irys.network.getPrice(
+      const priceInfo = await this.irys.network.getPrice(
         this.dataSize,
         this.ledgerId
       );
+      this.termFee = priceInfo.termFee;
     }
     return this;
   }
@@ -215,6 +222,7 @@ export class UnsignedTransaction
     if (!this.termFee) await this.fillFee();
 
     const prehash = await this.getSignatureData();
+
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
@@ -253,25 +261,25 @@ export class UnsignedTransaction
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
+        // BE VERY CAREFUL ABOUT HOW WE SERIALIZE AND DESERIALIZE
+        // note: `undefined`/nullish and 0 serialize to the same thing
+        // this is notable for `bundleFormat` and `permFee`
         const fields: Input = [
           this.version,
           this.anchor,
           this.signer,
           this.dataRoot,
           this.dataSize,
+          this.headerSize,
           this.termFee,
           this.ledgerId,
           this.chainId,
         ];
 
         // Add optional fields only if they are defined
-        if (this.bundleFormat !== undefined) {
-          fields.push(this.bundleFormat);
-        }
-        if (this.permFee !== undefined) {
-          fields.push(this.permFee);
-        }
-
+        // note: encode handles null/undefined fields
+        fields.push(this.bundleFormat);
+        fields.push(this.permFee);
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
 
@@ -296,6 +304,7 @@ export class SignedTransaction
   public termFee!: U64;
   public ledgerId!: U32;
   public chainId!: U64;
+  public headerSize!: U64;
   public bundleFormat?: U64 = undefined;
   public permFee?: U64 = undefined;
   public signature!: Signature;
@@ -373,6 +382,7 @@ export class SignedTransaction
       signer: encodeBase58(this.signer),
       dataRoot: encodeBase58(this.dataRoot),
       dataSize: this.dataSize.toString(),
+      headerSize: this.headerSize.toString(),
       termFee: this.termFee.toString(),
       ledgerId: this.ledgerId,
       chainId: this.chainId.toString(),
@@ -395,6 +405,7 @@ export class SignedTransaction
       signer: decodeBase58ToFixed(encoded.signer, 20),
       dataRoot: decodeBase58ToFixed(encoded.dataRoot, 32),
       dataSize: BigInt(encoded.dataSize),
+      headerSize: BigInt(encoded.headerSize),
       termFee: BigInt(encoded.termFee),
       ledgerId: encoded.ledgerId,
       chainId: BigInt(encoded.chainId),
@@ -489,9 +500,10 @@ export class SignedTransaction
       concurrency?: number;
       onProgress?: (idx: number) => void;
     }
-  ): Promise<void> {
-    await this.uploadHeader(opts);
+  ): Promise<AxiosResponse> {
+    const headerRes = await this.uploadHeader(opts);
     await this.uploadChunks(data, opts);
+    return headerRes;
   }
 
   public async uploadHeader(
@@ -566,18 +578,16 @@ export class SignedTransaction
           this.signer,
           this.dataRoot,
           this.dataSize,
+          this.headerSize,
           this.termFee,
           this.ledgerId,
           this.chainId,
         ];
 
         // Add optional fields only if they are defined
-        if (this.bundleFormat !== undefined) {
-          fields.push(this.bundleFormat);
-        }
-        if (this.permFee !== undefined) {
-          fields.push(this.permFee);
-        }
+        // note: encode handles null/undefined fields
+        fields.push(this.bundleFormat);
+        fields.push(this.permFee);
 
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
