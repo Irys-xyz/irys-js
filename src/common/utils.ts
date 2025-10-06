@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
-import type { Base58, FixedUint8Array } from "./dataTypes";
+import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
 import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
@@ -276,6 +276,11 @@ export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr: string): string =>
   addr.startsWith("0x") ? addr : irysToExecAddr(addr);
+export const encodeAddress = (addr: Address): Base58<Address> =>
+  encodeBase58(addr);
+
+export const decodeAddress = (addr: Base58<Address>): Address =>
+  decodeBase58ToFixed(addr, 20);
 
 export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
   return new BigNumber(mIrys).shiftedBy(-18);

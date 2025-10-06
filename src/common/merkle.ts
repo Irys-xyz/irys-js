@@ -2,7 +2,7 @@ import { chunker } from "./chunker";
 import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
 import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
-import type { Chunks } from "./transaction";
+import type { Chunks } from "./dataTransaction";
 import type { Data } from "./types";
 import { concatBuffers, promisePool } from "./utils";
 

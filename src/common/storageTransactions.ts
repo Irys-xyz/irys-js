@@ -2,7 +2,7 @@ import type { AxiosResponse } from "axios";
 import type Api from "./api";
 import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
 import type { TransactionId, U64, UTF8 } from "./dataTypes";
-import type { EncodedSignedTransactionInterface } from "./transaction";
+import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
 
 export type LocalDataStartEncoded = {
   dataStartOffset: UTF8<U64>;
@@ -18,7 +18,7 @@ export class StorageTransactions {
   async getHeader(
     txId: TransactionId,
     config?: ApiRequestConfig
-  ): Promise<AxiosResponse<EncodedSignedTransactionInterface>> {
+  ): Promise<AxiosResponse<EncodedSignedDataTransactionInterface>> {
     return this.getTxId(txId, V1_API_ROUTES.GET_TX_HEADER, config);
   }
 

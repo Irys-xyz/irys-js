@@ -13,7 +13,6 @@ import type {
   UTF8,
 } from "./dataTypes";
 import {
-  createFixedUint8Array,
   decodeBase58ToFixed,
   promisePool,
   toFixedUint8Array,
@@ -39,11 +38,11 @@ import { chunker } from "./chunker";
 import AsyncRetry from "async-retry";
 import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
 
-export type TransactionInterface =
-  | UnsignedTransactionInterface
-  | SignedTransactionInterface;
+export type DataTransactionInterface =
+  | UnsignedDataTransactionInterface
+  | SignedDataTransactionInterface;
 
-export type UnsignedTransactionInterface = {
+export type UnsignedDataTransactionInterface = {
   version: U8;
   anchor: H256;
   signer: Address;
@@ -58,13 +57,14 @@ export type UnsignedTransactionInterface = {
   chunks?: Chunks;
 };
 
-export type SignedTransactionInterface = UnsignedTransactionInterface & {
-  id: Base58;
-  signature: Signature;
-  chunks?: Chunks;
-};
+export type SignedDataTransactionInterface =
+  UnsignedDataTransactionInterface & {
+    id: Base58;
+    signature: Signature;
+    chunks?: Chunks;
+  };
 
-export type EncodedUnsignedTransactionInterface = {
+export type EncodedUnsignedDataTransactionInterface = {
   version: U8;
   anchor: Base58<H256>;
   signer: Base58<Address>;
@@ -78,8 +78,8 @@ export type EncodedUnsignedTransactionInterface = {
   permFee?: UTF8<U64>;
 };
 
-export type EncodedSignedTransactionInterface =
-  EncodedUnsignedTransactionInterface & {
+export type EncodedSignedDataTransactionInterface =
+  EncodedUnsignedDataTransactionInterface & {
     id: Base58<H256>;
     signature: Base58<Signature>;
     chunks?: UTF8<Chunks>;
@@ -91,7 +91,7 @@ export type Chunks = {
   proofs: MerkleProof[];
 };
 
-const requiredUnsignedTxHeaderProps = [
+const requiredUnsignedDataTxHeaderProps = [
   "version",
   "anchor",
   "signer",
@@ -102,23 +102,23 @@ const requiredUnsignedTxHeaderProps = [
   "chainId",
   "headerSize",
 ];
-const requiredSignedTxHeaderProps = [
-  ...requiredUnsignedTxHeaderProps,
+const requiredSignedDataTxHeaderProps = [
+  ...requiredUnsignedDataTxHeaderProps,
   "id",
   "signature",
 ];
 
-const fullSignedTxHeaderProps = [
-  ...requiredSignedTxHeaderProps,
+const fullSignedDataTxHeaderProps = [
+  ...requiredSignedDataTxHeaderProps,
   "bundleFormat",
   "permFee",
 ];
 
-const fullSignedTxProps = [...fullSignedTxHeaderProps, "chunks"];
+const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
 
-export class UnsignedTransaction
+export class UnsignedDataTransaction
   // extends BaseObject
-  implements Partial<UnsignedTransactionInterface>
+  implements Partial<UnsignedDataTransactionInterface>
 {
   public version: U8 = 0;
   public id?: TransactionId = undefined;
@@ -139,7 +139,7 @@ export class UnsignedTransaction
 
   public constructor(
     irys: IrysClient,
-    attributes?: Partial<UnsignedTransactionInterface>
+    attributes?: Partial<UnsignedDataTransactionInterface>
   ) {
     // super();
     this.irys = irys;
@@ -147,7 +147,7 @@ export class UnsignedTransaction
   }
 
   get missingProperties(): string[] {
-    return requiredUnsignedTxHeaderProps.reduce<string[]>((acc, k) => {
+    return requiredUnsignedDataTxHeaderProps.reduce<string[]>((acc, k) => {
       if (this[k as keyof this] === undefined) acc.push(k);
       return acc;
     }, []);
@@ -188,13 +188,8 @@ export class UnsignedTransaction
   }
 
   public async fillAnchor(): Promise<this> {
-    const apiAnchor = await this.irys.network.getLatestBlock();
-    if (apiAnchor.data.blockHash) {
-      this.anchor = decodeBase58ToFixed(apiAnchor.data.blockHash, 32);
-    } else {
-      this.anchor = createFixedUint8Array(32).fill(1);
-    }
-
+    const apiAnchor = await this.irys.network.getAnchor();
+    this.anchor = apiAnchor.blockHash;
     return this;
   }
 
@@ -208,7 +203,7 @@ export class UnsignedTransaction
       );
   }
 
-  public async sign(key: SigningKey | string): Promise<SignedTransaction> {
+  public async sign(key: SigningKey | string): Promise<SignedDataTransaction> {
     const signingKey =
       typeof key === "string"
         ? new SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
@@ -231,9 +226,9 @@ export class UnsignedTransaction
     const idBytes = getBytes(keccak256(signature.serialized));
     this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
 
-    return new SignedTransaction(
+    return new SignedDataTransaction(
       this.irys,
-      this as any as SignedTransactionInterface
+      this as any as SignedDataTransactionInterface
     );
   }
 
@@ -291,9 +286,9 @@ export class UnsignedTransaction
   }
 }
 
-export class SignedTransaction
-  // extends UnsignedTransaction
-  implements SignedTransactionInterface
+export class SignedDataTransaction
+  // extends UnsignedDataTransaction
+  implements SignedDataTransactionInterface
 {
   public id!: TransactionId;
   public version!: number;
@@ -311,14 +306,17 @@ export class SignedTransaction
   public irys: IrysClient;
   public chunks: Chunks | undefined;
 
-  public constructor(irys: IrysClient, attributes: SignedTransactionInterface) {
+  public constructor(
+    irys: IrysClient,
+    attributes: SignedDataTransactionInterface
+  ) {
     // super();
     this.irys = irys;
     // safer than object.assign, given we will be getting passed a class instance
     // this should "copy" over all header properties & chunks
-    for (const k of fullSignedTxProps) {
-      const v = attributes[k as keyof SignedTransactionInterface];
-      if (v === undefined && requiredSignedTxHeaderProps.includes(k))
+    for (const k of fullSignedDataTxProps) {
+      const v = attributes[k as keyof SignedDataTransactionInterface];
+      if (v === undefined && requiredSignedDataTxHeaderProps.includes(k))
         throw new Error(
           `Unable to build signed transaction - missing field ${k}`
         );
@@ -327,7 +325,7 @@ export class SignedTransaction
   }
 
   get missingProperties(): string[] {
-    return requiredSignedTxHeaderProps.reduce<string[]>((acc, k) => {
+    return requiredSignedDataTxHeaderProps.reduce<string[]>((acc, k) => {
       if (this[k as keyof this] === undefined) acc.push(k);
       return acc;
     }, []);
@@ -339,11 +337,11 @@ export class SignedTransaction
       throw new Error(`Missing required properties: ${missing.join(", ")}`);
   }
 
-  public getHeader(): SignedTransactionInterface {
-    return fullSignedTxHeaderProps.reduce<Record<string, any>>((acc, k) => {
-      acc[k as keyof SignedTransactionInterface] = this[k as keyof this];
+  public getHeader(): SignedDataTransactionInterface {
+    return fullSignedDataTxHeaderProps.reduce<Record<string, any>>((acc, k) => {
+      acc[k as keyof SignedDataTransactionInterface] = this[k as keyof this];
       return acc;
-    }, {}) as SignedTransactionInterface;
+    }, {}) as SignedDataTransactionInterface;
   }
 
   // if you want the encoded header without chunks, use `this.encode(false)`
@@ -374,7 +372,7 @@ export class SignedTransaction
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  public encode(withChunks = false): EncodedSignedTransactionInterface {
+  public encode(withChunks = false): EncodedSignedDataTransactionInterface {
     return {
       id: this.id,
       version: this.version,
@@ -396,9 +394,9 @@ export class SignedTransaction
 
   public static decode(
     irys: IrysClient,
-    encoded: EncodedSignedTransactionInterface
-  ): SignedTransaction {
-    return new SignedTransaction(irys, {
+    encoded: EncodedSignedDataTransactionInterface
+  ): SignedDataTransaction {
+    return new SignedDataTransaction(irys, {
       id: encoded.id,
       version: encoded.version,
       anchor: decodeBase58ToFixed(encoded.anchor, 32),
@@ -510,7 +508,7 @@ export class SignedTransaction
     apiConfig?: ApiRequestConfig
   ): Promise<AxiosResponse> {
     return await this.irys.api.post(
-      V1_API_ROUTES.POST_TX_HEADER,
+      V1_API_ROUTES.POST_DATA_TX_HEADER,
       this.toJSON(),
       {
         ...apiConfig,

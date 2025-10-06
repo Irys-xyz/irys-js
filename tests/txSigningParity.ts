@@ -1,5 +1,5 @@
 import { hexlify } from "ethers/utils";
-import type { UnsignedTransactionInterface } from "../src/common/transaction";
+import type { UnsignedDataTransactionInterface } from "../src/common/dataTransaction";
 import { createFixedUint8Array } from "../src/common/utils";
 import IrysClient from "../src/node";
 import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
@@ -7,7 +7,7 @@ import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
 async function main(): Promise<void> {
   const irys = await new IrysClient().node("http://172.17.0.2:8080/v1");
 
-  const txProps: Partial<UnsignedTransactionInterface> = {
+  const txProps: Partial<UnsignedDataTransactionInterface> = {
     anchor: createFixedUint8Array(32).fill(1),
     dataRoot: createFixedUint8Array(32).fill(3),
     dataSize: 242n,
@@ -20,7 +20,7 @@ async function main(): Promise<void> {
     headerSize: 0n,
   };
 
-  const tx = irys.createTransaction(txProps);
+  const tx = irys.createDataTransaction(txProps);
 
   // dev test wallet 1
   // safe to commit, random & public already

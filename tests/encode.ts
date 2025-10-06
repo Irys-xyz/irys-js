@@ -1,5 +1,5 @@
 import { StorageConfig } from "../src/common/storageConfig";
-import { SignedTransaction } from "../src/common/transaction";
+import { SignedDataTransaction } from "../src/common/dataTransaction";
 import IrysClient from "../src/node";
 
 async function testSignedTxEncodeDecode(): Promise<void> {
@@ -16,7 +16,7 @@ async function testSignedTxEncodeDecode(): Promise<void> {
   const data = new Uint8Array(irys.storageConfig.chunkSize * 2.5).fill(69);
 
   const signedTx = await irys
-    .createTransaction()
+    .createDataTransaction()
     .prepareChunks(data)
     .then((r) =>
       r.sign(
@@ -24,7 +24,7 @@ async function testSignedTxEncodeDecode(): Promise<void> {
       )
     );
   const encoded = signedTx.encode();
-  const decoded = SignedTransaction.decode(irys, encoded);
+  const decoded = SignedDataTransaction.decode(irys, encoded);
   console.log(await decoded.validateSignature());
 }
 (async function () {

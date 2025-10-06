@@ -5,12 +5,14 @@ import type { U64 } from "./dataTypes";
 import Merkle from "./merkle";
 import { ProgrammableData } from "./programmableData";
 import { StorageConfig } from "./storageConfig";
-import type { UnsignedTransactionInterface } from "./transaction";
-import { UnsignedTransaction } from "./transaction";
+import type { UnsignedDataTransactionInterface } from "./dataTransaction";
+import { UnsignedDataTransaction } from "./dataTransaction";
 import { Utils } from "./utilities";
 import { Account } from "./account";
 import { Network } from "./network";
 import { StorageTransactions } from "./storageTransactions";
+import type { UnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import { UnsignedCommitmentTransaction } from "./commitmentTransaction";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -96,9 +98,15 @@ export class IrysClient /* extends EventEmitter */ {
     return this.api.executionRpcUrl;
   }
 
-  public createTransaction(
-    attributes?: Partial<UnsignedTransactionInterface>
-  ): UnsignedTransaction {
-    return new UnsignedTransaction(this, attributes);
+  public createDataTransaction(
+    attributes?: Partial<UnsignedDataTransactionInterface>
+  ): UnsignedDataTransaction {
+    return new UnsignedDataTransaction(this, attributes);
+  }
+
+  public createCommitmentTransaction(
+    attributes?: Partial<UnsignedCommitmentTransactionInterface>
+  ): UnsignedCommitmentTransaction {
+    return new UnsignedCommitmentTransaction(this, attributes);
   }
 }

@@ -2,6 +2,7 @@ import type { AxiosResponse } from "axios";
 import type Api from "./api";
 import { V1_API_ROUTES } from "./api";
 import type {
+  Address,
   Base58,
   BlockHash,
   H256,
@@ -12,6 +13,7 @@ import type {
 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import { Utils } from "./utilities";
+import { decodeBase58ToFixed, encodeAddress } from "./utils";
 
 export class Network {
   public api: Api;
@@ -42,6 +44,18 @@ export class Network {
     return this.api.get<EncodedLatestBlock>(V1_API_ROUTES.GET_LATEST_BLOCK);
   }
 
+  public async getAnchor(): Promise<AnchorInfo> {
+    const encoded = (
+      await Utils.checkAndThrow(
+        this.api.get<EncodedAnchorInfo>(V1_API_ROUTES.GET_ANCHOR),
+        "getting latest anchor"
+      )
+    ).data;
+    return {
+      blockHash: decodeBase58ToFixed(encoded.blockHash, 32),
+    };
+  }
+
   public async getPrice(
     size: number | bigint,
     ledgerId: bigint | number = 0
@@ -64,7 +78,55 @@ export class Network {
       bytes: BigInt(encoded.bytes),
     };
   }
+
+  public async getPledgePrice(address: Address): Promise<PledgePriceInfo> {
+    const encoded = (
+      await Utils.checkAndThrow(
+        this.api.get<EncodedPledgePriceInfo>(
+          V1_API_ROUTES.GET_PLEDGE_PRICE.replace(
+            "{userAddress}",
+            encodeAddress(address)
+          )
+        ),
+        "getting price for transaction"
+      )
+    ).data;
+    return {
+      value: BigInt(encoded.value),
+      fee: BigInt(encoded.fee),
+      userAddress: address,
+      pledgeCount: BigInt(encoded.pledgeCount),
+    };
+  }
 }
+
+export type EncodedAnchorInfo = {
+  blockHash: Base58<BlockHash>;
+};
+
+export type AnchorInfo = {
+  blockHash: BlockHash;
+};
+
+export type StakePriceInfo = {
+  value: U256;
+  fee: U256;
+};
+
+export type PledgePriceInfo = StakePriceInfo & {
+  userAddress: Address;
+  pledgeCount: U64;
+};
+
+export type EncodedStakePriceInfo = {
+  value: UTF8<U256>;
+  fee: UTF8<U256>;
+};
+
+export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
+  userAddress: Base58<Address>;
+  pledgeCount: UTF8<U64>;
+};
 
 // INCOMPLETE
 export type EncodedLatestBlock = {

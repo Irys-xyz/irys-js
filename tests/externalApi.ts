@@ -4,11 +4,12 @@ import { concatBuffers, encodeBase58, sleep } from "../src/common/utils";
 import IrysClient from "../src/node";
 import { PackedChunk } from "../src/common/chunk";
 import { arrayCompare } from "../src/common/merkle";
+import { CommitmentTypeId } from "../src/common/commitmentTransaction";
 
 async function main() {
   const irys = await new IrysClient().node("http://172.17.0.2:8080");
 
-  const tx = irys.createTransaction();
+  const tx = irys.createDataTransaction();
 
   // dev test wallet 1
   // safe to commit, random & public already
@@ -28,6 +29,23 @@ async function main() {
 
   const headerRes = await signedTx.upload(data);
   console.log(headerRes);
+
+  // TODO: improve this API
+  const commitment = irys.createCommitmentTransaction({
+    commitmentType: {
+      type: CommitmentTypeId.PLEDGE,
+      pledgeCountBeforeExecuting: 0n,
+    },
+  });
+
+  const signedCommitment = await commitment.sign(wallet.signingKey);
+  if (!(await signedCommitment.validateSignature())) {
+    throw new Error("Invalid signature");
+  }
+
+  const commitmentHeaderRes = await signedCommitment.uploadHeader();
+  console.log(commitmentHeaderRes);
+
   // // wait 2 s
   // await sleep(2_000);
 

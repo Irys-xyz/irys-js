@@ -37,8 +37,11 @@ export enum V1_API_ROUTES {
   GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data_start_offset",
   GET_LATEST_BLOCK = "/v1/block/latest",
   GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
-  POST_TX_HEADER = "/v1/tx",
+  POST_DATA_TX_HEADER = "/v1/tx",
+  POST_COMMITMENT_TX_HEADER = "/v1/commitment_tx",
   POST_CHUNK = "/v1/chunk",
+  GET_PLEDGE_PRICE = "/v1/price/commitment/pledge/{userAddress}",
+  GET_ANCHOR = "/v1/anchor",
 }
 
 export const API_VERSIONS = ["v1"];
