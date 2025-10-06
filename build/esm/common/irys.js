@@ -2,11 +2,12 @@ import Api from "./api.js";
 import Merkle from "./merkle.js";
 import { ProgrammableData } from "./programmableData.js";
 import { StorageConfig } from "./storageConfig.js";
-import { UnsignedTransaction } from "./transaction.js";
+import { UnsignedDataTransaction } from "./dataTransaction.js";
 import { Utils } from "./utilities.js";
 import { Account } from "./account.js";
 import { Network } from "./network.js";
 import { StorageTransactions } from "./storageTransactions.js";
+import { UnsignedCommitmentTransaction } from "./commitmentTransaction.js";
 // // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unsafe-declaration-merging
 // export declare interface IrysClient {
 //   on<U extends keyof IrysClientEvents>(
@@ -73,8 +74,11 @@ export class IrysClient /* extends EventEmitter */ {
     get executionRpcUrl() {
         return this.api.executionRpcUrl;
     }
-    createTransaction(attributes) {
-        return new UnsignedTransaction(this, attributes);
+    createDataTransaction(attributes) {
+        return new UnsignedDataTransaction(this, attributes);
+    }
+    createCommitmentTransaction(attributes) {
+        return new UnsignedCommitmentTransaction(this, attributes);
     }
 }
 //# sourceMappingURL=irys.js.map

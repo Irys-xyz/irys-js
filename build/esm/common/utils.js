@@ -117,30 +117,28 @@ export function bytesToBigInt(bytes) {
     }
     return result;
 }
-export function longToNByteArray(N, long) {
-    const byteArray = new Uint8Array(N);
-    if (long < 0)
+export function numberToBytes(value, numBytes) {
+    const bytes = new Uint8Array(numBytes);
+    if (value < 0)
         throw new Error("Array is unsigned, cannot represent -ve numbers");
-    if (long > 2 ** (N * 8) - 1)
-        throw new Error(`Number ${long} is too large for an array of ${N} bytes`);
-    for (let index = 0; index < byteArray.length; index++) {
-        const byte = long & 0xff;
-        byteArray[index] = byte;
-        long = (long - byte) / 256;
+    if (value > 2 ** (numBytes * 8) - 1)
+        throw new Error(`Number ${value} is too large for an array of ${numBytes} bytes`);
+    for (let i = 0; i < numBytes; i++) {
+        bytes[i] = (value >> (i * 8)) & 0xff;
     }
-    return byteArray;
+    return bytes;
 }
 export function longTo8ByteArray(long) {
-    return longToNByteArray(8, long);
+    return numberToBytes(long, 8);
 }
 export function shortTo2ByteArray(short) {
-    return longToNByteArray(2, short);
+    return numberToBytes(short, 2);
 }
 export function longTo16ByteArray(long) {
-    return longToNByteArray(16, long);
+    return numberToBytes(long, 16);
 }
 export function longTo32ByteArray(long) {
-    return longToNByteArray(32, long);
+    return numberToBytes(long, 32);
 }
 export function byteArrayToLong(byteArray) {
     let value = 0;
@@ -201,6 +199,8 @@ export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
     : encodeBase58(getBytes("0x" + execAddr));
 export const toIrysAddr = (addr) => addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr) => addr.startsWith("0x") ? addr : irysToExecAddr(addr);
+export const encodeAddress = (addr) => encodeBase58(addr);
+export const decodeAddress = (addr) => decodeBase58ToFixed(addr, 20);
 export function mirysToIrys(mIrys) {
     return new BigNumber(mIrys).shiftedBy(-18);
 }

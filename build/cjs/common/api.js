@@ -12,15 +12,18 @@ exports.isApiConfig = isApiConfig;
 var V1_API_ROUTES;
 (function (V1_API_ROUTES) {
     V1_API_ROUTES["GET_TX_HEADER"] = "/v1/tx/#";
-    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/is_promoted";
+    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/promotion_status";
     V1_API_ROUTES["GET_STORAGE_CONFIG"] = "/v1/network/config";
     V1_API_ROUTES["GET_INFO"] = "/";
     V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
     V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
     V1_API_ROUTES["GET_LATEST_BLOCK"] = "/v1/block/latest";
     V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
-    V1_API_ROUTES["POST_TX_HEADER"] = "/v1/tx";
+    V1_API_ROUTES["POST_DATA_TX_HEADER"] = "/v1/tx";
+    V1_API_ROUTES["POST_COMMITMENT_TX_HEADER"] = "/v1/commitment_tx";
     V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
+    V1_API_ROUTES["GET_PLEDGE_PRICE"] = "/v1/price/commitment/pledge/{userAddress}";
+    V1_API_ROUTES["GET_ANCHOR"] = "/v1/anchor";
 })(V1_API_ROUTES || (exports.V1_API_ROUTES = V1_API_ROUTES = {}));
 exports.API_VERSIONS = ["v1"];
 class Api {
@@ -85,6 +88,11 @@ class Api {
                 data: body,
                 ...config,
                 method: "POST",
+                retry: {
+                    retries: 0, // default to 0 so the user gets the actual error
+                    // TODO: only retry for specific status codes (non 200, 400, i.e 500, 429, etc.)
+                    ...config?.retry,
+                },
             });
         }
         catch (error) {

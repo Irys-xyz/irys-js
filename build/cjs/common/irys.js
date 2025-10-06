@@ -6,11 +6,12 @@ const api_1 = tslib_1.__importDefault(require("./api"));
 const merkle_1 = tslib_1.__importDefault(require("./merkle"));
 const programmableData_1 = require("./programmableData");
 const storageConfig_1 = require("./storageConfig");
-const transaction_1 = require("./transaction");
+const dataTransaction_1 = require("./dataTransaction");
 const utilities_1 = require("./utilities");
 const account_1 = require("./account");
 const network_1 = require("./network");
 const storageTransactions_1 = require("./storageTransactions");
+const commitmentTransaction_1 = require("./commitmentTransaction");
 // // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unsafe-declaration-merging
 // export declare interface IrysClient {
 //   on<U extends keyof IrysClientEvents>(
@@ -67,8 +68,11 @@ class IrysClient /* extends EventEmitter */ {
     get executionRpcUrl() {
         return this.api.executionRpcUrl;
     }
-    createTransaction(attributes) {
-        return new transaction_1.UnsignedTransaction(this, attributes);
+    createDataTransaction(attributes) {
+        return new dataTransaction_1.UnsignedDataTransaction(this, attributes);
+    }
+    createCommitmentTransaction(attributes) {
+        return new commitmentTransaction_1.UnsignedCommitmentTransaction(this, attributes);
     }
 }
 exports.IrysClient = IrysClient;

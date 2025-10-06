@@ -1,6 +1,6 @@
 import type CryptoInterface from "./cryptoInterface.js";
 import type { StorageConfig } from "./storageConfig.js";
-import type { Chunks } from "./transaction.js";
+import type { Chunks } from "./dataTransaction.js";
 import type { Data } from "./types.js";
 export type MerkleChunk = {
     dataHash: Uint8Array;

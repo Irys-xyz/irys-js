@@ -10,6 +10,7 @@ export type U32 = number;
 export type U34 = number;
 export type U64 = bigint;
 export type U200 = bigint;
+export type U256 = bigint;
 export type TxRelativeChunkOffset = U32;
 export type PartitionChunkOffset = U32;
 export type Signature = FixedUint8Array<65>;

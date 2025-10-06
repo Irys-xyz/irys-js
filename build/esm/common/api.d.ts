@@ -18,15 +18,18 @@ export type ApiRequestConfig = {
 } & AxiosRequestConfig;
 export declare enum V1_API_ROUTES {
     GET_TX_HEADER = "/v1/tx/#",
-    GET_PROMOTION_STATUS = "/v1/tx/#/is_promoted",
+    GET_PROMOTION_STATUS = "/v1/tx/#/promotion_status",
     GET_STORAGE_CONFIG = "/v1/network/config",
     GET_INFO = "/",
     EXECUTION_RPC = "/v1/execution-rpc",
     GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data_start_offset",
     GET_LATEST_BLOCK = "/v1/block/latest",
     GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
-    POST_TX_HEADER = "/v1/tx",
-    POST_CHUNK = "/v1/chunk"
+    POST_DATA_TX_HEADER = "/v1/tx",
+    POST_COMMITMENT_TX_HEADER = "/v1/commitment_tx",
+    POST_CHUNK = "/v1/chunk",
+    GET_PLEDGE_PRICE = "/v1/price/commitment/pledge/{userAddress}",
+    GET_ANCHOR = "/v1/anchor"
 }
 export declare const API_VERSIONS: string[];
 export default class Api {

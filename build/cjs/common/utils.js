@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.promisePool = exports.isAsyncIter = exports.irysTomIrys = exports.mirysToIrys = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.longToNByteArray = exports.bytesToBigInt = exports.bigIntToBytes = exports.bigIntToBuffer = exports.bufferToBigInt = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
+exports.promisePool = exports.isAsyncIter = exports.irysTomIrys = exports.mirysToIrys = exports.decodeAddress = exports.encodeAddress = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.numberToBytes = exports.bytesToBigInt = exports.bigIntToBytes = exports.bigIntToBuffer = exports.bufferToBigInt = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
 const tslib_1 = require("tslib");
 /* eslint-disable no-useless-escape */
 const base64_js_1 = require("base64-js");
@@ -142,34 +142,32 @@ function bytesToBigInt(bytes) {
     return result;
 }
 exports.bytesToBigInt = bytesToBigInt;
-function longToNByteArray(N, long) {
-    const byteArray = new Uint8Array(N);
-    if (long < 0)
+function numberToBytes(value, numBytes) {
+    const bytes = new Uint8Array(numBytes);
+    if (value < 0)
         throw new Error("Array is unsigned, cannot represent -ve numbers");
-    if (long > 2 ** (N * 8) - 1)
-        throw new Error(`Number ${long} is too large for an array of ${N} bytes`);
-    for (let index = 0; index < byteArray.length; index++) {
-        const byte = long & 0xff;
-        byteArray[index] = byte;
-        long = (long - byte) / 256;
+    if (value > 2 ** (numBytes * 8) - 1)
+        throw new Error(`Number ${value} is too large for an array of ${numBytes} bytes`);
+    for (let i = 0; i < numBytes; i++) {
+        bytes[i] = (value >> (i * 8)) & 0xff;
     }
-    return byteArray;
+    return bytes;
 }
-exports.longToNByteArray = longToNByteArray;
+exports.numberToBytes = numberToBytes;
 function longTo8ByteArray(long) {
-    return longToNByteArray(8, long);
+    return numberToBytes(long, 8);
 }
 exports.longTo8ByteArray = longTo8ByteArray;
 function shortTo2ByteArray(short) {
-    return longToNByteArray(2, short);
+    return numberToBytes(short, 2);
 }
 exports.shortTo2ByteArray = shortTo2ByteArray;
 function longTo16ByteArray(long) {
-    return longToNByteArray(16, long);
+    return numberToBytes(long, 16);
 }
 exports.longTo16ByteArray = longTo16ByteArray;
 function longTo32ByteArray(long) {
-    return longToNByteArray(32, long);
+    return numberToBytes(long, 32);
 }
 exports.longTo32ByteArray = longTo32ByteArray;
 function byteArrayToLong(byteArray) {
@@ -244,6 +242,10 @@ const toIrysAddr = (addr) => addr.startsWith("0x") ? (0, exports.execToIrysAddr)
 exports.toIrysAddr = toIrysAddr;
 const toExecAddr = (addr) => addr.startsWith("0x") ? addr : (0, exports.irysToExecAddr)(addr);
 exports.toExecAddr = toExecAddr;
+const encodeAddress = (addr) => (0, exports.encodeBase58)(addr);
+exports.encodeAddress = encodeAddress;
+const decodeAddress = (addr) => decodeBase58ToFixed(addr, 20);
+exports.decodeAddress = decodeAddress;
 function mirysToIrys(mIrys) {
     return new bignumber_js_1.default(mIrys).shiftedBy(-18);
 }

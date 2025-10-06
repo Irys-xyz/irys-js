@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import type { Base58, FixedUint8Array } from "./dataTypes.js";
+import type { Address, Base58, FixedUint8Array } from "./dataTypes.js";
 import BigNumber from "bignumber.js";
 export type Base64UrlString = string;
 export declare function concatBuffers(buffers: Uint8Array[] | ArrayBuffer[]): Uint8Array;
@@ -23,7 +23,7 @@ export declare function bufferToBigInt(buffer: Buffer): bigint;
 export declare function bigIntToBuffer(note: bigint, size: number): Buffer;
 export declare function bigIntToBytes(value: bigint, numBytes: number): Uint8Array;
 export declare function bytesToBigInt(bytes: Uint8Array): bigint;
-export declare function longToNByteArray(N: number, long: number): Uint8Array;
+export declare function numberToBytes(value: number, numBytes: number): Uint8Array;
 export declare function longTo8ByteArray(long: number): Uint8Array;
 export declare function shortTo2ByteArray(short: number): Uint8Array;
 export declare function longTo16ByteArray(long: number): Uint8Array;
@@ -51,6 +51,8 @@ export declare const irysToExecAddr: (irysAddr: string) => string;
 export declare const execToIrysAddr: (execAddr: string) => string;
 export declare const toIrysAddr: (addr: string) => string;
 export declare const toExecAddr: (addr: string) => string;
+export declare const encodeAddress: (addr: Address) => Base58<Address>;
+export declare const decodeAddress: (addr: Base58<Address>) => Address;
 export declare function mirysToIrys(mIrys: BigNumber.Value): BigNumber;
 export declare function irysTomIrys(irys: BigNumber.Value): BigNumber;
 export declare const isAsyncIter: (obj: any) => obj is AsyncIterable<Uint8Array>;

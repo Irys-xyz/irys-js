@@ -5,12 +5,14 @@ import type { U64 } from "./dataTypes";
 import Merkle from "./merkle";
 import { ProgrammableData } from "./programmableData";
 import { StorageConfig } from "./storageConfig";
-import type { UnsignedTransactionInterface } from "./transaction";
-import { UnsignedTransaction } from "./transaction";
+import type { UnsignedDataTransactionInterface } from "./dataTransaction";
+import { UnsignedDataTransaction } from "./dataTransaction";
 import { Utils } from "./utilities";
 import { Account } from "./account";
 import { Network } from "./network";
 import { StorageTransactions } from "./storageTransactions";
+import type { UnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import { UnsignedCommitmentTransaction } from "./commitmentTransaction";
 export type IrysConfig = {
     api: ApiConfig;
     chainId: U64;
@@ -31,5 +33,6 @@ export declare class IrysClient {
     constructor(config: IrysConfig);
     ready(): Promise<this>;
     get executionRpcUrl(): URL;
-    createTransaction(attributes?: Partial<UnsignedTransactionInterface>): UnsignedTransaction;
+    createDataTransaction(attributes?: Partial<UnsignedDataTransactionInterface>): UnsignedDataTransaction;
+    createCommitmentTransaction(attributes?: Partial<UnsignedCommitmentTransactionInterface>): UnsignedCommitmentTransaction;
 }

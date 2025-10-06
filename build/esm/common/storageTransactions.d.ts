@@ -2,14 +2,14 @@ import type { AxiosResponse } from "axios";
 import type Api from "./api.js";
 import { type ApiRequestConfig } from "./api.js";
 import type { TransactionId, U64, UTF8 } from "./dataTypes.js";
-import type { EncodedSignedTransactionInterface } from "./transaction.js";
+import type { EncodedSignedDataTransactionInterface } from "./dataTransaction.js";
 export type LocalDataStartEncoded = {
     dataStartOffset: UTF8<U64>;
 };
 export declare class StorageTransactions {
     api: Api;
     constructor(api: Api);
-    getHeader(txId: TransactionId, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedSignedTransactionInterface>>;
+    getHeader(txId: TransactionId, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedSignedDataTransactionInterface>>;
     /**
      * @deprecated this method WILL BE REMOVED/CHANGED, DO NOT RELY ON IT
      */
@@ -20,8 +20,6 @@ export declare class StorageTransactions {
     getPromotionStatus(txId: TransactionId, config?: ApiRequestConfig): Promise<PromotionStatus>;
     protected getTxId<T>(txId: TransactionId, route: string, config?: ApiRequestConfig): Promise<AxiosResponse<T>>;
 }
-export declare enum PromotionStatus {
-    NOT_FOUND = 0,
-    NOT_PROMOTED = 1,
-    PROMOTED = 2
-}
+export type PromotionStatus = {
+    promotionHeight?: U64;
+};

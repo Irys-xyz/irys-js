@@ -1,7 +1,7 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SignedTransaction = exports.UnsignedTransaction = void 0;
+exports.SignedDataTransaction = exports.UnsignedDataTransaction = void 0;
 const tslib_1 = require("tslib");
 const utils_1 = require("./utils");
 const merkle_1 = require("./merkle");
@@ -13,7 +13,7 @@ const chunk_1 = require("./chunk");
 const chunker_1 = require("./chunker");
 const async_retry_1 = tslib_1.__importDefault(require("async-retry"));
 const api_1 = require("./api");
-const requiredUnsignedTxHeaderProps = [
+const requiredUnsignedDataTxHeaderProps = [
     "version",
     "anchor",
     "signer",
@@ -22,19 +22,20 @@ const requiredUnsignedTxHeaderProps = [
     "termFee",
     "ledgerId",
     "chainId",
+    "headerSize",
 ];
-const requiredSignedTxHeaderProps = [
-    ...requiredUnsignedTxHeaderProps,
+const requiredSignedDataTxHeaderProps = [
+    ...requiredUnsignedDataTxHeaderProps,
     "id",
     "signature",
 ];
-const fullSignedTxHeaderProps = [
-    ...requiredSignedTxHeaderProps,
+const fullSignedDataTxHeaderProps = [
+    ...requiredSignedDataTxHeaderProps,
     "bundleFormat",
     "permFee",
 ];
-const fullSignedTxProps = [...fullSignedTxHeaderProps, "chunks"];
-class UnsignedTransaction {
+const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
+class UnsignedDataTransaction {
     constructor(irys, attributes) {
         this.version = 0;
         this.id = undefined;
@@ -45,16 +46,17 @@ class UnsignedTransaction {
         this.termFee = 0n;
         this.chainId = constants_1.IRYS_TESTNET_CHAIN_ID;
         this.signature = undefined;
-        this.bundleFormat = 0n;
+        this.bundleFormat = undefined;
         this.permFee = undefined;
         this.ledgerId = 0;
+        this.headerSize = 0n;
         // super();
         this.irys = irys;
         if (attributes)
             Object.assign(this, attributes);
     }
     get missingProperties() {
-        return requiredUnsignedTxHeaderProps.reduce((acc, k) => {
+        return requiredUnsignedDataTxHeaderProps.reduce((acc, k) => {
             if (this[k] === undefined)
                 acc.push(k);
             return acc;
@@ -69,11 +71,13 @@ class UnsignedTransaction {
             throw new Error("missing required field ledgerId");
         // if we're ledger 0, get term & perm fee
         if (this.ledgerId === 0) {
-            this.permFee = await this.irys.network.getPrice(this.dataSize, 0);
-            this.termFee = 0n; /* await this.irys.utils.getPrice(this.dataSize, 1); */
+            const priceInfo = await this.irys.network.getPrice(this.dataSize, 0);
+            this.permFee = priceInfo.permFee;
+            this.termFee = priceInfo.termFee;
         }
         else {
-            this.termFee = await this.irys.network.getPrice(this.dataSize, this.ledgerId);
+            const priceInfo = await this.irys.network.getPrice(this.dataSize, this.ledgerId);
+            this.termFee = priceInfo.termFee;
         }
         return this;
     }
@@ -87,13 +91,8 @@ class UnsignedTransaction {
         return this.termFee + this.permFee;
     }
     async fillAnchor() {
-        const apiAnchor = await this.irys.network.getLatestBlock();
-        if (apiAnchor.data.blockHash) {
-            this.anchor = (0, utils_1.decodeBase58ToFixed)(apiAnchor.data.blockHash, 32);
-        }
-        else {
-            this.anchor = (0, utils_1.createFixedUint8Array)(32).fill(1);
-        }
+        const apiAnchor = await this.irys.network.getAnchor();
+        this.anchor = apiAnchor.blockHash;
         return this;
     }
     throwOnMissing() {
@@ -118,7 +117,7 @@ class UnsignedTransaction {
         }
         const idBytes = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(signature.serialized));
         this.id = (0, ethers_2.encodeBase58)((0, utils_1.toFixedUint8Array)(idBytes, 32));
-        return new SignedTransaction(this.irys, this);
+        return new SignedDataTransaction(this.irys, this);
     }
     // prepares some data into chunks, associating them with this transaction instance
     // note: this will *consume any provided async iterable* - you will need to provide a second instance for the `uploadChunks` function
@@ -142,23 +141,24 @@ class UnsignedTransaction {
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
+                // BE VERY CAREFUL ABOUT HOW WE SERIALIZE AND DESERIALIZE
+                // note: `undefined`/nullish and 0 serialize to the same thing
+                // this is notable for `bundleFormat` and `permFee`
                 const fields = [
                     this.version,
                     this.anchor,
                     this.signer,
                     this.dataRoot,
                     this.dataSize,
+                    this.headerSize,
                     this.termFee,
                     this.ledgerId,
                     this.chainId,
                 ];
                 // Add optional fields only if they are defined
-                if (this.bundleFormat !== undefined) {
-                    fields.push(this.bundleFormat);
-                }
-                if (this.permFee !== undefined) {
-                    fields.push(this.permFee);
-                }
+                // note: encode handles null/undefined fields
+                fields.push(this.bundleFormat);
+                fields.push(this.permFee);
                 const encoded = (0, rlp_1.encode)(fields);
                 const prehash = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(encoded));
                 return Promise.resolve(prehash);
@@ -167,8 +167,8 @@ class UnsignedTransaction {
         }
     }
 }
-exports.UnsignedTransaction = UnsignedTransaction;
-class SignedTransaction {
+exports.UnsignedDataTransaction = UnsignedDataTransaction;
+class SignedDataTransaction {
     constructor(irys, attributes) {
         this.bundleFormat = undefined;
         this.permFee = undefined;
@@ -176,15 +176,15 @@ class SignedTransaction {
         this.irys = irys;
         // safer than object.assign, given we will be getting passed a class instance
         // this should "copy" over all header properties & chunks
-        for (const k of fullSignedTxProps) {
+        for (const k of fullSignedDataTxProps) {
             const v = attributes[k];
-            if (v === undefined && requiredSignedTxHeaderProps.includes(k))
+            if (v === undefined && requiredSignedDataTxHeaderProps.includes(k))
                 throw new Error(`Unable to build signed transaction - missing field ${k}`);
             this[k] = v;
         }
     }
     get missingProperties() {
-        return requiredSignedTxHeaderProps.reduce((acc, k) => {
+        return requiredSignedDataTxHeaderProps.reduce((acc, k) => {
             if (this[k] === undefined)
                 acc.push(k);
             return acc;
@@ -196,7 +196,7 @@ class SignedTransaction {
             throw new Error(`Missing required properties: ${missing.join(", ")}`);
     }
     getHeader() {
-        return fullSignedTxHeaderProps.reduce((acc, k) => {
+        return fullSignedDataTxHeaderProps.reduce((acc, k) => {
             acc[k] = this[k];
             return acc;
         }, {});
@@ -230,6 +230,7 @@ class SignedTransaction {
             signer: (0, ethers_2.encodeBase58)(this.signer),
             dataRoot: (0, ethers_2.encodeBase58)(this.dataRoot),
             dataSize: this.dataSize.toString(),
+            headerSize: this.headerSize.toString(),
             termFee: this.termFee.toString(),
             ledgerId: this.ledgerId,
             chainId: this.chainId.toString(),
@@ -241,13 +242,14 @@ class SignedTransaction {
         };
     }
     static decode(irys, encoded) {
-        return new SignedTransaction(irys, {
+        return new SignedDataTransaction(irys, {
             id: encoded.id,
             version: encoded.version,
             anchor: (0, utils_1.decodeBase58ToFixed)(encoded.anchor, 32),
             signer: (0, utils_1.decodeBase58ToFixed)(encoded.signer, 20),
             dataRoot: (0, utils_1.decodeBase58ToFixed)(encoded.dataRoot, 32),
             dataSize: BigInt(encoded.dataSize),
+            headerSize: BigInt(encoded.headerSize),
             termFee: BigInt(encoded.termFee),
             ledgerId: encoded.ledgerId,
             chainId: BigInt(encoded.chainId),
@@ -296,11 +298,12 @@ class SignedTransaction {
     }
     // Uploads the transaction's header and chunks
     async upload(data, opts) {
-        await this.uploadHeader(opts);
+        const headerRes = await this.uploadHeader(opts);
         await this.uploadChunks(data, opts);
+        return headerRes;
     }
     async uploadHeader(apiConfig) {
-        return await this.irys.api.post(api_1.V1_API_ROUTES.POST_TX_HEADER, this.toJSON(), {
+        return await this.irys.api.post(api_1.V1_API_ROUTES.POST_DATA_TX_HEADER, this.toJSON(), {
             ...apiConfig,
             headers: { "Content-Type": "application/json" },
             validateStatus: (s) => s < 400,
@@ -339,17 +342,15 @@ class SignedTransaction {
                     this.signer,
                     this.dataRoot,
                     this.dataSize,
+                    this.headerSize,
                     this.termFee,
                     this.ledgerId,
                     this.chainId,
                 ];
                 // Add optional fields only if they are defined
-                if (this.bundleFormat !== undefined) {
-                    fields.push(this.bundleFormat);
-                }
-                if (this.permFee !== undefined) {
-                    fields.push(this.permFee);
-                }
+                // note: encode handles null/undefined fields
+                fields.push(this.bundleFormat);
+                fields.push(this.permFee);
                 const encoded = (0, rlp_1.encode)(fields);
                 const prehash = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(encoded));
                 return Promise.resolve(prehash);
@@ -358,5 +359,5 @@ class SignedTransaction {
         }
     }
 }
-exports.SignedTransaction = SignedTransaction;
-//# sourceMappingURL=transaction.js.map
+exports.SignedDataTransaction = SignedDataTransaction;
+//# sourceMappingURL=dataTransaction.js.map
