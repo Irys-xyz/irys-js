@@ -14,6 +14,8 @@ import type {
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import { Utils } from "./utilities";
 import { decodeBase58ToFixed, encodeAddress } from "./utils";
+import type { CommitmentType } from "./commitmentTransaction";
+import { encodeCommitmentType } from "./commitmentTransaction";
 
 export class Network {
   public api: Api;
@@ -79,14 +81,17 @@ export class Network {
     };
   }
 
-  public async getPledgePrice(address: Address): Promise<PledgePriceInfo> {
+  public async getCommitmentPrice(
+    address: Address,
+    type: CommitmentType
+  ): Promise<PledgePriceInfo | StakePriceInfo> {
     const encoded = (
       await Utils.checkAndThrow(
-        this.api.get<EncodedPledgePriceInfo>(
-          V1_API_ROUTES.GET_PLEDGE_PRICE.replace(
-            "{userAddress}",
-            encodeAddress(address)
-          )
+        this.api.get<EncodedPledgePriceInfo | EncodedStakePriceInfo>(
+          V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
+            "{type}",
+            encodeCommitmentType(type).type
+          ).replace("{userAddress}", encodeAddress(address))
         ),
         "getting price for transaction"
       )
@@ -95,7 +100,11 @@ export class Network {
       value: BigInt(encoded.value),
       fee: BigInt(encoded.fee),
       userAddress: address,
-      pledgeCount: BigInt(encoded.pledgeCount),
+      pledgeCount:
+        // TODO: fix
+        (encoded as EncodedPledgePriceInfo)?.pledgeCount !== undefined
+          ? BigInt((encoded as EncodedPledgePriceInfo).pledgeCount)
+          : undefined,
     };
   }
 }

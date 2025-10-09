@@ -14,9 +14,11 @@ export type U256 = bigint;
 
 export type TxRelativeChunkOffset = U32;
 export type PartitionChunkOffset = U32;
+export type LedgerChunkOffset = U64;
 export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
 export type BlockHash = H256;
+export type BlockNumber = U64;
 
 // the generic is used to hint at the decoded/internal type
 

@@ -27,8 +27,8 @@ import {
 import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys";
-
 import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
+import type { PledgePriceInfo } from "./network";
 
 export type CommitmentTransactionInterface =
   | UnsignedCommitmentTransactionInterface
@@ -142,7 +142,9 @@ function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
   }
 }
 
-function encodeCommitmentType(type: CommitmentType): EncodedCommitmentType {
+export function encodeCommitmentType(
+  type: CommitmentType
+): EncodedCommitmentType {
   switch (type.type) {
     case CommitmentTypeId.STAKE:
       return { type: EncodedCommitmentTypeId.STAKE };
@@ -209,18 +211,26 @@ export class UnsignedCommitmentTransaction
   }
 
   public async fillFee(): Promise<this> {
-    const commitmentType = getOrThrowIfFalsy(
+    const commitmentType = getOrThrowIfNullish(
       this,
       "commitmentType",
       "Unable to get fee for a commitment without {1} set"
     );
-    if (commitmentType.type === CommitmentTypeId.PLEDGE) {
-      const pledgePrice = await this.irys.network.getPledgePrice(
-        getOrThrowIfFalsy(this, "signer")
+    const commitmentPrice = await this.irys.network.getCommitmentPrice(
+      getOrThrowIfNullish(this, "signer"),
+      commitmentType
+    );
+    this.fee = commitmentPrice.fee;
+    this.value = commitmentPrice.value;
+    if (
+      commitmentType.type === CommitmentTypeId.PLEDGE ||
+      commitmentType.type === CommitmentTypeId.UNPLEDGE
+    ) {
+      commitmentType.pledgeCountBeforeExecuting = getOrThrowIfNullish(
+        commitmentPrice as PledgePriceInfo,
+        "pledgeCount",
+        "Service error: expected {1} to be set for pledge/unpledge price request"
       );
-      commitmentType.pledgeCountBeforeExecuting = pledgePrice.pledgeCount;
-      this.fee = pledgePrice.fee;
-      this.value = pledgePrice.value;
     }
     return this;
   }
@@ -286,7 +296,7 @@ export class UnsignedCommitmentTransaction
           this.anchor,
           this.signer,
           ...signingEncodeCommitmentType(
-            getOrThrowIfFalsy(
+            getOrThrowIfNullish(
               this,
               "commitmentType",
               "Unable to sign commitment tx with missing field {1}"
@@ -440,7 +450,7 @@ export class SignedCommitmentTransaction
           this.anchor,
           this.signer,
           ...signingEncodeCommitmentType(
-            getOrThrowIfFalsy(
+            getOrThrowIfNullish(
               this,
               "commitmentType",
               "Unable to sign commitment tx with missing field {1}"
@@ -463,13 +473,13 @@ export class SignedCommitmentTransaction
   }
 }
 
-export function getOrThrowIfFalsy<T, K extends keyof T & string>(
+export function getOrThrowIfNullish<T, K extends keyof T & string>(
   obj: T,
   key: K,
   msg = "Missing required property {1}"
 ): Exclude<T[K], undefined | null> {
   const v = obj[key];
-  if (!v) {
+  if (v === undefined || v === null) {
     throw new Error(msg.replace("{1}", key));
   } else {
     // this is because NonNullable doesn't perserve the types properly
