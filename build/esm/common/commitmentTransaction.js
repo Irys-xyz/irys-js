@@ -60,7 +60,7 @@ function decodeCommitmentType(enc) {
             return { type: CommitmentTypeId.UNSTAKE };
     }
 }
-function encodeCommitmentType(type) {
+export function encodeCommitmentType(type) {
     switch (type.type) {
         case CommitmentTypeId.STAKE:
             return { type: EncodedCommitmentTypeId.STAKE };
@@ -116,12 +116,13 @@ export class UnsignedCommitmentTransaction {
         }, []);
     }
     async fillFee() {
-        const commitmentType = getOrThrowIfFalsy(this, "commitmentType", "Unable to get fee for a commitment without {1} set");
-        if (commitmentType.type === CommitmentTypeId.PLEDGE) {
-            const pledgePrice = await this.irys.network.getPledgePrice(getOrThrowIfFalsy(this, "signer"));
-            commitmentType.pledgeCountBeforeExecuting = pledgePrice.pledgeCount;
-            this.fee = pledgePrice.fee;
-            this.value = pledgePrice.value;
+        const commitmentType = getOrThrowIfNullish(this, "commitmentType", "Unable to get fee for a commitment without {1} set");
+        const commitmentPrice = await this.irys.network.getCommitmentPrice(getOrThrowIfNullish(this, "signer"), commitmentType);
+        this.fee = commitmentPrice.fee;
+        this.value = commitmentPrice.value;
+        if (commitmentType.type === CommitmentTypeId.PLEDGE ||
+            commitmentType.type === CommitmentTypeId.UNPLEDGE) {
+            commitmentType.pledgeCountBeforeExecuting = getOrThrowIfNullish(commitmentPrice, "pledgeCount", "Service error: expected {1} to be set for pledge/unpledge price request");
         }
         return this;
     }
@@ -167,7 +168,7 @@ export class UnsignedCommitmentTransaction {
                 const fields = [
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfFalsy(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.version,
                     this.chainId,
                     this.fee,
@@ -281,7 +282,7 @@ export class SignedCommitmentTransaction {
                 const fields = [
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfFalsy(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.version,
                     this.chainId,
                     this.fee,
@@ -295,9 +296,9 @@ export class SignedCommitmentTransaction {
         }
     }
 }
-export function getOrThrowIfFalsy(obj, key, msg = "Missing required property {1}") {
+export function getOrThrowIfNullish(obj, key, msg = "Missing required property {1}") {
     const v = obj[key];
-    if (!v) {
+    if (v === undefined || v === null) {
         throw new Error(msg.replace("{1}", key));
     }
     else {

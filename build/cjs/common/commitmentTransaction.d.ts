@@ -54,6 +54,7 @@ export type EncodedCommitmentType = {
     type: EncodedCommitmentTypeId.PLEDGE | EncodedCommitmentTypeId.UNPLEDGE;
     pledgeCountBeforeExecuting: UTF8<U64>;
 };
+export declare function encodeCommitmentType(type: CommitmentType): EncodedCommitmentType;
 export declare class UnsignedCommitmentTransaction implements Partial<UnsignedCommitmentTransactionInterface> {
     version: U8;
     id?: TransactionId;
@@ -96,4 +97,4 @@ export declare class SignedCommitmentTransaction implements SignedCommitmentTran
     validateSignature(): Promise<boolean>;
     getSignatureData(): Promise<Uint8Array>;
 }
-export declare function getOrThrowIfFalsy<T, K extends keyof T & string>(obj: T, key: K, msg?: string): Exclude<T[K], undefined | null>;
+export declare function getOrThrowIfNullish<T, K extends keyof T & string>(obj: T, key: K, msg?: string): Exclude<T[K], undefined | null>;

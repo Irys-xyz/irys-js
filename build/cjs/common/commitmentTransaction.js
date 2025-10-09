@@ -1,7 +1,7 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrThrowIfFalsy = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
+exports.getOrThrowIfNullish = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.encodeCommitmentType = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
 const utils_1 = require("./utils");
 const merkle_1 = require("./merkle");
 const rlp_1 = require("rlp");
@@ -81,6 +81,7 @@ function encodeCommitmentType(type) {
             return { type: EncodedCommitmentTypeId.UNSTAKE };
     }
 }
+exports.encodeCommitmentType = encodeCommitmentType;
 function signingEncodeCommitmentType(type) {
     const buf = type.type;
     switch (type.type) {
@@ -118,12 +119,13 @@ class UnsignedCommitmentTransaction {
         }, []);
     }
     async fillFee() {
-        const commitmentType = getOrThrowIfFalsy(this, "commitmentType", "Unable to get fee for a commitment without {1} set");
-        if (commitmentType.type === CommitmentTypeId.PLEDGE) {
-            const pledgePrice = await this.irys.network.getPledgePrice(getOrThrowIfFalsy(this, "signer"));
-            commitmentType.pledgeCountBeforeExecuting = pledgePrice.pledgeCount;
-            this.fee = pledgePrice.fee;
-            this.value = pledgePrice.value;
+        const commitmentType = getOrThrowIfNullish(this, "commitmentType", "Unable to get fee for a commitment without {1} set");
+        const commitmentPrice = await this.irys.network.getCommitmentPrice(getOrThrowIfNullish(this, "signer"), commitmentType);
+        this.fee = commitmentPrice.fee;
+        this.value = commitmentPrice.value;
+        if (commitmentType.type === CommitmentTypeId.PLEDGE ||
+            commitmentType.type === CommitmentTypeId.UNPLEDGE) {
+            commitmentType.pledgeCountBeforeExecuting = getOrThrowIfNullish(commitmentPrice, "pledgeCount", "Service error: expected {1} to be set for pledge/unpledge price request");
         }
         return this;
     }
@@ -169,7 +171,7 @@ class UnsignedCommitmentTransaction {
                 const fields = [
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfFalsy(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.version,
                     this.chainId,
                     this.fee,
@@ -274,7 +276,7 @@ class SignedCommitmentTransaction {
                 const fields = [
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfFalsy(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.version,
                     this.chainId,
                     this.fee,
@@ -289,9 +291,9 @@ class SignedCommitmentTransaction {
     }
 }
 exports.SignedCommitmentTransaction = SignedCommitmentTransaction;
-function getOrThrowIfFalsy(obj, key, msg = "Missing required property {1}") {
+function getOrThrowIfNullish(obj, key, msg = "Missing required property {1}") {
     const v = obj[key];
-    if (!v) {
+    if (v === undefined || v === null) {
         throw new Error(msg.replace("{1}", key));
     }
     else {
@@ -299,5 +301,5 @@ function getOrThrowIfFalsy(obj, key, msg = "Missing required property {1}") {
         return v;
     }
 }
-exports.getOrThrowIfFalsy = getOrThrowIfFalsy;
+exports.getOrThrowIfNullish = getOrThrowIfNullish;
 //# sourceMappingURL=commitmentTransaction.js.map

@@ -22,7 +22,7 @@ var V1_API_ROUTES;
     V1_API_ROUTES["POST_DATA_TX_HEADER"] = "/v1/tx";
     V1_API_ROUTES["POST_COMMITMENT_TX_HEADER"] = "/v1/commitment_tx";
     V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
-    V1_API_ROUTES["GET_PLEDGE_PRICE"] = "/v1/price/commitment/pledge/{userAddress}";
+    V1_API_ROUTES["GET_COMMITMENT_PRICE"] = "/v1/price/commitment/{type}/{userAddress}";
     V1_API_ROUTES["GET_ANCHOR"] = "/v1/anchor";
 })(V1_API_ROUTES || (exports.V1_API_ROUTES = V1_API_ROUTES = {}));
 exports.API_VERSIONS = ["v1"];

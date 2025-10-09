@@ -4,6 +4,7 @@ exports.Network = void 0;
 const api_1 = require("./api");
 const utilities_1 = require("./utilities");
 const utils_1 = require("./utils");
+const commitmentTransaction_1 = require("./commitmentTransaction");
 class Network {
     constructor(api) {
         this.api = api;
@@ -37,13 +38,17 @@ class Network {
             bytes: BigInt(encoded.bytes),
         };
     }
-    async getPledgePrice(address) {
-        const encoded = (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_PLEDGE_PRICE.replace("{userAddress}", (0, utils_1.encodeAddress)(address))), "getting price for transaction")).data;
+    async getCommitmentPrice(address, type) {
+        const encoded = (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", (0, commitmentTransaction_1.encodeCommitmentType)(type).type).replace("{userAddress}", (0, utils_1.encodeAddress)(address))), "getting price for transaction")).data;
         return {
             value: BigInt(encoded.value),
             fee: BigInt(encoded.fee),
             userAddress: address,
-            pledgeCount: BigInt(encoded.pledgeCount),
+            pledgeCount: 
+            // TODO: fix
+            encoded?.pledgeCount !== undefined
+                ? BigInt(encoded.pledgeCount)
+                : undefined,
         };
     }
 }

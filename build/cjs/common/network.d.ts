@@ -2,6 +2,7 @@ import type { AxiosResponse } from "axios";
 import type Api from "./api";
 import type { Address, Base58, BlockHash, H256, U256, U32, U64, UTF8 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
+import type { CommitmentType } from "./commitmentTransaction";
 export declare class Network {
     api: Api;
     constructor(api: Api);
@@ -11,7 +12,7 @@ export declare class Network {
     getLatestBlock(): Promise<AxiosResponse<EncodedLatestBlock>>;
     getAnchor(): Promise<AnchorInfo>;
     getPrice(size: number | bigint, ledgerId?: bigint | number): Promise<PriceInfo>;
-    getPledgePrice(address: Address): Promise<PledgePriceInfo>;
+    getCommitmentPrice(address: Address, type: CommitmentType): Promise<PledgePriceInfo | StakePriceInfo>;
 }
 export type EncodedAnchorInfo = {
     blockHash: Base58<BlockHash>;

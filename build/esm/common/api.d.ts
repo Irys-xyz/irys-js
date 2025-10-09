@@ -28,7 +28,7 @@ export declare enum V1_API_ROUTES {
     POST_DATA_TX_HEADER = "/v1/tx",
     POST_COMMITMENT_TX_HEADER = "/v1/commitment_tx",
     POST_CHUNK = "/v1/chunk",
-    GET_PLEDGE_PRICE = "/v1/price/commitment/pledge/{userAddress}",
+    GET_COMMITMENT_PRICE = "/v1/price/commitment/{type}/{userAddress}",
     GET_ANCHOR = "/v1/anchor"
 }
 export declare const API_VERSIONS: string[];

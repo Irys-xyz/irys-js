@@ -1,6 +1,7 @@
 import { V1_API_ROUTES } from "./api.js";
 import { Utils } from "./utilities.js";
 import { decodeBase58ToFixed, encodeAddress } from "./utils.js";
+import { encodeCommitmentType } from "./commitmentTransaction.js";
 export class Network {
     api;
     constructor(api) {
@@ -35,13 +36,17 @@ export class Network {
             bytes: BigInt(encoded.bytes),
         };
     }
-    async getPledgePrice(address) {
-        const encoded = (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_PLEDGE_PRICE.replace("{userAddress}", encodeAddress(address))), "getting price for transaction")).data;
+    async getCommitmentPrice(address, type) {
+        const encoded = (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", encodeCommitmentType(type).type).replace("{userAddress}", encodeAddress(address))), "getting price for transaction")).data;
         return {
             value: BigInt(encoded.value),
             fee: BigInt(encoded.fee),
             userAddress: address,
-            pledgeCount: BigInt(encoded.pledgeCount),
+            pledgeCount: 
+            // TODO: fix
+            encoded?.pledgeCount !== undefined
+                ? BigInt(encoded.pledgeCount)
+                : undefined,
         };
     }
 }
