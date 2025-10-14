@@ -91,8 +91,12 @@ function signingEncodeCommitmentType(type) {
             return [buf];
     }
 }
+export var CommitmentTransactionVersion;
+(function (CommitmentTransactionVersion) {
+    CommitmentTransactionVersion[CommitmentTransactionVersion["V1"] = 1] = "V1";
+})(CommitmentTransactionVersion || (CommitmentTransactionVersion = {}));
 export class UnsignedCommitmentTransaction {
-    version = 0;
+    version = CommitmentTransactionVersion.V1;
     id = undefined;
     anchor = undefined;
     signer = undefined;
@@ -158,7 +162,7 @@ export class UnsignedCommitmentTransaction {
     // / returns the "signature data" aka the prehash (hash of all the tx fields)
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case CommitmentTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -275,7 +279,7 @@ export class SignedCommitmentTransaction {
     }
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case CommitmentTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!

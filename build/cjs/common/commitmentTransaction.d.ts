@@ -1,11 +1,11 @@
-import type { Address, Base58, H256, Signature, TransactionId, U256, U64, U8, UTF8 } from "./dataTypes";
+import type { Address, Base58, H256, Signature, TransactionId, U256, U64, UTF8 } from "./dataTypes";
 import { SigningKey } from "ethers";
 import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys";
 import { type ApiRequestConfig } from "./api";
 export type CommitmentTransactionInterface = UnsignedCommitmentTransactionInterface | SignedCommitmentTransactionInterface;
 export type UnsignedCommitmentTransactionInterface = {
-    version: U8;
+    version: CommitmentTransactionVersion;
     anchor: H256;
     signer: Address;
     commitmentType: CommitmentType;
@@ -18,7 +18,7 @@ export type SignedCommitmentTransactionInterface = UnsignedCommitmentTransaction
     signature: Signature;
 };
 export type EncodedUnsignedCommitmentTransactionInterface = {
-    version: U8;
+    version: CommitmentTransactionVersion;
     anchor: Base58<H256>;
     signer: Base58<Address>;
     chainId: UTF8<U64>;
@@ -55,8 +55,11 @@ export type EncodedCommitmentType = {
     pledgeCountBeforeExecuting: UTF8<U64>;
 };
 export declare function encodeCommitmentType(type: CommitmentType): EncodedCommitmentType;
+export declare enum CommitmentTransactionVersion {
+    V1 = 1
+}
 export declare class UnsignedCommitmentTransaction implements Partial<UnsignedCommitmentTransactionInterface> {
-    version: U8;
+    version: CommitmentTransactionVersion;
     id?: TransactionId;
     anchor?: H256;
     signer?: Address;
@@ -75,7 +78,7 @@ export declare class UnsignedCommitmentTransaction implements Partial<UnsignedCo
     getSignatureData(): Promise<Uint8Array>;
 }
 export declare class SignedCommitmentTransaction implements SignedCommitmentTransactionInterface {
-    version: U8;
+    version: CommitmentTransactionVersion;
     id: TransactionId;
     anchor: H256;
     signer: Address;

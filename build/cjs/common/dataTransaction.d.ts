@@ -9,7 +9,7 @@ import AsyncRetry from "async-retry";
 import { type ApiRequestConfig } from "./api";
 export type DataTransactionInterface = UnsignedDataTransactionInterface | SignedDataTransactionInterface;
 export type UnsignedDataTransactionInterface = {
-    version: U8;
+    version: DataTransactionVersion;
     anchor: H256;
     signer: Address;
     dataRoot: H256;
@@ -51,7 +51,7 @@ export type Chunks = {
     proofs: MerkleProof[];
 };
 export declare class UnsignedDataTransaction implements Partial<UnsignedDataTransactionInterface> {
-    version: U8;
+    version: DataTransactionVersion;
     id?: TransactionId;
     anchor?: H256;
     signer?: Address;
@@ -81,9 +81,12 @@ export declare class UnsignedDataTransaction implements Partial<UnsignedDataTran
     prepareChunks(data: Data): Promise<this>;
     getSignatureData(): Promise<Uint8Array>;
 }
+export declare enum DataTransactionVersion {
+    V1 = 1
+}
 export declare class SignedDataTransaction implements SignedDataTransactionInterface {
     id: TransactionId;
-    version: number;
+    version: DataTransactionVersion;
     anchor: H256;
     signer: Address;
     dataRoot: H256;

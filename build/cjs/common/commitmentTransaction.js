@@ -1,7 +1,7 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrThrowIfNullish = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.encodeCommitmentType = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
+exports.getOrThrowIfNullish = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.CommitmentTransactionVersion = exports.encodeCommitmentType = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
 const utils_1 = require("./utils");
 const merkle_1 = require("./merkle");
 const rlp_1 = require("rlp");
@@ -95,9 +95,13 @@ function signingEncodeCommitmentType(type) {
             return [buf];
     }
 }
+var CommitmentTransactionVersion;
+(function (CommitmentTransactionVersion) {
+    CommitmentTransactionVersion[CommitmentTransactionVersion["V1"] = 1] = "V1";
+})(CommitmentTransactionVersion || (exports.CommitmentTransactionVersion = CommitmentTransactionVersion = {}));
 class UnsignedCommitmentTransaction {
     constructor(irys, attributes) {
-        this.version = 0;
+        this.version = CommitmentTransactionVersion.V1;
         this.id = undefined;
         this.anchor = undefined;
         this.signer = undefined;
@@ -161,7 +165,7 @@ class UnsignedCommitmentTransaction {
     // / returns the "signature data" aka the prehash (hash of all the tx fields)
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case CommitmentTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -269,7 +273,7 @@ class SignedCommitmentTransaction {
     }
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case CommitmentTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!

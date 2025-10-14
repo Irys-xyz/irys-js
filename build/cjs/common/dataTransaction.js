@@ -1,7 +1,7 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SignedDataTransaction = exports.UnsignedDataTransaction = void 0;
+exports.SignedDataTransaction = exports.DataTransactionVersion = exports.UnsignedDataTransaction = void 0;
 const tslib_1 = require("tslib");
 const utils_1 = require("./utils");
 const merkle_1 = require("./merkle");
@@ -37,7 +37,7 @@ const fullSignedDataTxHeaderProps = [
 const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
 class UnsignedDataTransaction {
     constructor(irys, attributes) {
-        this.version = 0;
+        this.version = DataTransactionVersion.V1;
         this.id = undefined;
         this.anchor = undefined;
         this.signer = undefined;
@@ -137,7 +137,7 @@ class UnsignedDataTransaction {
     // / returns the "signature data" aka the prehash (hash of all the tx fields)
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case DataTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -168,6 +168,10 @@ class UnsignedDataTransaction {
     }
 }
 exports.UnsignedDataTransaction = UnsignedDataTransaction;
+var DataTransactionVersion;
+(function (DataTransactionVersion) {
+    DataTransactionVersion[DataTransactionVersion["V1"] = 1] = "V1";
+})(DataTransactionVersion || (exports.DataTransactionVersion = DataTransactionVersion = {}));
 class SignedDataTransaction {
     constructor(irys, attributes) {
         this.bundleFormat = undefined;
@@ -332,7 +336,7 @@ class SignedDataTransaction {
     }
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case DataTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!

@@ -32,7 +32,7 @@ const fullSignedDataTxHeaderProps = [
 ];
 const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
 export class UnsignedDataTransaction {
-    version = 0;
+    version = DataTransactionVersion.V1;
     id = undefined;
     anchor = undefined;
     signer = undefined;
@@ -136,7 +136,7 @@ export class UnsignedDataTransaction {
     // / returns the "signature data" aka the prehash (hash of all the tx fields)
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case DataTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -166,6 +166,10 @@ export class UnsignedDataTransaction {
         }
     }
 }
+export var DataTransactionVersion;
+(function (DataTransactionVersion) {
+    DataTransactionVersion[DataTransactionVersion["V1"] = 1] = "V1";
+})(DataTransactionVersion || (DataTransactionVersion = {}));
 export class SignedDataTransaction {
     id;
     version;
@@ -343,7 +347,7 @@ export class SignedDataTransaction {
     }
     getSignatureData() {
         switch (this.version) {
-            case 0:
+            case DataTransactionVersion.V1:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
