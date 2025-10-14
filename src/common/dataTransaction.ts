@@ -39,7 +39,7 @@ export type DataTransactionInterface =
   | SignedDataTransactionInterface;
 
 export type UnsignedDataTransactionInterface = {
-  version: U8;
+  version: DataTransactionVersion;
   anchor: H256;
   signer: Address;
   dataRoot: H256;
@@ -116,7 +116,7 @@ export class UnsignedDataTransaction
   // extends BaseObject
   implements Partial<UnsignedDataTransactionInterface>
 {
-  public version: U8 = 0;
+  public version: DataTransactionVersion = DataTransactionVersion.V1;
   public id?: TransactionId = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
@@ -248,7 +248,7 @@ export class UnsignedDataTransaction
   // / returns the "signature data" aka the prehash (hash of all the tx fields)
   public getSignatureData(): Promise<Uint8Array> {
     switch (this.version) {
-      case 0:
+      case DataTransactionVersion.V1:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
@@ -282,12 +282,16 @@ export class UnsignedDataTransaction
   }
 }
 
+export enum DataTransactionVersion {
+  V1 = 1,
+}
+
 export class SignedDataTransaction
   // extends UnsignedDataTransaction
   implements SignedDataTransactionInterface
 {
   public id!: TransactionId;
-  public version!: number;
+  public version!: DataTransactionVersion;
   public anchor!: H256;
   public signer!: Address;
   public dataRoot!: H256;
@@ -562,7 +566,7 @@ export class SignedDataTransaction
 
   public getSignatureData(): Promise<Uint8Array> {
     switch (this.version) {
-      case 0:
+      case DataTransactionVersion.V1:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!

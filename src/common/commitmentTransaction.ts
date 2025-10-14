@@ -35,7 +35,7 @@ export type CommitmentTransactionInterface =
   | SignedCommitmentTransactionInterface;
 
 export type UnsignedCommitmentTransactionInterface = {
-  version: U8;
+  version: CommitmentTransactionVersion;
   anchor: H256;
   signer: Address;
   commitmentType: CommitmentType;
@@ -51,7 +51,7 @@ export type SignedCommitmentTransactionInterface =
   };
 
 export type EncodedUnsignedCommitmentTransactionInterface = {
-  version: U8;
+  version: CommitmentTransactionVersion;
   anchor: Base58<H256>;
   signer: Base58<Address>;
   chainId: UTF8<U64>;
@@ -177,10 +177,15 @@ function signingEncodeCommitmentType(type: CommitmentType): (U8 | bigint)[] {
   }
 }
 
+export enum CommitmentTransactionVersion {
+  V1 = 1,
+}
+
 export class UnsignedCommitmentTransaction
   implements Partial<UnsignedCommitmentTransactionInterface>
 {
-  public version: U8 = 0;
+  public version: CommitmentTransactionVersion =
+    CommitmentTransactionVersion.V1;
   public id?: TransactionId = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
@@ -285,7 +290,7 @@ export class UnsignedCommitmentTransaction
   // / returns the "signature data" aka the prehash (hash of all the tx fields)
   public getSignatureData(): Promise<Uint8Array> {
     switch (this.version) {
-      case 0:
+      case CommitmentTransactionVersion.V1:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
@@ -321,7 +326,7 @@ export class UnsignedCommitmentTransaction
 export class SignedCommitmentTransaction
   implements SignedCommitmentTransactionInterface
 {
-  public version!: U8;
+  public version!: CommitmentTransactionVersion;
   public id!: TransactionId;
   public anchor!: H256;
   public signer!: Address;
@@ -442,7 +447,7 @@ export class SignedCommitmentTransaction
 
   public getSignatureData(): Promise<Uint8Array> {
     switch (this.version) {
-      case 0:
+      case CommitmentTransactionVersion.V1:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!

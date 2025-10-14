@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     permFee: 98n,
     ledgerId: 0,
     bundleFormat: undefined,
-    version: 0,
+    version: 1,
     chainId: IRYS_TESTNET_CHAIN_ID,
     headerSize: 0n,
   };
