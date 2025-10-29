@@ -1,14 +1,17 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api";
-import { V1_API_ROUTES } from "./api";
+import type { BlockParam } from "./api";
+import { BlockTag, V1_API_ROUTES } from "./api";
 import type {
   Address,
   Base58,
   BlockHash,
+  EpochTimestamp,
   H256,
   U256,
   U32,
   U64,
+  U8,
   UTF8,
 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
@@ -32,8 +35,8 @@ export class Network {
     ).data;
   }
 
-  public async getHeight(): Promise<number> {
-    return this.getInfo().then((r) => r.blockIndexHeight);
+  public async getHeight(): Promise<U64> {
+    return this.getInfo().then((r) => BigInt(r.blockIndexHeight));
   }
 
   public async getInfo(): Promise<EncodedInfoInterface> {
@@ -42,8 +45,23 @@ export class Network {
       .then((r) => r.data);
   }
 
-  public async getLatestBlock(): Promise<AxiosResponse<EncodedLatestBlock>> {
-    return this.api.get<EncodedLatestBlock>(V1_API_ROUTES.GET_LATEST_BLOCK);
+  public async getLatestBlock(): Promise<
+    AxiosResponse<EncodedCombinedBlockHeader>
+  > {
+    return this.getBlock(BlockTag.LATEST);
+  }
+
+  public async getBlock(
+    param: BlockParam,
+    withPoa = false
+  ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
+    return await Utils.checkAndThrow(
+      this.api.get<EncodedCombinedBlockHeader>(
+        V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
+          (withPoa ? "/full" : "")
+      ),
+      `getting block by param: ${param.toString()}`
+    );
   }
 
   public async getAnchor(): Promise<AnchorInfo> {
@@ -70,7 +88,7 @@ export class Network {
             ledgerId.toString()
           ).replace("{size}", size.toString())
         ),
-        "getting price for transaction"
+        "getting price for data transaction"
       )
     ).data;
     return {
@@ -93,7 +111,7 @@ export class Network {
             encodeCommitmentType(type).type
           ).replace("{userAddress}", encodeAddress(address))
         ),
-        "getting price for transaction"
+        "getting price for commitment transaction"
       )
     ).data;
     return {
@@ -107,7 +125,35 @@ export class Network {
           : undefined,
     };
   }
+
+  public async getBlockIndex(
+    fromHeight: number | U64,
+    pageSize = 100
+  ): Promise<EncodedBlockIndexEntry[]> {
+    return (
+      await Utils.checkAndThrow(
+        this.api.get(
+          V1_API_ROUTES.GET_BLOCK_INDEX.replace(
+            "{height}",
+            fromHeight.toString()
+          ).replace("{limit}", pageSize.toString())
+        ),
+        "Getting block index page"
+      )
+    ).data;
+  }
 }
+
+export type EncodedBlockIndexEntry = {
+  blockHash: Base58<BlockHash>;
+  numLedgers: U8;
+  ledgers: EncodedLedgerIndexItem[];
+};
+
+export type EncodedLedgerIndexItem = {
+  totalChunks: UTF8<U64>;
+  txRoot: Base58<H256>;
+};
 
 export type EncodedAnchorInfo = {
   blockHash: Base58<BlockHash>;
@@ -138,18 +184,23 @@ export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
 };
 
 // INCOMPLETE
-export type EncodedLatestBlock = {
+export type EncodedCombinedBlockHeader = {
   blockHash: UTF8<BlockHash>;
 };
 
 export type EncodedInfoInterface = {
   version: string;
   peerCount: number;
-  chainId: number;
-  height: number;
+  chainId: UTF8<U64>;
+  height: UTF8<U64>;
   blockHash: Base58<H256>;
-  blockIndexHeight: number;
-  blocks: number;
+  blockIndexHeight: UTF8<U64>;
+  blockIndexHash: Base58<H256>;
+  pendingBlocks: UTF8<U64>;
+  isSyncing: boolean;
+  currentSyncHeight: UTF8<U64>;
+  uptimeSecs: UTF8<EpochTimestamp>;
+  miningAddress: Base58<Address>;
 };
 
 export type EncodedPriceInfo = {
