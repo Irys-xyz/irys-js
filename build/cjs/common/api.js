@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildUrl = exports.normalizeUrl = exports.API_VERSIONS = exports.V1_API_ROUTES = exports.isApiConfig = void 0;
+exports.buildUrl = exports.normalizeUrl = exports.API_VERSIONS = exports.BlockTag = exports.V1_API_ROUTES = exports.isApiConfig = void 0;
 const tslib_1 = require("tslib");
 const axios_1 = tslib_1.__importDefault(require("axios"));
 const async_retry_1 = tslib_1.__importDefault(require("async-retry"));
@@ -17,14 +17,21 @@ var V1_API_ROUTES;
     V1_API_ROUTES["GET_INFO"] = "/";
     V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
     V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
-    V1_API_ROUTES["GET_LATEST_BLOCK"] = "/v1/block/latest";
+    V1_API_ROUTES["GET_BLOCK"] = "/v1/block/{blockParam}";
     V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
     V1_API_ROUTES["POST_DATA_TX_HEADER"] = "/v1/tx";
     V1_API_ROUTES["POST_COMMITMENT_TX_HEADER"] = "/v1/commitment_tx";
     V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
     V1_API_ROUTES["GET_COMMITMENT_PRICE"] = "/v1/price/commitment/{type}/{userAddress}";
     V1_API_ROUTES["GET_ANCHOR"] = "/v1/anchor";
+    V1_API_ROUTES["GET_BLOCK_INDEX"] = "/v1/block_index?height={height}&limit={limit}";
 })(V1_API_ROUTES || (exports.V1_API_ROUTES = V1_API_ROUTES = {}));
+var BlockTag;
+(function (BlockTag) {
+    BlockTag["LATEST"] = "latest";
+    BlockTag["PENDING"] = "pending";
+    BlockTag["FINALIZED"] = "finalized";
+})(BlockTag || (exports.BlockTag = BlockTag = {}));
 exports.API_VERSIONS = ["v1"];
 class Api {
     constructor(config) {

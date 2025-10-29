@@ -1,19 +1,31 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api";
-import type { Address, Base58, BlockHash, H256, U256, U32, U64, UTF8 } from "./dataTypes";
+import type { BlockParam } from "./api";
+import type { Address, Base58, BlockHash, EpochTimestamp, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import type { CommitmentType } from "./commitmentTransaction";
 export declare class Network {
     api: Api;
     constructor(api: Api);
     getStorageConfig(): Promise<EncodedStorageConfigInterface>;
-    getHeight(): Promise<number>;
+    getHeight(): Promise<U64>;
     getInfo(): Promise<EncodedInfoInterface>;
-    getLatestBlock(): Promise<AxiosResponse<EncodedLatestBlock>>;
+    getLatestBlock(): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getBlock(param: BlockParam, withPoa?: boolean): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
     getAnchor(): Promise<AnchorInfo>;
     getPrice(size: number | bigint, ledgerId?: bigint | number): Promise<PriceInfo>;
     getCommitmentPrice(address: Address, type: CommitmentType): Promise<PledgePriceInfo | StakePriceInfo>;
+    getBlockIndex(fromHeight: number | U64, pageSize?: number): Promise<EncodedBlockIndexEntry[]>;
 }
+export type EncodedBlockIndexEntry = {
+    blockHash: Base58<BlockHash>;
+    numLedgers: U8;
+    ledgers: EncodedLedgerIndexItem[];
+};
+export type EncodedLedgerIndexItem = {
+    totalChunks: UTF8<U64>;
+    txRoot: Base58<H256>;
+};
 export type EncodedAnchorInfo = {
     blockHash: Base58<BlockHash>;
 };
@@ -36,17 +48,22 @@ export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
     userAddress: Base58<Address>;
     pledgeCount: UTF8<U64>;
 };
-export type EncodedLatestBlock = {
+export type EncodedCombinedBlockHeader = {
     blockHash: UTF8<BlockHash>;
 };
 export type EncodedInfoInterface = {
     version: string;
     peerCount: number;
-    chainId: number;
-    height: number;
+    chainId: UTF8<U64>;
+    height: UTF8<U64>;
     blockHash: Base58<H256>;
-    blockIndexHeight: number;
-    blocks: number;
+    blockIndexHeight: UTF8<U64>;
+    blockIndexHash: Base58<H256>;
+    pendingBlocks: UTF8<U64>;
+    isSyncing: boolean;
+    currentSyncHeight: UTF8<U64>;
+    uptimeSecs: UTF8<EpochTimestamp>;
+    miningAddress: Base58<Address>;
 };
 export type EncodedPriceInfo = {
     permFee: UTF8<U256>;

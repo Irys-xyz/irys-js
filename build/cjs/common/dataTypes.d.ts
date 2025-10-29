@@ -18,6 +18,7 @@ export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
 export type BlockHash = H256;
 export type BlockNumber = U64;
+export type EpochTimestamp = U64;
 export type Base58<T = never> = string;
 export type Base64<T = never> = string;
 export type UTF8<T = never> = string;
