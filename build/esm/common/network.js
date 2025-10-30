@@ -2,6 +2,7 @@ import { BlockTag, V1_API_ROUTES } from "./api.js";
 import { Utils } from "./utilities.js";
 import { decodeBase58ToFixed, encodeAddress } from "./utils.js";
 import { encodeCommitmentType } from "./commitmentTransaction.js";
+// TODO: return a "request builder" that allows for more modification?
 export class Network {
     api;
     constructor(api) {

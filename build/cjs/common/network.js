@@ -5,6 +5,7 @@ const api_1 = require("./api");
 const utilities_1 = require("./utilities");
 const utils_1 = require("./utils");
 const commitmentTransaction_1 = require("./commitmentTransaction");
+// TODO: return a "request builder" that allows for more modification?
 class Network {
     constructor(api) {
         this.api = api;
