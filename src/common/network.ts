@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api";
-import type { BlockParam } from "./api";
+import type { ApiRequestConfig, BlockParam } from "./api";
 import { BlockTag, V1_API_ROUTES } from "./api";
 import type {
   Address,
@@ -27,47 +27,55 @@ export class Network {
     this.api = api;
   }
 
-  public async getStorageConfig(): Promise<EncodedStorageConfigInterface> {
+  public async getStorageConfig(
+    config?: ApiRequestConfig
+  ): Promise<EncodedStorageConfigInterface> {
     return (
       await this.api.get<EncodedStorageConfigInterface>(
-        V1_API_ROUTES.GET_STORAGE_CONFIG
+        V1_API_ROUTES.GET_STORAGE_CONFIG,
+        config
       )
     ).data;
   }
 
-  public async getHeight(): Promise<U64> {
-    return this.getInfo().then((r) => BigInt(r.blockIndexHeight));
+  public async getHeight(config?: ApiRequestConfig): Promise<U64> {
+    return this.getInfo(config).then((r) => BigInt(r.blockIndexHeight));
   }
 
-  public async getInfo(): Promise<EncodedInfoInterface> {
+  public async getInfo(
+    config?: ApiRequestConfig
+  ): Promise<EncodedInfoInterface> {
     return this.api
-      .get<EncodedInfoInterface>(V1_API_ROUTES.GET_INFO)
+      .get<EncodedInfoInterface>(V1_API_ROUTES.GET_INFO, config)
       .then((r) => r.data);
   }
 
-  public async getLatestBlock(): Promise<
-    AxiosResponse<EncodedCombinedBlockHeader>
-  > {
-    return this.getBlock(BlockTag.LATEST);
+  public async getLatestBlock(
+    withPoa = false,
+    config?: ApiRequestConfig
+  ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
+    return this.getBlock(BlockTag.LATEST, withPoa, config);
   }
 
   public async getBlock(
     param: BlockParam,
-    withPoa = false
+    withPoa = false,
+    config?: ApiRequestConfig
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
     return await Utils.checkAndThrow(
       this.api.get<EncodedCombinedBlockHeader>(
         V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
-          (withPoa ? "/full" : "")
+          (withPoa ? "/full" : ""),
+        config
       ),
       `getting block by param: ${param.toString()}`
     );
   }
 
-  public async getAnchor(): Promise<AnchorInfo> {
+  public async getAnchor(config?: ApiRequestConfig): Promise<AnchorInfo> {
     const encoded = (
       await Utils.checkAndThrow(
-        this.api.get<EncodedAnchorInfo>(V1_API_ROUTES.GET_ANCHOR),
+        this.api.get<EncodedAnchorInfo>(V1_API_ROUTES.GET_ANCHOR, config),
         "getting latest anchor"
       )
     ).data;
@@ -78,7 +86,8 @@ export class Network {
 
   public async getPrice(
     size: number | bigint,
-    ledgerId: bigint | number = 0
+    ledgerId: bigint | number = 0,
+    config?: ApiRequestConfig
   ): Promise<PriceInfo> {
     const encoded = (
       await Utils.checkAndThrow(
@@ -86,7 +95,8 @@ export class Network {
           V1_API_ROUTES.GET_TX_PRICE.replace(
             "{ledgerId}",
             ledgerId.toString()
-          ).replace("{size}", size.toString())
+          ).replace("{size}", size.toString()),
+          config
         ),
         "getting price for data transaction"
       )
@@ -101,7 +111,8 @@ export class Network {
 
   public async getCommitmentPrice(
     address: Address,
-    type: CommitmentType
+    type: CommitmentType,
+    config?: ApiRequestConfig
   ): Promise<PledgePriceInfo | StakePriceInfo> {
     const encoded = (
       await Utils.checkAndThrow(
@@ -109,7 +120,8 @@ export class Network {
           V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
             "{type}",
             encodeCommitmentType(type).type
-          ).replace("{userAddress}", encodeAddress(address))
+          ).replace("{userAddress}", encodeAddress(address)),
+          config
         ),
         "getting price for commitment transaction"
       )
@@ -128,7 +140,8 @@ export class Network {
 
   public async getBlockIndex(
     fromHeight: number | U64,
-    pageSize = 100
+    pageSize = 100,
+    config?: ApiRequestConfig
   ): Promise<EncodedBlockIndexEntry[]> {
     return (
       await Utils.checkAndThrow(
@@ -136,7 +149,8 @@ export class Network {
           V1_API_ROUTES.GET_BLOCK_INDEX.replace(
             "{height}",
             fromHeight.toString()
-          ).replace("{limit}", pageSize.toString())
+          ).replace("{limit}", pageSize.toString()),
+          config
         ),
         "Getting block index page"
       )

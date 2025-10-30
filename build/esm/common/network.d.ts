@@ -1,21 +1,21 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api.js";
-import type { BlockParam } from "./api.js";
+import type { ApiRequestConfig, BlockParam } from "./api.js";
 import type { Address, Base58, BlockHash, EpochTimestamp, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import type { EncodedStorageConfigInterface } from "./storageConfig.js";
 import type { CommitmentType } from "./commitmentTransaction.js";
 export declare class Network {
     api: Api;
     constructor(api: Api);
-    getStorageConfig(): Promise<EncodedStorageConfigInterface>;
-    getHeight(): Promise<U64>;
-    getInfo(): Promise<EncodedInfoInterface>;
-    getLatestBlock(): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
-    getBlock(param: BlockParam, withPoa?: boolean): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
-    getAnchor(): Promise<AnchorInfo>;
-    getPrice(size: number | bigint, ledgerId?: bigint | number): Promise<PriceInfo>;
-    getCommitmentPrice(address: Address, type: CommitmentType): Promise<PledgePriceInfo | StakePriceInfo>;
-    getBlockIndex(fromHeight: number | U64, pageSize?: number): Promise<EncodedBlockIndexEntry[]>;
+    getStorageConfig(config?: ApiRequestConfig): Promise<EncodedStorageConfigInterface>;
+    getHeight(config?: ApiRequestConfig): Promise<U64>;
+    getInfo(config?: ApiRequestConfig): Promise<EncodedInfoInterface>;
+    getLatestBlock(withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getBlock(param: BlockParam, withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getAnchor(config?: ApiRequestConfig): Promise<AnchorInfo>;
+    getPrice(size: number | bigint, ledgerId?: bigint | number, config?: ApiRequestConfig): Promise<PriceInfo>;
+    getCommitmentPrice(address: Address, type: CommitmentType, config?: ApiRequestConfig): Promise<PledgePriceInfo | StakePriceInfo>;
+    getBlockIndex(fromHeight: number | U64, pageSize?: number, config?: ApiRequestConfig): Promise<EncodedBlockIndexEntry[]>;
 }
 export type EncodedBlockIndexEntry = {
     blockHash: Base58<BlockHash>;
