@@ -20,6 +20,7 @@ import { decodeBase58ToFixed, encodeAddress } from "./utils";
 import type { CommitmentType } from "./commitmentTransaction";
 import { encodeCommitmentType } from "./commitmentTransaction";
 
+// TODO: return a "request builder" that allows for more modification?
 export class Network {
   public api: Api;
 
