@@ -17,5 +17,25 @@ export class Utils {
         }
         return res;
     }
+    /**
+     * Throws an error if the provided axios reponse has a status code != 200
+     * @param response an axios response
+     * @returns nothing if the status code is 200
+     */
+    static async wrapError(response, context) {
+        try {
+            return await response;
+        }
+        catch (e) {
+            throw new HttpError(e, context);
+        }
+    }
+}
+export class HttpError extends Error {
+    inner;
+    constructor(inner, ctx) {
+        super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
+        this.inner = inner;
+    }
 }
 //# sourceMappingURL=utilities.js.map

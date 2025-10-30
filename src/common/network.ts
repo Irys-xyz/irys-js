@@ -63,7 +63,7 @@ export class Network {
     withPoa = false,
     config?: ApiRequestConfig
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
-    return await Utils.checkAndThrow(
+    return await Utils.wrapError(
       this.api.get<EncodedCombinedBlockHeader>(
         V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
           (withPoa ? "/full" : ""),
@@ -75,7 +75,7 @@ export class Network {
 
   public async getAnchor(config?: ApiRequestConfig): Promise<AnchorInfo> {
     const encoded = (
-      await Utils.checkAndThrow(
+      await Utils.wrapError(
         this.api.get<EncodedAnchorInfo>(V1_API_ROUTES.GET_ANCHOR, config),
         "getting latest anchor"
       )
@@ -91,7 +91,7 @@ export class Network {
     config?: ApiRequestConfig
   ): Promise<PriceInfo> {
     const encoded = (
-      await Utils.checkAndThrow(
+      await Utils.wrapError(
         this.api.get<EncodedPriceInfo>(
           V1_API_ROUTES.GET_TX_PRICE.replace(
             "{ledgerId}",
@@ -116,7 +116,7 @@ export class Network {
     config?: ApiRequestConfig
   ): Promise<PledgePriceInfo | StakePriceInfo> {
     const encoded = (
-      await Utils.checkAndThrow(
+      await Utils.wrapError(
         this.api.get<EncodedPledgePriceInfo | EncodedStakePriceInfo>(
           V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
             "{type}",
@@ -145,7 +145,7 @@ export class Network {
     config?: ApiRequestConfig
   ): Promise<EncodedBlockIndexEntry[]> {
     return (
-      await Utils.checkAndThrow(
+      await Utils.wrapError(
         this.api.get(
           V1_API_ROUTES.GET_BLOCK_INDEX.replace(
             "{height}",

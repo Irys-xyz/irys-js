@@ -23,17 +23,17 @@ export class Network {
         return this.getBlock(BlockTag.LATEST, withPoa, config);
     }
     async getBlock(param, withPoa = false, config) {
-        return await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
+        return await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
             (withPoa ? "/full" : ""), config), `getting block by param: ${param.toString()}`);
     }
     async getAnchor(config) {
-        const encoded = (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
+        const encoded = (await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
         return {
             blockHash: decodeBase58ToFixed(encoded.blockHash, 32),
         };
     }
     async getPrice(size, ledgerId = 0, config) {
-        const encoded = (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_TX_PRICE.replace("{ledgerId}", ledgerId.toString()).replace("{size}", size.toString()), config), "getting price for data transaction")).data;
+        const encoded = (await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_TX_PRICE.replace("{ledgerId}", ledgerId.toString()).replace("{size}", size.toString()), config), "getting price for data transaction")).data;
         return {
             permFee: BigInt(encoded.permFee),
             termFee: BigInt(encoded.termFee),
@@ -42,7 +42,7 @@ export class Network {
         };
     }
     async getCommitmentPrice(address, type, config) {
-        const encoded = (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", encodeCommitmentType(type).type).replace("{userAddress}", encodeAddress(address)), config), "getting price for commitment transaction")).data;
+        const encoded = (await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", encodeCommitmentType(type).type).replace("{userAddress}", encodeAddress(address)), config), "getting price for commitment transaction")).data;
         return {
             value: BigInt(encoded.value),
             fee: BigInt(encoded.fee),
@@ -55,7 +55,7 @@ export class Network {
         };
     }
     async getBlockIndex(fromHeight, pageSize = 100, config) {
-        return (await Utils.checkAndThrow(this.api.get(V1_API_ROUTES.GET_BLOCK_INDEX.replace("{height}", fromHeight.toString()).replace("{limit}", pageSize.toString()), config), "Getting block index page")).data;
+        return (await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_BLOCK_INDEX.replace("{height}", fromHeight.toString()).replace("{limit}", pageSize.toString()), config), "Getting block index page")).data;
     }
 }
 //# sourceMappingURL=network.js.map

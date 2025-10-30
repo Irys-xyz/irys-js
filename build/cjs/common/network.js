@@ -25,17 +25,17 @@ class Network {
         return this.getBlock(api_1.BlockTag.LATEST, withPoa, config);
     }
     async getBlock(param, withPoa = false, config) {
-        return await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
+        return await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
             (withPoa ? "/full" : ""), config), `getting block by param: ${param.toString()}`);
     }
     async getAnchor(config) {
-        const encoded = (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
+        const encoded = (await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
         return {
             blockHash: (0, utils_1.decodeBase58ToFixed)(encoded.blockHash, 32),
         };
     }
     async getPrice(size, ledgerId = 0, config) {
-        const encoded = (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_TX_PRICE.replace("{ledgerId}", ledgerId.toString()).replace("{size}", size.toString()), config), "getting price for data transaction")).data;
+        const encoded = (await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_TX_PRICE.replace("{ledgerId}", ledgerId.toString()).replace("{size}", size.toString()), config), "getting price for data transaction")).data;
         return {
             permFee: BigInt(encoded.permFee),
             termFee: BigInt(encoded.termFee),
@@ -44,7 +44,7 @@ class Network {
         };
     }
     async getCommitmentPrice(address, type, config) {
-        const encoded = (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", (0, commitmentTransaction_1.encodeCommitmentType)(type).type).replace("{userAddress}", (0, utils_1.encodeAddress)(address)), config), "getting price for commitment transaction")).data;
+        const encoded = (await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_COMMITMENT_PRICE.replace("{type}", (0, commitmentTransaction_1.encodeCommitmentType)(type).type).replace("{userAddress}", (0, utils_1.encodeAddress)(address)), config), "getting price for commitment transaction")).data;
         return {
             value: BigInt(encoded.value),
             fee: BigInt(encoded.fee),
@@ -57,7 +57,7 @@ class Network {
         };
     }
     async getBlockIndex(fromHeight, pageSize = 100, config) {
-        return (await utilities_1.Utils.checkAndThrow(this.api.get(api_1.V1_API_ROUTES.GET_BLOCK_INDEX.replace("{height}", fromHeight.toString()).replace("{limit}", pageSize.toString()), config), "Getting block index page")).data;
+        return (await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_BLOCK_INDEX.replace("{height}", fromHeight.toString()).replace("{limit}", pageSize.toString()), config), "Getting block index page")).data;
     }
 }
 exports.Network = Network;

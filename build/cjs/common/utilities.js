@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Utils = void 0;
+exports.HttpError = exports.Utils = void 0;
 class Utils {
     constructor(irysClient) {
         this.irys = irysClient;
@@ -19,6 +19,26 @@ class Utils {
         }
         return res;
     }
+    /**
+     * Throws an error if the provided axios reponse has a status code != 200
+     * @param response an axios response
+     * @returns nothing if the status code is 200
+     */
+    static async wrapError(response, context) {
+        try {
+            return await response;
+        }
+        catch (e) {
+            throw new HttpError(e, context);
+        }
+    }
 }
 exports.Utils = Utils;
+class HttpError extends Error {
+    constructor(inner, ctx) {
+        super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
+        this.inner = inner;
+    }
+}
+exports.HttpError = HttpError;
 //# sourceMappingURL=utilities.js.map
