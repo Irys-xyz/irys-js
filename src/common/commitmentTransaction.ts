@@ -421,9 +421,7 @@ export class SignedCommitmentTransaction
     });
   }
 
-  public async uploadHeader(
-    apiConfig?: ApiRequestConfig
-  ): Promise<AxiosResponse> {
+  public async upload(apiConfig?: ApiRequestConfig): Promise<AxiosResponse> {
     return await this.irys.api.post(
       V1_API_ROUTES.POST_COMMITMENT_TX_HEADER,
       this.toJSON(),
