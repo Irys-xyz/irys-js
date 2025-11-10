@@ -43,7 +43,7 @@ async function main() {
     throw new Error("Invalid signature");
   }
 
-  const commitmentHeaderRes = await signedCommitment.uploadHeader();
+  const commitmentHeaderRes = await signedCommitment.upload();
   console.log(commitmentHeaderRes);
 
   // // wait 2 s
