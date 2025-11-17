@@ -19,6 +19,7 @@ import { Utils } from "./utilities";
 import { decodeBase58ToFixed, encodeAddress } from "./utils";
 import type { CommitmentType } from "./commitmentTransaction";
 import { encodeCommitmentType } from "./commitmentTransaction";
+import type { FixMe } from "./types";
 
 // TODO: return a "request builder" that allows for more modification?
 export class Network {
@@ -200,7 +201,20 @@ export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
 
 // INCOMPLETE
 export type EncodedCombinedBlockHeader = {
-  blockHash: UTF8<BlockHash>;
+  version: U8;
+  blockHash: Base58<BlockHash>;
+  height: UTF8<U64>;
+  dataLedgers: EncodedDataLedger[];
+};
+
+export type EncodedDataLedger = {
+  ledgerId: U8;
+  txRoot: Base58<H256>;
+  txIds: Base58<H256>[];
+  totalChunks: UTF8<U64>;
+  expires?: UTF8<U64>;
+  proofs?: FixMe[]; // TODO
+  requiredProofCount?: U8;
 };
 
 export type EncodedInfoInterface = {
