@@ -96,7 +96,7 @@ export declare class SignedCommitmentTransaction implements SignedCommitmentTran
     get txId(): string;
     encode(): EncodedSignedCommitmentTransactionInterface;
     static decode(irys: IrysClient, encoded: EncodedSignedCommitmentTransactionInterface): SignedCommitmentTransaction;
-    uploadHeader(apiConfig?: ApiRequestConfig): Promise<AxiosResponse>;
+    upload(apiConfig?: ApiRequestConfig): Promise<AxiosResponse>;
     validateSignature(): Promise<boolean>;
     getSignatureData(): Promise<Uint8Array>;
 }

@@ -4,6 +4,7 @@ import type { ApiRequestConfig, BlockParam } from "./api";
 import type { Address, Base58, BlockHash, EpochTimestamp, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import type { CommitmentType } from "./commitmentTransaction";
+import type { FixMe } from "./types";
 export declare class Network {
     api: Api;
     constructor(api: Api);
@@ -49,7 +50,19 @@ export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
     pledgeCount: UTF8<U64>;
 };
 export type EncodedCombinedBlockHeader = {
-    blockHash: UTF8<BlockHash>;
+    version: U8;
+    blockHash: Base58<BlockHash>;
+    height: UTF8<U64>;
+    dataLedgers: EncodedDataLedger[];
+};
+export type EncodedDataLedger = {
+    ledgerId: U8;
+    txRoot: Base58<H256>;
+    txIds: Base58<H256>[];
+    totalChunks: UTF8<U64>;
+    expires?: UTF8<U64>;
+    proofs?: FixMe[];
+    requiredProofCount?: U8;
 };
 export type EncodedInfoInterface = {
     version: string;

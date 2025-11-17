@@ -17,11 +17,7 @@ export class Utils {
         }
         return res;
     }
-    /**
-     * Throws an error if the provided axios reponse has a status code != 200
-     * @param response an axios response
-     * @returns nothing if the status code is 200
-     */
+    // wraps a HTTP error with some context
     static async wrapError(response, context) {
         try {
             return await response;

@@ -263,7 +263,7 @@ export class SignedCommitmentTransaction {
             commitmentType: decodeCommitmentType(encoded.commitmentType),
         });
     }
-    async uploadHeader(apiConfig) {
+    async upload(apiConfig) {
         return await this.irys.api.post(V1_API_ROUTES.POST_COMMITMENT_TX_HEADER, this.toJSON(), {
             ...apiConfig,
             headers: { "Content-Type": "application/json" },
