@@ -6,7 +6,7 @@ import type {
   Address,
   Base58,
   BlockHash,
-  EpochTimestamp,
+  EpochTimestampMs,
   H256,
   U256,
   U32,
@@ -205,6 +205,7 @@ export type EncodedCombinedBlockHeader = {
   blockHash: Base58<BlockHash>;
   height: UTF8<U64>;
   dataLedgers: EncodedDataLedger[];
+  timestamp: UTF8<EpochTimestampMs>;
 };
 
 export type EncodedDataLedger = {
@@ -228,7 +229,7 @@ export type EncodedInfoInterface = {
   pendingBlocks: UTF8<U64>;
   isSyncing: boolean;
   currentSyncHeight: UTF8<U64>;
-  uptimeSecs: UTF8<EpochTimestamp>;
+  uptimeSecs: UTF8<U64>;
   miningAddress: Base58<Address>;
 };
 

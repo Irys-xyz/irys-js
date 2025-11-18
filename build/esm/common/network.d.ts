@@ -1,7 +1,7 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api.js";
 import type { ApiRequestConfig, BlockParam } from "./api.js";
-import type { Address, Base58, BlockHash, EpochTimestamp, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
+import type { Address, Base58, BlockHash, EpochTimestampMs, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import type { EncodedStorageConfigInterface } from "./storageConfig.js";
 import type { CommitmentType } from "./commitmentTransaction.js";
 import type { FixMe } from "./types.js";
@@ -54,6 +54,7 @@ export type EncodedCombinedBlockHeader = {
     blockHash: Base58<BlockHash>;
     height: UTF8<U64>;
     dataLedgers: EncodedDataLedger[];
+    timestamp: UTF8<EpochTimestampMs>;
 };
 export type EncodedDataLedger = {
     ledgerId: U8;
@@ -75,7 +76,7 @@ export type EncodedInfoInterface = {
     pendingBlocks: UTF8<U64>;
     isSyncing: boolean;
     currentSyncHeight: UTF8<U64>;
-    uptimeSecs: UTF8<EpochTimestamp>;
+    uptimeSecs: UTF8<U64>;
     miningAddress: Base58<Address>;
 };
 export type EncodedPriceInfo = {

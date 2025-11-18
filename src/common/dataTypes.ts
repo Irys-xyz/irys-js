@@ -19,7 +19,7 @@ export type Signature = FixedUint8Array<65>;
 export type Base64Url = string;
 export type BlockHash = H256;
 export type BlockNumber = U64;
-export type EpochTimestamp = U64;
+export type EpochTimestampMs = U64;
 
 // the generic is used to hint at the decoded/internal type
 
