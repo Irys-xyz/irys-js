@@ -1,7 +1,7 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SignedDataTransaction = exports.DataTransactionVersion = exports.UnsignedDataTransaction = void 0;
+exports.SignedDataTransaction = exports.DataTransactionVersion = exports.UnsignedDataTransaction = exports.DataLedgerId = void 0;
 const tslib_1 = require("tslib");
 const utils_1 = require("./utils");
 const merkle_1 = require("./merkle");
@@ -13,6 +13,11 @@ const chunk_1 = require("./chunk");
 const chunker_1 = require("./chunker");
 const async_retry_1 = tslib_1.__importDefault(require("async-retry"));
 const api_1 = require("./api");
+var DataLedgerId;
+(function (DataLedgerId) {
+    DataLedgerId[DataLedgerId["PUBLISH"] = 0] = "PUBLISH";
+    DataLedgerId[DataLedgerId["SUBMIT"] = 1] = "SUBMIT";
+})(DataLedgerId || (exports.DataLedgerId = DataLedgerId = {}));
 const requiredUnsignedDataTxHeaderProps = [
     "version",
     "anchor",
@@ -48,7 +53,7 @@ class UnsignedDataTransaction {
         this.signature = undefined;
         this.bundleFormat = undefined;
         this.permFee = undefined;
-        this.ledgerId = 0;
+        this.ledgerId = DataLedgerId.PUBLISH;
         this.headerSize = 0n;
         // super();
         this.irys = irys;

@@ -9,6 +9,11 @@ import { UnpackedChunk, chunkEndByteOffset } from "./chunk.js";
 import { chunker } from "./chunker.js";
 import AsyncRetry from "async-retry";
 import { V1_API_ROUTES } from "./api.js";
+export var DataLedgerId;
+(function (DataLedgerId) {
+    DataLedgerId[DataLedgerId["PUBLISH"] = 0] = "PUBLISH";
+    DataLedgerId[DataLedgerId["SUBMIT"] = 1] = "SUBMIT";
+})(DataLedgerId || (DataLedgerId = {}));
 const requiredUnsignedDataTxHeaderProps = [
     "version",
     "anchor",
@@ -43,7 +48,7 @@ export class UnsignedDataTransaction {
     signature = undefined;
     bundleFormat = undefined;
     permFee = undefined;
-    ledgerId = 0;
+    ledgerId = DataLedgerId.PUBLISH;
     headerSize = 0n;
     irys;
     // Computed when needed.

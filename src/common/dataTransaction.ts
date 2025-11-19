@@ -38,6 +38,11 @@ export type DataTransactionInterface =
   | UnsignedDataTransactionInterface
   | SignedDataTransactionInterface;
 
+export enum DataLedgerId {
+  PUBLISH = 0,
+  SUBMIT = 1,
+}
+
 export type UnsignedDataTransactionInterface = {
   version: DataTransactionVersion;
   anchor: H256;
@@ -127,7 +132,7 @@ export class UnsignedDataTransaction
   public signature?: Signature = undefined;
   public bundleFormat?: U64 = undefined;
   public permFee?: U256 = undefined;
-  public ledgerId: U32 = 0;
+  public ledgerId: U32 = DataLedgerId.PUBLISH;
   public headerSize: U64 = 0n;
   public irys!: IrysClient;
   // Computed when needed.
@@ -149,7 +154,7 @@ export class UnsignedDataTransaction
     }, []);
   }
 
-  public ledger(ledgerId: number): this {
+  public ledger(ledgerId: number | DataLedgerId): this {
     this.ledgerId = ledgerId;
     return this;
   }
