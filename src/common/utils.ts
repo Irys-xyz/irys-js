@@ -4,6 +4,8 @@ import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
 import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
+import { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
 
 export type Base64UrlString = string;
 
@@ -290,6 +292,27 @@ export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
 export function irysTomIrys(irys: BigNumber.Value): BigNumber {
   return new BigNumber(irys).shiftedBy(18);
 }
+
+export const isCommitmentTx = (
+  tx:
+    | EncodedUnsignedCommitmentTransactionInterface
+    | EncodedUnsignedDataTransactionInterface
+): tx is EncodedUnsignedCommitmentTransactionInterface => {
+  // @ts-expect-error TS is dum sometimes
+  if (tx?.commitmentType) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+export const isDataTx = (
+  tx:
+    | EncodedUnsignedCommitmentTransactionInterface
+    | EncodedUnsignedDataTransactionInterface
+): tx is EncodedUnsignedDataTransactionInterface => {
+  return !isCommitmentTx(tx);
+};
 
 export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
   typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===

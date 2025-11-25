@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.promisePool = exports.isAsyncIter = exports.irysTomIrys = exports.mirysToIrys = exports.decodeAddress = exports.encodeAddress = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.numberToBytes = exports.bytesToBigInt = exports.bigIntToBytes = exports.bigIntToBuffer = exports.bufferToBigInt = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
+exports.promisePool = exports.isAsyncIter = exports.isDataTx = exports.isCommitmentTx = exports.irysTomIrys = exports.mirysToIrys = exports.decodeAddress = exports.encodeAddress = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.numberToBytes = exports.bytesToBigInt = exports.bigIntToBytes = exports.bigIntToBuffer = exports.bufferToBigInt = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
 const tslib_1 = require("tslib");
 /* eslint-disable no-useless-escape */
 const base64_js_1 = require("base64-js");
@@ -254,6 +254,20 @@ function irysTomIrys(irys) {
     return new bignumber_js_1.default(irys).shiftedBy(18);
 }
 exports.irysTomIrys = irysTomIrys;
+const isCommitmentTx = (tx) => {
+    // @ts-expect-error TS is dum sometimes
+    if (tx?.commitmentType) {
+        return true;
+    }
+    else {
+        return false;
+    }
+};
+exports.isCommitmentTx = isCommitmentTx;
+const isDataTx = (tx) => {
+    return !(0, exports.isCommitmentTx)(tx);
+};
+exports.isDataTx = isDataTx;
 const isAsyncIter = (obj) => typeof obj[Symbol.asyncIterator] ===
     "function";
 exports.isAsyncIter = isAsyncIter;

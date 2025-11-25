@@ -1,6 +1,8 @@
 /// <reference types="node" />
 import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import BigNumber from "bignumber.js";
+import { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
 export type Base64UrlString = string;
 export declare function concatBuffers(buffers: Uint8Array[] | ArrayBuffer[]): Uint8Array;
 export declare function writeTo(dest: Uint8Array, src: Readonly<Uint8Array>): void;
@@ -55,6 +57,8 @@ export declare const encodeAddress: (addr: Address) => Base58<Address>;
 export declare const decodeAddress: (addr: Base58<Address> | string) => Address;
 export declare function mirysToIrys(mIrys: BigNumber.Value): BigNumber;
 export declare function irysTomIrys(irys: BigNumber.Value): BigNumber;
+export declare const isCommitmentTx: (tx: EncodedUnsignedCommitmentTransactionInterface | EncodedUnsignedDataTransactionInterface) => tx is EncodedUnsignedCommitmentTransactionInterface;
+export declare const isDataTx: (tx: EncodedUnsignedCommitmentTransactionInterface | EncodedUnsignedDataTransactionInterface) => tx is EncodedUnsignedDataTransactionInterface;
 export declare const isAsyncIter: (obj: any) => obj is AsyncIterable<Uint8Array>;
 export declare function promisePool<T, N>(iter: Iterable<T> | AsyncIterable<T>, fn: (item: T, index: number) => Promise<N>, opts?: {
     concurrency?: number;

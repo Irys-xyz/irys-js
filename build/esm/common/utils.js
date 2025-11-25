@@ -207,6 +207,18 @@ export function mirysToIrys(mIrys) {
 export function irysTomIrys(irys) {
     return new BigNumber(irys).shiftedBy(18);
 }
+export const isCommitmentTx = (tx) => {
+    // @ts-expect-error TS is dum sometimes
+    if (tx?.commitmentType) {
+        return true;
+    }
+    else {
+        return false;
+    }
+};
+export const isDataTx = (tx) => {
+    return !isCommitmentTx(tx);
+};
 export const isAsyncIter = (obj) => typeof obj[Symbol.asyncIterator] ===
     "function";
 // basic promise pool
