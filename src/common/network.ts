@@ -205,6 +205,7 @@ export type EncodedCombinedBlockHeader = {
   blockHash: Base58<BlockHash>;
   height: UTF8<U64>;
   dataLedgers: EncodedDataLedger[];
+  systemLedgers: EncodedSystemTransactionLedger[];
   timestamp: UTF8<EpochTimestampMs>;
 };
 
@@ -216,6 +217,11 @@ export type EncodedDataLedger = {
   expires?: UTF8<U64>;
   proofs?: FixMe[]; // TODO
   requiredProofCount?: U8;
+};
+
+export type EncodedSystemTransactionLedger = {
+  ledgerId: U8;
+  txIds: Base58<H256>[];
 };
 
 export type EncodedInfoInterface = {
