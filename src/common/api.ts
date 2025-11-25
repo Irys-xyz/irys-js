@@ -52,7 +52,7 @@ export enum BlockTag {
   FINALIZED = "finalized",
 }
 
-export type BlockParam = Base58<H256> | U64 | BlockTag;
+export type BlockParam = number | Base58<H256> | U64 | BlockTag;
 
 export const API_VERSIONS = ["v1"];
 

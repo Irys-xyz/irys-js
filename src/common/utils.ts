@@ -276,11 +276,12 @@ export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr: string): string =>
   addr.startsWith("0x") ? addr : irysToExecAddr(addr);
+
 export const encodeAddress = (addr: Address): Base58<Address> =>
   encodeBase58(addr);
 
-export const decodeAddress = (addr: Base58<Address>): Address =>
-  decodeBase58ToFixed(addr, 20);
+export const decodeAddress = (addr: Base58<Address> | string): Address =>
+  decodeBase58ToFixed(toIrysAddr(addr), 20);
 
 export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
   return new BigNumber(mIrys).shiftedBy(-18);

@@ -200,7 +200,7 @@ export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
 export const toIrysAddr = (addr) => addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr) => addr.startsWith("0x") ? addr : irysToExecAddr(addr);
 export const encodeAddress = (addr) => encodeBase58(addr);
-export const decodeAddress = (addr) => decodeBase58ToFixed(addr, 20);
+export const decodeAddress = (addr) => decodeBase58ToFixed(toIrysAddr(addr), 20);
 export function mirysToIrys(mIrys) {
     return new BigNumber(mIrys).shiftedBy(-18);
 }

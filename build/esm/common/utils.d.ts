@@ -52,7 +52,7 @@ export declare const execToIrysAddr: (execAddr: string) => string;
 export declare const toIrysAddr: (addr: string) => string;
 export declare const toExecAddr: (addr: string) => string;
 export declare const encodeAddress: (addr: Address) => Base58<Address>;
-export declare const decodeAddress: (addr: Base58<Address>) => Address;
+export declare const decodeAddress: (addr: Base58<Address> | string) => Address;
 export declare function mirysToIrys(mIrys: BigNumber.Value): BigNumber;
 export declare function irysTomIrys(irys: BigNumber.Value): BigNumber;
 export declare const isAsyncIter: (obj: any) => obj is AsyncIterable<Uint8Array>;

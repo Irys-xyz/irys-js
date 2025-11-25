@@ -38,7 +38,7 @@ export declare enum BlockTag {
     PENDING = "pending",
     FINALIZED = "finalized"
 }
-export type BlockParam = Base58<H256> | U64 | BlockTag;
+export type BlockParam = number | Base58<H256> | U64 | BlockTag;
 export declare const API_VERSIONS: string[];
 export default class Api {
     protected _instance?: AxiosInstance;

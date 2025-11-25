@@ -244,7 +244,7 @@ const toExecAddr = (addr) => addr.startsWith("0x") ? addr : (0, exports.irysToEx
 exports.toExecAddr = toExecAddr;
 const encodeAddress = (addr) => (0, exports.encodeBase58)(addr);
 exports.encodeAddress = encodeAddress;
-const decodeAddress = (addr) => decodeBase58ToFixed(addr, 20);
+const decodeAddress = (addr) => decodeBase58ToFixed((0, exports.toIrysAddr)(addr), 20);
 exports.decodeAddress = decodeAddress;
 function mirysToIrys(mIrys) {
     return new bignumber_js_1.default(mIrys).shiftedBy(-18);
