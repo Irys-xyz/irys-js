@@ -28,6 +28,9 @@ class Network {
         return await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
             (withPoa ? "/full" : ""), config), `getting block by param: ${param.toString()}`);
     }
+    async getTransaction(id, config) {
+        return await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_TX.replace("{txId}", id.toString()), config), `getting tx by ID: ${id.toString()}`);
+    }
     async getAnchor(config) {
         const encoded = (await utilities_1.Utils.wrapError(this.api.get(api_1.V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
         return {

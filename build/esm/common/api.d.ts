@@ -24,6 +24,7 @@ export declare enum V1_API_ROUTES {
     GET_INFO = "/",
     EXECUTION_RPC = "/v1/execution-rpc",
     GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data_start_offset",
+    GET_TX = "/v1/tx/{txId}",
     GET_BLOCK = "/v1/block/{blockParam}",
     GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
     POST_DATA_TX_HEADER = "/v1/tx",

@@ -1,10 +1,11 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api.js";
 import type { ApiRequestConfig, BlockParam } from "./api.js";
-import type { Address, Base58, BlockHash, EpochTimestampMs, H256, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
+import type { Address, Base58, BlockHash, EpochTimestampMs, H256, TransactionId, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import type { EncodedStorageConfigInterface } from "./storageConfig.js";
-import type { CommitmentType } from "./commitmentTransaction.js";
+import type { CommitmentType, EncodedSignedCommitmentTransactionInterface } from "./commitmentTransaction.js";
 import type { FixMe } from "./types.js";
+import { EncodedSignedDataTransactionInterface } from "./dataTransaction.js";
 export declare class Network {
     api: Api;
     constructor(api: Api);
@@ -13,6 +14,7 @@ export declare class Network {
     getInfo(config?: ApiRequestConfig): Promise<EncodedInfoInterface>;
     getLatestBlock(withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
     getBlock(param: BlockParam, withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getTransaction(id: TransactionId, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedSignedCommitmentTransactionInterface | EncodedSignedDataTransactionInterface>>;
     getAnchor(config?: ApiRequestConfig): Promise<AnchorInfo>;
     getPrice(size: number | bigint, ledgerId?: bigint | number, config?: ApiRequestConfig): Promise<PriceInfo>;
     getCommitmentPrice(address: Address, type: CommitmentType, config?: ApiRequestConfig): Promise<PledgePriceInfo | StakePriceInfo>;

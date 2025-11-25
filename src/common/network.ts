@@ -8,6 +8,7 @@ import type {
   BlockHash,
   EpochTimestampMs,
   H256,
+  TransactionId,
   U256,
   U32,
   U64,
@@ -17,9 +18,13 @@ import type {
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import { Utils } from "./utilities";
 import { decodeBase58ToFixed, encodeAddress } from "./utils";
-import type { CommitmentType } from "./commitmentTransaction";
+import type {
+  CommitmentType,
+  EncodedSignedCommitmentTransactionInterface,
+} from "./commitmentTransaction";
 import { encodeCommitmentType } from "./commitmentTransaction";
 import type { FixMe } from "./types";
+import { EncodedSignedDataTransactionInterface } from "./dataTransaction";
 
 // TODO: return a "request builder" that allows for more modification?
 export class Network {
@@ -71,6 +76,24 @@ export class Network {
         config
       ),
       `getting block by param: ${param.toString()}`
+    );
+  }
+
+  public async getTransaction(
+    id: TransactionId,
+    config?: ApiRequestConfig
+  ): Promise<
+    AxiosResponse<
+      | EncodedSignedCommitmentTransactionInterface
+      | EncodedSignedDataTransactionInterface
+    >
+  > {
+    return await Utils.wrapError(
+      this.api.get<
+        | EncodedSignedCommitmentTransactionInterface
+        | EncodedSignedDataTransactionInterface
+      >(V1_API_ROUTES.GET_TX.replace("{txId}", id.toString()), config),
+      `getting tx by ID: ${id.toString()}`
     );
   }
 

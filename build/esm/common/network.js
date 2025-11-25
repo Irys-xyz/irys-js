@@ -26,6 +26,9 @@ export class Network {
         return await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
             (withPoa ? "/full" : ""), config), `getting block by param: ${param.toString()}`);
     }
+    async getTransaction(id, config) {
+        return await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_TX.replace("{txId}", id.toString()), config), `getting tx by ID: ${id.toString()}`);
+    }
     async getAnchor(config) {
         const encoded = (await Utils.wrapError(this.api.get(V1_API_ROUTES.GET_ANCHOR, config), "getting latest anchor")).data;
         return {

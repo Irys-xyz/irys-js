@@ -12,6 +12,7 @@ export var V1_API_ROUTES;
     V1_API_ROUTES["GET_INFO"] = "/";
     V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
     V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
+    V1_API_ROUTES["GET_TX"] = "/v1/tx/{txId}";
     V1_API_ROUTES["GET_BLOCK"] = "/v1/block/{blockParam}";
     V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
     V1_API_ROUTES["POST_DATA_TX_HEADER"] = "/v1/tx";
