@@ -5,7 +5,7 @@ import type { Address, Base58, BlockHash, EpochTimestampMs, H256, TransactionId,
 import type { EncodedStorageConfigInterface } from "./storageConfig";
 import type { CommitmentType, EncodedSignedCommitmentTransactionInterface } from "./commitmentTransaction";
 import type { FixMe } from "./types";
-import { EncodedSignedDataTransactionInterface } from "./dataTransaction";
+import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
 export declare class Network {
     api: Api;
     constructor(api: Api);
@@ -58,6 +58,10 @@ export type EncodedCombinedBlockHeader = {
     dataLedgers: EncodedDataLedger[];
     systemLedgers: EncodedSystemTransactionLedger[];
     timestamp: UTF8<EpochTimestampMs>;
+    minerAddress: Base58<Address>;
+    rewardAddress: Base58<Address>;
+    rewardAmount: UTF8<U256>;
+    evmBlockHash: UTF8<BlockHash>;
 };
 export type EncodedDataLedger = {
     ledgerId: U8;

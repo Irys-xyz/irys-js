@@ -24,7 +24,7 @@ import type {
 } from "./commitmentTransaction";
 import { encodeCommitmentType } from "./commitmentTransaction";
 import type { FixMe } from "./types";
-import { EncodedSignedDataTransactionInterface } from "./dataTransaction";
+import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
 
 // TODO: return a "request builder" that allows for more modification?
 export class Network {
@@ -230,6 +230,11 @@ export type EncodedCombinedBlockHeader = {
   dataLedgers: EncodedDataLedger[];
   systemLedgers: EncodedSystemTransactionLedger[];
   timestamp: UTF8<EpochTimestampMs>;
+  minerAddress: Base58<Address>;
+  rewardAddress: Base58<Address>;
+  rewardAmount: UTF8<U256>;
+  // note: hex 0x encoded
+  evmBlockHash: UTF8<BlockHash>;
 };
 
 export type EncodedDataLedger = {
