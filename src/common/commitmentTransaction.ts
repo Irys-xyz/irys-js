@@ -8,13 +8,17 @@ import type {
   TransactionId,
   U256,
   U64,
-  U8,
   UTF8,
 } from "./dataTypes";
-import { decodeBase58ToFixed, toFixedUint8Array } from "./utils";
+import {
+  concatBuffers,
+  decodeBase58ToFixed,
+  numberToHex,
+  toFixedUint8Array,
+} from "./utils";
 import { arrayCompare } from "./merkle";
 import type { Input } from "rlp";
-import { encode } from "rlp";
+import { encode, utils } from "rlp";
 import { SigningKey } from "ethers";
 import {
   computeAddress,
@@ -110,8 +114,13 @@ export type CommitmentType =
       type: CommitmentTypeId.STAKE | CommitmentTypeId.UNSTAKE;
     }
   | {
-      type: CommitmentTypeId.PLEDGE | CommitmentTypeId.UNPLEDGE;
+      type: CommitmentTypeId.PLEDGE;
       pledgeCountBeforeExecuting: U64;
+    }
+  | {
+      type: CommitmentTypeId.UNPLEDGE;
+      pledgeCountBeforeExecuting: U64;
+      partitionHash: Base58<H256>;
     };
 
 export type EncodedCommitmentType =
@@ -119,8 +128,13 @@ export type EncodedCommitmentType =
       type: EncodedCommitmentTypeId.STAKE | EncodedCommitmentTypeId.UNSTAKE;
     }
   | {
-      type: EncodedCommitmentTypeId.PLEDGE | EncodedCommitmentTypeId.UNPLEDGE;
+      type: EncodedCommitmentTypeId.PLEDGE;
       pledgeCountBeforeExecuting: UTF8<U64>;
+    }
+  | {
+      type: EncodedCommitmentTypeId.UNPLEDGE;
+      pledgeCountBeforeExecuting: UTF8<U64>;
+      partitionHash: Base58<H256>;
     };
 
 function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
@@ -136,6 +150,7 @@ function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
       return {
         type: CommitmentTypeId.UNPLEDGE,
         pledgeCountBeforeExecuting: BigInt(enc.pledgeCountBeforeExecuting),
+        partitionHash: enc.partitionHash,
       };
     case EncodedCommitmentTypeId.UNSTAKE:
       return { type: CommitmentTypeId.UNSTAKE };
@@ -157,23 +172,34 @@ export function encodeCommitmentType(
       return {
         type: EncodedCommitmentTypeId.UNPLEDGE,
         pledgeCountBeforeExecuting: type.pledgeCountBeforeExecuting.toString(),
+        partitionHash: type.partitionHash,
       };
     case CommitmentTypeId.UNSTAKE:
       return { type: EncodedCommitmentTypeId.UNSTAKE };
   }
 }
 
-function signingEncodeCommitmentType(type: CommitmentType): (U8 | bigint)[] {
-  const buf = type.type;
+function signingEncodeCommitmentType(type: CommitmentType): Uint8Array {
+  const buf = new Uint8Array([type.type]);
   switch (type.type) {
     case CommitmentTypeId.STAKE:
-      return [buf];
+      return buf;
     case CommitmentTypeId.PLEDGE:
-      return [buf, type.pledgeCountBeforeExecuting];
+      return concatBuffers([
+        buf,
+        // below is required for RLP encoding
+        utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
+      ]);
     case CommitmentTypeId.UNPLEDGE:
-      return [buf, type.pledgeCountBeforeExecuting];
+      // needs to be a single buffer!!!
+      return concatBuffers([
+        buf,
+        // below is required for RLP encoding
+        utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
+        decodeBase58ToFixed(type.partitionHash, 32),
+      ]);
     case CommitmentTypeId.UNSTAKE:
-      return [buf];
+      return buf;
   }
 }
 
@@ -298,6 +324,7 @@ export class UnsignedCommitmentTransaction
         // note: `undefined`/nullish and 0 serialize to the same thing
         // this is notable for `bundleFormat` and `permFee`
         const fields: Input = [
+          this.version,
           this.anchor,
           this.signer,
           ...signingEncodeCommitmentType(
@@ -307,7 +334,6 @@ export class UnsignedCommitmentTransaction
               "Unable to sign commitment tx with missing field {1}"
             )
           ),
-          this.version,
           this.chainId,
           this.fee,
           this.value,
@@ -450,6 +476,7 @@ export class SignedCommitmentTransaction
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
         const fields: Input = [
+          this.version,
           this.anchor,
           this.signer,
           ...signingEncodeCommitmentType(
@@ -459,7 +486,6 @@ export class SignedCommitmentTransaction
               "Unable to sign commitment tx with missing field {1}"
             )
           ),
-          this.version,
           this.chainId,
           this.fee,
           this.value,

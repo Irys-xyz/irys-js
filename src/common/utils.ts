@@ -4,8 +4,8 @@ import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
 import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
-import { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
-import { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
+import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import type { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
 
 export type Base64UrlString = string;
 
@@ -150,6 +150,11 @@ export function bigIntToBuffer(note: bigint, size: number): Buffer {
     "hex"
   );
   return buf;
+}
+
+export function numberToHex(number: number | bigint): string {
+  const hex = number.toString(16);
+  return hex.length % 2 ? `0${hex}` : hex;
 }
 
 // clamped versions - LE encoding
