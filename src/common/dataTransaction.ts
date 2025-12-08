@@ -310,6 +310,8 @@ export class SignedDataTransaction
   public signature!: Signature;
   public irys: IrysClient;
   public chunks: Chunks | undefined;
+  // TODO: implement! this is so we upload the last chunk _first_, which lets nodes confirm the data_size immediately
+  // public lastChunk: Uint8Array | undefined;
 
   public constructor(
     irys: IrysClient,
