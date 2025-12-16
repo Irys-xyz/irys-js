@@ -178,6 +178,8 @@ var DataTransactionVersion;
     DataTransactionVersion[DataTransactionVersion["V1"] = 1] = "V1";
 })(DataTransactionVersion || (exports.DataTransactionVersion = DataTransactionVersion = {}));
 class SignedDataTransaction {
+    // TODO: implement! this is so we upload the last chunk _first_, which lets nodes confirm the data_size immediately
+    // public lastChunk: Uint8Array | undefined;
     constructor(irys, attributes) {
         this.bundleFormat = undefined;
         this.permFee = undefined;

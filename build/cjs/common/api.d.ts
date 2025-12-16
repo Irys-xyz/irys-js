@@ -19,20 +19,21 @@ export type ApiRequestConfig = {
 } & AxiosRequestConfig;
 export declare enum V1_API_ROUTES {
     GET_TX_HEADER = "/v1/tx/#",
-    GET_PROMOTION_STATUS = "/v1/tx/#/promotion_status",
-    GET_STORAGE_CONFIG = "/v1/network/config",
+    GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
+    GET_NETWORK_CONFIG = "/v1/network/config",
     GET_INFO = "/",
     EXECUTION_RPC = "/v1/execution-rpc",
-    GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data_start_offset",
+    GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data-start-offset",
     GET_TX = "/v1/tx/{txId}",
     GET_BLOCK = "/v1/block/{blockParam}",
     GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
     POST_DATA_TX_HEADER = "/v1/tx",
-    POST_COMMITMENT_TX_HEADER = "/v1/commitment_tx",
+    POST_COMMITMENT_TX_HEADER = "/v1/commitment-tx",
     POST_CHUNK = "/v1/chunk",
     GET_COMMITMENT_PRICE = "/v1/price/commitment/{type}/{userAddress}",
     GET_ANCHOR = "/v1/anchor",
-    GET_BLOCK_INDEX = "/v1/block_index?height={height}&limit={limit}"
+    GET_BLOCK_INDEX = "/v1/block-index?height={height}&limit={limit}",
+    GET_ASSIGNMENTS = "/v1/ledger/{address}/assignments"
 }
 export declare enum BlockTag {
     LATEST = "latest",

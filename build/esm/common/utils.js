@@ -102,6 +102,10 @@ export function bigIntToBuffer(note, size) {
     const buf = Buffer.from(hex.padStart(size * 2, "0").slice(0, size * 2), "hex");
     return buf;
 }
+export function numberToHex(number) {
+    const hex = number.toString(16);
+    return hex.length % 2 ? `0${hex}` : hex;
+}
 // clamped versions - LE encoding
 export function bigIntToBytes(value, numBytes) {
     const bytes = new Uint8Array(numBytes);
@@ -193,7 +197,7 @@ export const encodeBase58 = (bytes) => bs58.encode(bytes);
 export function decodeBase58ToFixed(string, length) {
     return toFixedUint8Array(decodeBase58(string), length);
 }
-export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr.toLowerCase()));
+export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))
     : encodeBase58(getBytes("0x" + execAddr));

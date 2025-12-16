@@ -1,8 +1,8 @@
 /// <reference types="node" />
 import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import BigNumber from "bignumber.js";
-import { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
-import { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
+import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import type { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
 export type Base64UrlString = string;
 export declare function concatBuffers(buffers: Uint8Array[] | ArrayBuffer[]): Uint8Array;
 export declare function writeTo(dest: Uint8Array, src: Readonly<Uint8Array>): void;
@@ -23,6 +23,7 @@ export declare function bigIntToUint8Array(bigInt: bigint): Uint8Array;
 export declare function uint8ArrayToBigInt(bytes: Uint8Array): bigint;
 export declare function bufferToBigInt(buffer: Buffer): bigint;
 export declare function bigIntToBuffer(note: bigint, size: number): Buffer;
+export declare function numberToHex(number: number | bigint): string;
 export declare function bigIntToBytes(value: bigint, numBytes: number): Uint8Array;
 export declare function bytesToBigInt(bytes: Uint8Array): bigint;
 export declare function numberToBytes(value: number, numBytes: number): Uint8Array;

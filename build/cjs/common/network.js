@@ -11,7 +11,7 @@ class Network {
         this.api = api;
     }
     async getStorageConfig(config) {
-        return (await this.api.get(api_1.V1_API_ROUTES.GET_STORAGE_CONFIG, config)).data;
+        return (await this.api.get(api_1.V1_API_ROUTES.GET_NETWORK_CONFIG, config)).data;
     }
     async getHeight(config) {
         return this.getInfo(config).then((r) => BigInt(r.blockIndexHeight));
