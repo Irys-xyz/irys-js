@@ -7,19 +7,28 @@ export const isApiConfig = (o) => typeof o !== "string" && "url" in o;
 export var V1_API_ROUTES;
 (function (V1_API_ROUTES) {
     V1_API_ROUTES["GET_TX_HEADER"] = "/v1/tx/#";
-    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/promotion_status";
-    V1_API_ROUTES["GET_STORAGE_CONFIG"] = "/v1/network/config";
+    V1_API_ROUTES["GET_PROMOTION_STATUS"] = "/v1/tx/#/promotion-status";
+    V1_API_ROUTES["GET_NETWORK_CONFIG"] = "/v1/network/config";
     V1_API_ROUTES["GET_INFO"] = "/";
     V1_API_ROUTES["EXECUTION_RPC"] = "/v1/execution-rpc";
-    V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data_start_offset";
-    V1_API_ROUTES["GET_LATEST_BLOCK"] = "/v1/block/latest";
+    V1_API_ROUTES["GET_LOCAL_DATA_START_OFFSET"] = "/v1/tx/#/local/data-start-offset";
+    V1_API_ROUTES["GET_TX"] = "/v1/tx/{txId}";
+    V1_API_ROUTES["GET_BLOCK"] = "/v1/block/{blockParam}";
     V1_API_ROUTES["GET_TX_PRICE"] = "/v1/price/{ledgerId}/{size}";
     V1_API_ROUTES["POST_DATA_TX_HEADER"] = "/v1/tx";
-    V1_API_ROUTES["POST_COMMITMENT_TX_HEADER"] = "/v1/commitment_tx";
+    V1_API_ROUTES["POST_COMMITMENT_TX_HEADER"] = "/v1/commitment-tx";
     V1_API_ROUTES["POST_CHUNK"] = "/v1/chunk";
     V1_API_ROUTES["GET_COMMITMENT_PRICE"] = "/v1/price/commitment/{type}/{userAddress}";
     V1_API_ROUTES["GET_ANCHOR"] = "/v1/anchor";
+    V1_API_ROUTES["GET_BLOCK_INDEX"] = "/v1/block-index?height={height}&limit={limit}";
+    V1_API_ROUTES["GET_ASSIGNMENTS"] = "/v1/ledger/{address}/assignments";
 })(V1_API_ROUTES || (V1_API_ROUTES = {}));
+export var BlockTag;
+(function (BlockTag) {
+    BlockTag["LATEST"] = "latest";
+    BlockTag["PENDING"] = "pending";
+    BlockTag["FINALIZED"] = "finalized";
+})(BlockTag || (BlockTag = {}));
 export const API_VERSIONS = ["v1"];
 export default class Api {
     _instance;

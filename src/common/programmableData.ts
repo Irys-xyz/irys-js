@@ -51,15 +51,13 @@ export class ReadBuilder {
         dataStart = dataStartCache.get(txId)!;
       } else {
         const txMeta = (
-          await Utils.checkAndThrow(
-            this.irys.storageTransactions.getHeader(txId)
-          )
+          await Utils.wrapError(this.irys.storageTransactions.getHeader(txId))
         ).data;
         if (txMeta.ledgerId !== 0)
           throw new Error(
             `Transaction ${txId} is not permanent (ledger 0) and cannot be used.`
           );
-        dataStart = await Utils.checkAndThrow(
+        dataStart = await Utils.wrapError(
           await this.irys.storageTransactions.getLocalDataStartOffset(txId)
         ).then((r) => BigInt(r.data.dataStartOffset as string));
         dataStartCache.set(txId, dataStart);

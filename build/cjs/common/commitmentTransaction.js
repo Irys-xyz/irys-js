@@ -58,6 +58,7 @@ function decodeCommitmentType(enc) {
             return {
                 type: CommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: BigInt(enc.pledgeCountBeforeExecuting),
+                partitionHash: enc.partitionHash,
             };
         case EncodedCommitmentTypeId.UNSTAKE:
             return { type: CommitmentTypeId.UNSTAKE };
@@ -76,6 +77,7 @@ function encodeCommitmentType(type) {
             return {
                 type: EncodedCommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: type.pledgeCountBeforeExecuting.toString(),
+                partitionHash: type.partitionHash,
             };
         case CommitmentTypeId.UNSTAKE:
             return { type: EncodedCommitmentTypeId.UNSTAKE };
@@ -83,16 +85,26 @@ function encodeCommitmentType(type) {
 }
 exports.encodeCommitmentType = encodeCommitmentType;
 function signingEncodeCommitmentType(type) {
-    const buf = type.type;
+    const buf = new Uint8Array([type.type]);
     switch (type.type) {
         case CommitmentTypeId.STAKE:
-            return [buf];
+            return buf;
         case CommitmentTypeId.PLEDGE:
-            return [buf, type.pledgeCountBeforeExecuting];
+            return (0, utils_1.concatBuffers)([
+                buf,
+                // below is required for RLP encoding
+                rlp_1.utils.hexToBytes((0, utils_1.numberToHex)(type.pledgeCountBeforeExecuting)),
+            ]);
         case CommitmentTypeId.UNPLEDGE:
-            return [buf, type.pledgeCountBeforeExecuting];
+            // needs to be a single buffer!!!
+            return (0, utils_1.concatBuffers)([
+                buf,
+                // below is required for RLP encoding
+                rlp_1.utils.hexToBytes((0, utils_1.numberToHex)(type.pledgeCountBeforeExecuting)),
+                (0, utils_1.decodeBase58ToFixed)(type.partitionHash, 32),
+            ]);
         case CommitmentTypeId.UNSTAKE:
-            return [buf];
+            return buf;
     }
 }
 var CommitmentTransactionVersion;
@@ -173,10 +185,10 @@ class UnsignedCommitmentTransaction {
                 // note: `undefined`/nullish and 0 serialize to the same thing
                 // this is notable for `bundleFormat` and `permFee`
                 const fields = [
+                    this.version,
                     this.anchor,
                     this.signer,
                     ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
-                    this.version,
                     this.chainId,
                     this.fee,
                     this.value,
@@ -257,7 +269,7 @@ class SignedCommitmentTransaction {
             commitmentType: decodeCommitmentType(encoded.commitmentType),
         });
     }
-    async uploadHeader(apiConfig) {
+    async upload(apiConfig) {
         return await this.irys.api.post(api_1.V1_API_ROUTES.POST_COMMITMENT_TX_HEADER, this.toJSON(), {
             ...apiConfig,
             headers: { "Content-Type": "application/json" },
@@ -278,10 +290,10 @@ class SignedCommitmentTransaction {
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
                 const fields = [
+                    this.version,
                     this.anchor,
                     this.signer,
                     ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
-                    this.version,
                     this.chainId,
                     this.fee,
                     this.value,

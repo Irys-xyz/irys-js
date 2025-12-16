@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
-import { decodeBase58ToFixed, toFixedUint8Array } from "./utils.js";
+import { concatBuffers, decodeBase58ToFixed, numberToHex, toFixedUint8Array, } from "./utils.js";
 import { arrayCompare } from "./merkle.js";
-import { encode } from "rlp";
+import { encode, utils } from "rlp";
 import { SigningKey } from "ethers";
 import { computeAddress, encodeBase58, getBytes, hexlify, keccak256, recoverAddress, } from "ethers";
 import { IRYS_TESTNET_CHAIN_ID } from "./constants.js";
@@ -55,6 +55,7 @@ function decodeCommitmentType(enc) {
             return {
                 type: CommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: BigInt(enc.pledgeCountBeforeExecuting),
+                partitionHash: enc.partitionHash,
             };
         case EncodedCommitmentTypeId.UNSTAKE:
             return { type: CommitmentTypeId.UNSTAKE };
@@ -73,22 +74,33 @@ export function encodeCommitmentType(type) {
             return {
                 type: EncodedCommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: type.pledgeCountBeforeExecuting.toString(),
+                partitionHash: type.partitionHash,
             };
         case CommitmentTypeId.UNSTAKE:
             return { type: EncodedCommitmentTypeId.UNSTAKE };
     }
 }
 function signingEncodeCommitmentType(type) {
-    const buf = type.type;
+    const buf = new Uint8Array([type.type]);
     switch (type.type) {
         case CommitmentTypeId.STAKE:
-            return [buf];
+            return buf;
         case CommitmentTypeId.PLEDGE:
-            return [buf, type.pledgeCountBeforeExecuting];
+            return concatBuffers([
+                buf,
+                // below is required for RLP encoding
+                utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
+            ]);
         case CommitmentTypeId.UNPLEDGE:
-            return [buf, type.pledgeCountBeforeExecuting];
+            // needs to be a single buffer!!!
+            return concatBuffers([
+                buf,
+                // below is required for RLP encoding
+                utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
+                decodeBase58ToFixed(type.partitionHash, 32),
+            ]);
         case CommitmentTypeId.UNSTAKE:
-            return [buf];
+            return buf;
     }
 }
 export var CommitmentTransactionVersion;
@@ -170,10 +182,10 @@ export class UnsignedCommitmentTransaction {
                 // note: `undefined`/nullish and 0 serialize to the same thing
                 // this is notable for `bundleFormat` and `permFee`
                 const fields = [
+                    this.version,
                     this.anchor,
                     this.signer,
                     ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
-                    this.version,
                     this.chainId,
                     this.fee,
                     this.value,
@@ -263,7 +275,7 @@ export class SignedCommitmentTransaction {
             commitmentType: decodeCommitmentType(encoded.commitmentType),
         });
     }
-    async uploadHeader(apiConfig) {
+    async upload(apiConfig) {
         return await this.irys.api.post(V1_API_ROUTES.POST_COMMITMENT_TX_HEADER, this.toJSON(), {
             ...apiConfig,
             headers: { "Content-Type": "application/json" },
@@ -284,10 +296,10 @@ export class SignedCommitmentTransaction {
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
                 const fields = [
+                    this.version,
                     this.anchor,
                     this.signer,
                     ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
-                    this.version,
                     this.chainId,
                     this.fee,
                     this.value,

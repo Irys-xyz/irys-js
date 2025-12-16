@@ -1,19 +1,34 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api.js";
-import type { Address, Base58, BlockHash, H256, U256, U32, U64, UTF8 } from "./dataTypes.js";
+import type { ApiRequestConfig, BlockParam } from "./api.js";
+import type { Address, Base58, BlockHash, EpochTimestampMs, H256, TransactionId, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
 import type { EncodedStorageConfigInterface } from "./storageConfig.js";
-import type { CommitmentType } from "./commitmentTransaction.js";
+import type { CommitmentType, EncodedSignedCommitmentTransactionInterface } from "./commitmentTransaction.js";
+import type { FixMe } from "./types.js";
+import type { EncodedSignedDataTransactionInterface } from "./dataTransaction.js";
 export declare class Network {
     api: Api;
     constructor(api: Api);
-    getStorageConfig(): Promise<EncodedStorageConfigInterface>;
-    getHeight(): Promise<number>;
-    getInfo(): Promise<EncodedInfoInterface>;
-    getLatestBlock(): Promise<AxiosResponse<EncodedLatestBlock>>;
-    getAnchor(): Promise<AnchorInfo>;
-    getPrice(size: number | bigint, ledgerId?: bigint | number): Promise<PriceInfo>;
-    getCommitmentPrice(address: Address, type: CommitmentType): Promise<PledgePriceInfo | StakePriceInfo>;
+    getStorageConfig(config?: ApiRequestConfig): Promise<EncodedStorageConfigInterface>;
+    getHeight(config?: ApiRequestConfig): Promise<U64>;
+    getInfo(config?: ApiRequestConfig): Promise<EncodedInfoInterface>;
+    getLatestBlock(withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getBlock(param: BlockParam, withPoa?: boolean, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedCombinedBlockHeader>>;
+    getTransaction(id: TransactionId, config?: ApiRequestConfig): Promise<AxiosResponse<EncodedSignedCommitmentTransactionInterface | EncodedSignedDataTransactionInterface>>;
+    getAnchor(config?: ApiRequestConfig): Promise<AnchorInfo>;
+    getPrice(size: number | bigint, ledgerId?: bigint | number, config?: ApiRequestConfig): Promise<PriceInfo>;
+    getCommitmentPrice(address: Address, type: CommitmentType, config?: ApiRequestConfig): Promise<PledgePriceInfo | StakePriceInfo>;
+    getBlockIndex(fromHeight: number | U64, pageSize?: number, config?: ApiRequestConfig): Promise<EncodedBlockIndexEntry[]>;
 }
+export type EncodedBlockIndexEntry = {
+    blockHash: Base58<BlockHash>;
+    numLedgers: U8;
+    ledgers: EncodedLedgerIndexItem[];
+};
+export type EncodedLedgerIndexItem = {
+    totalChunks: UTF8<U64>;
+    txRoot: Base58<H256>;
+};
 export type EncodedAnchorInfo = {
     blockHash: Base58<BlockHash>;
 };
@@ -36,17 +51,44 @@ export type EncodedPledgePriceInfo = EncodedStakePriceInfo & {
     userAddress: Base58<Address>;
     pledgeCount: UTF8<U64>;
 };
-export type EncodedLatestBlock = {
-    blockHash: UTF8<BlockHash>;
+export type EncodedCombinedBlockHeader = {
+    version: U8;
+    blockHash: Base58<BlockHash>;
+    height: UTF8<U64>;
+    dataLedgers: EncodedDataLedger[];
+    systemLedgers: EncodedSystemTransactionLedger[];
+    timestamp: UTF8<EpochTimestampMs>;
+    minerAddress: Base58<Address>;
+    rewardAddress: Base58<Address>;
+    rewardAmount: UTF8<U256>;
+    evmBlockHash: UTF8<BlockHash>;
+};
+export type EncodedDataLedger = {
+    ledgerId: U8;
+    txRoot: Base58<H256>;
+    txIds: Base58<H256>[];
+    totalChunks: UTF8<U64>;
+    expires?: UTF8<U64>;
+    proofs?: FixMe[];
+    requiredProofCount?: U8;
+};
+export type EncodedSystemTransactionLedger = {
+    ledgerId: U8;
+    txIds: Base58<H256>[];
 };
 export type EncodedInfoInterface = {
     version: string;
     peerCount: number;
-    chainId: number;
-    height: number;
+    chainId: UTF8<U64>;
+    height: UTF8<U64>;
     blockHash: Base58<H256>;
-    blockIndexHeight: number;
-    blocks: number;
+    blockIndexHeight: UTF8<U64>;
+    blockIndexHash: Base58<H256>;
+    pendingBlocks: UTF8<U64>;
+    isSyncing: boolean;
+    currentSyncHeight: UTF8<U64>;
+    uptimeSecs: UTF8<U64>;
+    miningAddress: Base58<Address>;
 };
 export type EncodedPriceInfo = {
     permFee: UTF8<U256>;

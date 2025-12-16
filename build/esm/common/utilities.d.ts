@@ -10,4 +10,9 @@ export declare class Utils {
      * @returns nothing if the status code is 200
      */
     static checkAndThrow<T, D>(response: Resolvable<AxiosResponse<T, D>>, context?: string, exceptions?: number[]): Promise<AxiosResponse<T, D>>;
+    static wrapError<T, D>(response: Resolvable<AxiosResponse<T, D>>, context?: string): Promise<AxiosResponse<T, D>>;
+}
+export declare class HttpError extends Error {
+    inner: Error;
+    constructor(inner: Error, ctx?: string);
 }

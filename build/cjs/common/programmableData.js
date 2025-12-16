@@ -35,10 +35,10 @@ class ReadBuilder {
                 dataStart = dataStartCache.get(txId);
             }
             else {
-                const txMeta = (await utilities_1.Utils.checkAndThrow(this.irys.storageTransactions.getHeader(txId))).data;
+                const txMeta = (await utilities_1.Utils.wrapError(this.irys.storageTransactions.getHeader(txId))).data;
                 if (txMeta.ledgerId !== 0)
                     throw new Error(`Transaction ${txId} is not permanent (ledger 0) and cannot be used.`);
-                dataStart = await utilities_1.Utils.checkAndThrow(await this.irys.storageTransactions.getLocalDataStartOffset(txId)).then((r) => BigInt(r.data.dataStartOffset));
+                dataStart = await utilities_1.Utils.wrapError(await this.irys.storageTransactions.getLocalDataStartOffset(txId)).then((r) => BigInt(r.data.dataStartOffset));
                 dataStartCache.set(txId, dataStart);
             }
             const chunkSize = this.irys.storageConfig.chunkSize;

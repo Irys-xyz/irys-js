@@ -45,14 +45,22 @@ export declare enum EncodedCommitmentTypeId {
 export type CommitmentType = {
     type: CommitmentTypeId.STAKE | CommitmentTypeId.UNSTAKE;
 } | {
-    type: CommitmentTypeId.PLEDGE | CommitmentTypeId.UNPLEDGE;
+    type: CommitmentTypeId.PLEDGE;
     pledgeCountBeforeExecuting: U64;
+} | {
+    type: CommitmentTypeId.UNPLEDGE;
+    pledgeCountBeforeExecuting: U64;
+    partitionHash: Base58<H256>;
 };
 export type EncodedCommitmentType = {
     type: EncodedCommitmentTypeId.STAKE | EncodedCommitmentTypeId.UNSTAKE;
 } | {
-    type: EncodedCommitmentTypeId.PLEDGE | EncodedCommitmentTypeId.UNPLEDGE;
+    type: EncodedCommitmentTypeId.PLEDGE;
     pledgeCountBeforeExecuting: UTF8<U64>;
+} | {
+    type: EncodedCommitmentTypeId.UNPLEDGE;
+    pledgeCountBeforeExecuting: UTF8<U64>;
+    partitionHash: Base58<H256>;
 };
 export declare function encodeCommitmentType(type: CommitmentType): EncodedCommitmentType;
 export declare enum CommitmentTransactionVersion {
@@ -96,7 +104,7 @@ export declare class SignedCommitmentTransaction implements SignedCommitmentTran
     get txId(): string;
     encode(): EncodedSignedCommitmentTransactionInterface;
     static decode(irys: IrysClient, encoded: EncodedSignedCommitmentTransactionInterface): SignedCommitmentTransaction;
-    uploadHeader(apiConfig?: ApiRequestConfig): Promise<AxiosResponse>;
+    upload(apiConfig?: ApiRequestConfig): Promise<AxiosResponse>;
     validateSignature(): Promise<boolean>;
     getSignatureData(): Promise<Uint8Array>;
 }

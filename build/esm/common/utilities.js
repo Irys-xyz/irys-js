@@ -17,5 +17,21 @@ export class Utils {
         }
         return res;
     }
+    // wraps a HTTP error with some context
+    static async wrapError(response, context) {
+        try {
+            return await response;
+        }
+        catch (e) {
+            throw new HttpError(e, context);
+        }
+    }
+}
+export class HttpError extends Error {
+    inner;
+    constructor(inner, ctx) {
+        super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
+        this.inner = inner;
+    }
 }
 //# sourceMappingURL=utilities.js.map

@@ -4,6 +4,8 @@ import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
 import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
+import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
+import type { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
 
 export type Base64UrlString = string;
 
@@ -150,6 +152,11 @@ export function bigIntToBuffer(note: bigint, size: number): Buffer {
   return buf;
 }
 
+export function numberToHex(number: number | bigint): string {
+  const hex = number.toString(16);
+  return hex.length % 2 ? `0${hex}` : hex;
+}
+
 // clamped versions - LE encoding
 export function bigIntToBytes(value: bigint, numBytes: number): Uint8Array {
   const bytes = new Uint8Array(numBytes);
@@ -266,7 +273,7 @@ export function decodeBase58ToFixed<N extends number>(
 }
 
 export const irysToExecAddr = (irysAddr: string): string =>
-  hexlify(decodeBase58(irysAddr.toLowerCase()));
+  hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))
@@ -276,11 +283,12 @@ export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr: string): string =>
   addr.startsWith("0x") ? addr : irysToExecAddr(addr);
+
 export const encodeAddress = (addr: Address): Base58<Address> =>
   encodeBase58(addr);
 
-export const decodeAddress = (addr: Base58<Address>): Address =>
-  decodeBase58ToFixed(addr, 20);
+export const decodeAddress = (addr: Base58<Address> | string): Address =>
+  decodeBase58ToFixed(toIrysAddr(addr), 20);
 
 export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
   return new BigNumber(mIrys).shiftedBy(-18);
@@ -289,6 +297,27 @@ export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
 export function irysTomIrys(irys: BigNumber.Value): BigNumber {
   return new BigNumber(irys).shiftedBy(18);
 }
+
+export const isCommitmentTx = (
+  tx:
+    | EncodedUnsignedCommitmentTransactionInterface
+    | EncodedUnsignedDataTransactionInterface
+): tx is EncodedUnsignedCommitmentTransactionInterface => {
+  // @ts-expect-error TS is dum sometimes
+  if (tx?.commitmentType) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+export const isDataTx = (
+  tx:
+    | EncodedUnsignedCommitmentTransactionInterface
+    | EncodedUnsignedDataTransactionInterface
+): tx is EncodedUnsignedDataTransactionInterface => {
+  return !isCommitmentTx(tx);
+};
 
 export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
   typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===

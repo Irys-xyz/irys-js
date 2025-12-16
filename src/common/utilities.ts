@@ -33,4 +33,22 @@ export class Utils {
     }
     return res;
   }
+
+  // wraps a HTTP error with some context
+  public static async wrapError<T, D>(
+    response: Resolvable<AxiosResponse<T, D>>,
+    context?: string
+  ): Promise<AxiosResponse<T, D>> {
+    try {
+      return await response;
+    } catch (e: any) {
+      throw new HttpError(e, context);
+    }
+  }
+}
+
+export class HttpError extends Error {
+  constructor(public inner: Error, ctx?: string) {
+    super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
+  }
 }

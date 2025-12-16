@@ -8,6 +8,10 @@ import type { Data } from "./types.js";
 import AsyncRetry from "async-retry";
 import { type ApiRequestConfig } from "./api.js";
 export type DataTransactionInterface = UnsignedDataTransactionInterface | SignedDataTransactionInterface;
+export declare enum DataLedgerId {
+    PUBLISH = 0,
+    SUBMIT = 1
+}
 export type UnsignedDataTransactionInterface = {
     version: DataTransactionVersion;
     anchor: H256;
@@ -68,7 +72,7 @@ export declare class UnsignedDataTransaction implements Partial<UnsignedDataTran
     chunks?: Chunks;
     constructor(irys: IrysClient, attributes?: Partial<UnsignedDataTransactionInterface>);
     get missingProperties(): string[];
-    ledger(ledgerId: number): this;
+    ledger(ledgerId: number | DataLedgerId): this;
     fillFee(): Promise<this>;
     getFees(): Promise<{
         termFee: U64;

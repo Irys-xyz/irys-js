@@ -102,6 +102,10 @@ export function bigIntToBuffer(note, size) {
     const buf = Buffer.from(hex.padStart(size * 2, "0").slice(0, size * 2), "hex");
     return buf;
 }
+export function numberToHex(number) {
+    const hex = number.toString(16);
+    return hex.length % 2 ? `0${hex}` : hex;
+}
 // clamped versions - LE encoding
 export function bigIntToBytes(value, numBytes) {
     const bytes = new Uint8Array(numBytes);
@@ -193,20 +197,32 @@ export const encodeBase58 = (bytes) => bs58.encode(bytes);
 export function decodeBase58ToFixed(string, length) {
     return toFixedUint8Array(decodeBase58(string), length);
 }
-export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr.toLowerCase()));
+export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))
     : encodeBase58(getBytes("0x" + execAddr));
 export const toIrysAddr = (addr) => addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr) => addr.startsWith("0x") ? addr : irysToExecAddr(addr);
 export const encodeAddress = (addr) => encodeBase58(addr);
-export const decodeAddress = (addr) => decodeBase58ToFixed(addr, 20);
+export const decodeAddress = (addr) => decodeBase58ToFixed(toIrysAddr(addr), 20);
 export function mirysToIrys(mIrys) {
     return new BigNumber(mIrys).shiftedBy(-18);
 }
 export function irysTomIrys(irys) {
     return new BigNumber(irys).shiftedBy(18);
 }
+export const isCommitmentTx = (tx) => {
+    // @ts-expect-error TS is dum sometimes
+    if (tx?.commitmentType) {
+        return true;
+    }
+    else {
+        return false;
+    }
+};
+export const isDataTx = (tx) => {
+    return !isCommitmentTx(tx);
+};
 export const isAsyncIter = (obj) => typeof obj[Symbol.asyncIterator] ===
     "function";
 // basic promise pool
