@@ -39,7 +39,7 @@ export class Network {
   ): Promise<EncodedStorageConfigInterface> {
     return (
       await this.api.get<EncodedStorageConfigInterface>(
-        V1_API_ROUTES.GET_STORAGE_CONFIG,
+        V1_API_ROUTES.GET_NETWORK_CONFIG,
         config
       )
     ).data;

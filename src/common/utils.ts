@@ -273,7 +273,7 @@ export function decodeBase58ToFixed<N extends number>(
 }
 
 export const irysToExecAddr = (irysAddr: string): string =>
-  hexlify(decodeBase58(irysAddr.toLowerCase()));
+  hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr))

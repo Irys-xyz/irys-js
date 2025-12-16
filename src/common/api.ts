@@ -32,7 +32,7 @@ export type ApiRequestConfig = {
 export enum V1_API_ROUTES {
   GET_TX_HEADER = "/v1/tx/#",
   GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
-  GET_STORAGE_CONFIG = "/v1/network/config",
+  GET_NETWORK_CONFIG = "/v1/network/config",
   GET_INFO = "/",
   EXECUTION_RPC = "/v1/execution-rpc",
   GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data-start-offset",
@@ -45,6 +45,7 @@ export enum V1_API_ROUTES {
   GET_COMMITMENT_PRICE = "/v1/price/commitment/{type}/{userAddress}",
   GET_ANCHOR = "/v1/anchor",
   GET_BLOCK_INDEX = "/v1/block-index?height={height}&limit={limit}",
+  GET_ASSIGNMENTS = "/v1/ledger/{address}/assignments",
 }
 
 export enum BlockTag {
