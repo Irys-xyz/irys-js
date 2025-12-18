@@ -1,11 +1,21 @@
 import { hexlify } from "ethers/utils";
-import type { UnsignedDataTransactionInterface } from "../src/common/dataTransaction";
-import { createFixedUint8Array } from "../src/common/utils";
-import IrysClient from "../src/node";
+import {
+  UnsignedDataTransaction,
+  type UnsignedDataTransactionInterface,
+} from "../src/common/dataTransaction";
+import { createFixedUint8Array, encodeBase58 } from "../src/common/utils";
 import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
+import type { UnsignedCommitmentTransactionInterface } from "../src/common/commitmentTransaction";
+import {
+  CommitmentTypeId,
+  UnsignedCommitmentTransaction,
+} from "../src/common/commitmentTransaction";
 
 async function main(): Promise<void> {
-  const irys = await new IrysClient().node("http://172.17.0.2:8080/v1");
+  // dev test wallet 1
+  // safe to commit, random & public already
+  const priv =
+    "0xdb793353b633df950842415065f769699541160845d73db902eadee6bc5042d0";
 
   const txProps: Partial<UnsignedDataTransactionInterface> = {
     anchor: createFixedUint8Array(32).fill(1),
@@ -20,18 +30,40 @@ async function main(): Promise<void> {
     headerSize: 0n,
   };
 
-  const tx = irys.createDataTransaction(txProps);
-
-  // dev test wallet 1
-  // safe to commit, random & public already
-  const priv =
-    "0xdb793353b633df950842415065f769699541160845d73db902eadee6bc5042d0";
+  const tx = new UnsignedDataTransaction(undefined as any, txProps);
 
   const signedTx = await tx.sign(priv);
   const enc = signedTx.encode();
   const bs58Sig = enc.signature;
   const hexSig = hexlify(signedTx.signature);
   console.log("bs58", bs58Sig, "hex", hexSig, "enc", signedTx.toJSON());
+
+  const txProps2: Partial<UnsignedCommitmentTransactionInterface> = {
+    anchor: createFixedUint8Array(32).fill(1),
+    // dataRoot: createFixedUint8Array(32).fill(3),
+    commitmentType: {
+      type: CommitmentTypeId.UNPLEDGE,
+      pledgeCountBeforeExecuting: 12n,
+      partitionHash: encodeBase58(new Uint8Array(32).fill(2)),
+    },
+    version: 1,
+    chainId: IRYS_TESTNET_CHAIN_ID,
+    fee: 1234n,
+    value: 222n,
+  };
+
+  // const tx2 = irys.createCommitmentTransaction(txProps2);
+  const tx2 = new UnsignedCommitmentTransaction(undefined as any, txProps2);
+
+  const signedTx2 = await tx2.sign(priv);
+  if (!(await signedTx2.validateSignature())) {
+    throw new Error("Invalid TX");
+  }
+  const enc2 = signedTx2.encode();
+  const bs58Sig2 = enc2.signature;
+  const hexSig2 = hexlify(signedTx2.signature);
+  console.log("bs58", bs58Sig2, "hex", hexSig2, "enc", signedTx2.toJSON());
+
   console.log("done!");
 }
 
