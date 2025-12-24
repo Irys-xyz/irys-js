@@ -3,7 +3,10 @@ import {
   UnsignedDataTransaction,
   type UnsignedDataTransactionInterface,
 } from "../src/common/dataTransaction";
-import { createFixedUint8Array, encodeBase58 } from "../src/common/utils";
+import {
+  createFixedUint8Array,
+  decodeBase58ToFixed,
+} from "../src/common/utils";
 import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
 import type { UnsignedCommitmentTransactionInterface } from "../src/common/commitmentTransaction";
 import {
@@ -39,15 +42,20 @@ async function main(): Promise<void> {
   console.log("bs58", bs58Sig, "hex", hexSig, "enc", signedTx.toJSON());
 
   const txProps2: Partial<UnsignedCommitmentTransactionInterface> = {
-    anchor: createFixedUint8Array(32).fill(1),
-    // dataRoot: createFixedUint8Array(32).fill(3),
+    anchor: decodeBase58ToFixed(
+      "GqrCZEc5WU4gXj9qveAUDkNRPhsPPjWrD8buKAc5sXdZ",
+      32
+    ),
     commitmentType: {
       type: CommitmentTypeId.UNPLEDGE,
-      pledgeCountBeforeExecuting: 12n,
-      partitionHash: encodeBase58(new Uint8Array(32).fill(2)),
+      pledgeCountBeforeExecuting: 18446744073709551615n,
+      partitionHash: decodeBase58ToFixed(
+        "12Yjd3YA9xjzkqDfdcXVWgyu6TpAq9WJdh6NJRWzZBKt",
+        32
+      ),
     },
-    version: 1,
-    chainId: IRYS_TESTNET_CHAIN_ID,
+    version: 2,
+    chainId: 1270n,
     fee: 1234n,
     value: 222n,
   };
@@ -63,10 +71,9 @@ async function main(): Promise<void> {
   const bs58Sig2 = enc2.signature;
   const hexSig2 = hexlify(signedTx2.signature);
   console.log("bs58", bs58Sig2, "hex", hexSig2, "enc", signedTx2.toJSON());
-
-  console.log("done!");
 }
 
 (async function (): Promise<void> {
   await main();
+  console.log("done!");
 })();
