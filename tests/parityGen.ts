@@ -27,9 +27,9 @@ function randomBigIntInRange(min: bigint, max: bigint): bigint {
 
 function randomBigInt(bits: number) {
   const bytes = Math.ceil(bits / 8);
-  const randomBytes = crypto.getRandomValues(new Uint8Array(bytes));
+  const randomBytesData = randomBytes(bytes);
   let result = 0n;
-  for (const byte of randomBytes) {
+  for (const byte of randomBytesData) {
     result = (result << 8n) + BigInt(byte);
   }
   return result & ((1n << BigInt(bits)) - 1n); // mask to exact bit count

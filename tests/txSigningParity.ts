@@ -71,8 +71,6 @@ async function main(): Promise<void> {
   const bs58Sig2 = enc2.signature;
   const hexSig2 = hexlify(signedTx2.signature);
   console.log("bs58", bs58Sig2, "hex", hexSig2, "enc", signedTx2.toJSON());
-
-  console.log("done!");
 }
 
 (async function (): Promise<void> {
