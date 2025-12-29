@@ -1,9 +1,8 @@
 "use strict";
 /* eslint-disable no-case-declarations */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOrThrowIfNullish = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.CommitmentTransactionVersion = exports.encodeCommitmentType = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
+exports.getOrThrowIfNullish = exports.SignedCommitmentTransaction = exports.UnsignedCommitmentTransaction = exports.decodeBase58ToFixedNullish = exports.CommitmentTransactionVersion = exports.signingEncodeCommitmentType = exports.encodeCommitmentType = exports.EncodedCommitmentTypeId = exports.CommitmentTypeId = void 0;
 const utils_1 = require("./utils");
-const merkle_1 = require("./merkle");
 const rlp_1 = require("rlp");
 const ethers_1 = require("ethers");
 const ethers_2 = require("ethers");
@@ -58,7 +57,7 @@ function decodeCommitmentType(enc) {
             return {
                 type: CommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: BigInt(enc.pledgeCountBeforeExecuting),
-                partitionHash: enc.partitionHash,
+                partitionHash: (0, utils_1.decodeBase58ToFixed)(enc.partitionHash, 32),
             };
         case EncodedCommitmentTypeId.UNSTAKE:
             return { type: CommitmentTypeId.UNSTAKE };
@@ -77,43 +76,60 @@ function encodeCommitmentType(type) {
             return {
                 type: EncodedCommitmentTypeId.UNPLEDGE,
                 pledgeCountBeforeExecuting: type.pledgeCountBeforeExecuting.toString(),
-                partitionHash: type.partitionHash,
+                partitionHash: (0, ethers_2.encodeBase58)(type.partitionHash),
             };
         case CommitmentTypeId.UNSTAKE:
             return { type: EncodedCommitmentTypeId.UNSTAKE };
     }
 }
 exports.encodeCommitmentType = encodeCommitmentType;
+// This will get encoded by RLP encode with a length header for PLEDGE and UNPLEDGE
+// DO NOT CHANGE THIS UNLESS YOU THOROUGHLY TEST IT & 1:1 IT IN RUST (stricter decoder)
 function signingEncodeCommitmentType(type) {
-    const buf = new Uint8Array([type.type]);
+    // note: values are `encode`ed by the top-level `encode` call (caller's responsibility)
+    // single-byte values MUST be flat (check this with the rust decoder, it will error for non-canonical single byte RLP lists)
+    // multiple elements MUST be in a regular array
+    // ORDERING MATTERS
     switch (type.type) {
         case CommitmentTypeId.STAKE:
-            return buf;
+            // return typeBuf;
+            return type.type;
         case CommitmentTypeId.PLEDGE:
-            return (0, utils_1.concatBuffers)([
-                buf,
-                // below is required for RLP encoding
-                rlp_1.utils.hexToBytes((0, utils_1.numberToHex)(type.pledgeCountBeforeExecuting)),
-            ]);
+            return [type.type, type.pledgeCountBeforeExecuting];
         case CommitmentTypeId.UNPLEDGE:
-            // needs to be a single buffer!!!
-            return (0, utils_1.concatBuffers)([
-                buf,
-                // below is required for RLP encoding
-                rlp_1.utils.hexToBytes((0, utils_1.numberToHex)(type.pledgeCountBeforeExecuting)),
-                (0, utils_1.decodeBase58ToFixed)(type.partitionHash, 32),
-            ]);
+            return [type.type, type.pledgeCountBeforeExecuting, type.partitionHash];
         case CommitmentTypeId.UNSTAKE:
-            return buf;
+            // return typeBuf;
+            return type.type;
     }
 }
+exports.signingEncodeCommitmentType = signingEncodeCommitmentType;
 var CommitmentTransactionVersion;
 (function (CommitmentTransactionVersion) {
-    CommitmentTransactionVersion[CommitmentTransactionVersion["V1"] = 1] = "V1";
+    // V1 = 1, DEPRECATED DO NOT USE
+    CommitmentTransactionVersion[CommitmentTransactionVersion["V2"] = 2] = "V2";
 })(CommitmentTransactionVersion || (exports.CommitmentTransactionVersion = CommitmentTransactionVersion = {}));
+function validateCommitmentVersion(obj) {
+    // TODO: once we add more versions (that we want to retain support for in the SDK)
+    // update this logic
+    if (obj.version && obj.version !== CommitmentTransactionVersion.V2) {
+        throw new Error(`Invalid commitment version ${obj.version}, allowable version: ${CommitmentTransactionVersion.V2}`);
+    }
+}
+const encodeBase58Nullish = (v) => {
+    if (v === undefined)
+        return undefined;
+    return (0, ethers_2.encodeBase58)(v);
+};
+function decodeBase58ToFixedNullish(string, length) {
+    if (string === undefined)
+        return undefined;
+    return (0, utils_1.decodeBase58ToFixed)(string, length);
+}
+exports.decodeBase58ToFixedNullish = decodeBase58ToFixedNullish;
 class UnsignedCommitmentTransaction {
     constructor(irys, attributes) {
-        this.version = CommitmentTransactionVersion.V1;
+        this.version = CommitmentTransactionVersion.V2;
         this.id = undefined;
         this.anchor = undefined;
         this.signer = undefined;
@@ -126,6 +142,43 @@ class UnsignedCommitmentTransaction {
         this.irys = irys;
         if (attributes)
             Object.assign(this, attributes);
+        validateCommitmentVersion(this);
+    }
+    isSigned() {
+        return false;
+    }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    toJSON() {
+        return JSON.stringify(this.encode());
+    }
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    encode() {
+        return {
+            // id: this.id,
+            version: this.version,
+            anchor: encodeBase58Nullish(this.anchor),
+            signer: encodeBase58Nullish(this.signer),
+            fee: this.fee.toString(),
+            chainId: this.chainId.toString(),
+            // signature: encodeBase58Nullish(this.signature),
+            value: this.value.toString(),
+            commitmentType: this.commitmentType === undefined
+                ? undefined
+                : encodeCommitmentType(this.commitmentType),
+        };
+    }
+    static decode(irys, encoded) {
+        return new UnsignedCommitmentTransaction(irys, {
+            version: encoded.version,
+            anchor: decodeBase58ToFixedNullish(encoded.anchor, 32),
+            signer: decodeBase58ToFixedNullish(encoded.signer, 20),
+            chainId: encoded.chainId === undefined ? undefined : BigInt(encoded.chainId),
+            fee: encoded.fee === undefined ? undefined : BigInt(encoded.fee),
+            value: encoded.value === undefined ? undefined : BigInt(encoded.value),
+            commitmentType: encoded.commitmentType === undefined
+                ? undefined
+                : decodeCommitmentType(encoded.commitmentType),
+        });
     }
     get missingProperties() {
         return requiredUnsignedCommitmentTxHeaderProps.reduce((acc, k) => {
@@ -153,13 +206,17 @@ class UnsignedCommitmentTransaction {
     throwOnMissing() {
         const missing = this.missingProperties;
         if (missing.length)
-            throw new Error(`Missing required properties: ${missing.join(", ")} - did you call tx.prepareChunks(<data>)?`);
+            throw new Error(`Missing required properties: ${missing.join(", ")}`);
     }
     async sign(key) {
         const signingKey = typeof key === "string"
             ? new ethers_1.SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
             : key;
-        this.signer ??= (0, utils_1.toFixedUint8Array)((0, ethers_2.getBytes)((0, ethers_2.computeAddress)(signingKey.publicKey)), 20);
+        const computedSigner = (0, utils_1.toFixedUint8Array)((0, ethers_2.getBytes)((0, ethers_2.computeAddress)(signingKey.publicKey)), 20);
+        this.signer ??= computedSigner;
+        if (!(0, utils_1.arrayCompare)(computedSigner, this.signer)) {
+            throw new Error(`Provided signer address ${(0, ethers_2.encodeBase58)(this.signer)} is not equivalent to the address for the provided signing key (${(0, ethers_2.encodeBase58)(computedSigner)})`);
+        }
         if (!this.anchor)
             await this.fillAnchor();
         if (!this.fee)
@@ -168,16 +225,16 @@ class UnsignedCommitmentTransaction {
         const signature = signingKey.sign(prehash);
         this.signature = (0, utils_1.toFixedUint8Array)((0, ethers_2.getBytes)(signature.serialized), 65);
         if ((0, ethers_2.hexlify)(this.signature) !== signature.serialized) {
-            throw new Error();
+            throw new Error(`signature encode/decode roundtrip error: ${this.signature} ${signature.serialized}`);
         }
-        const idBytes = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(signature.serialized));
+        const idBytes = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(this.signature));
         this.id = (0, ethers_2.encodeBase58)((0, utils_1.toFixedUint8Array)(idBytes, 32));
         return new SignedCommitmentTransaction(this.irys, this);
     }
     // / returns the "signature data" aka the prehash (hash of all the tx fields)
     getSignatureData() {
         switch (this.version) {
-            case CommitmentTransactionVersion.V1:
+            case CommitmentTransactionVersion.V2:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -188,7 +245,7 @@ class UnsignedCommitmentTransaction {
                     this.version,
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.chainId,
                     this.fee,
                     this.value,
@@ -214,6 +271,7 @@ class SignedCommitmentTransaction {
                 throw new Error(`Unable to build signed transaction - missing field ${k}`);
             this[k] = v;
         }
+        validateCommitmentVersion(this);
     }
     get missingProperties() {
         return requiredSignedCommitmentTxHeaderProps.reduce((acc, k) => {
@@ -221,6 +279,9 @@ class SignedCommitmentTransaction {
                 acc.push(k);
             return acc;
         }, []);
+    }
+    isSigned() {
+        return true;
     }
     throwOnMissing() {
         const missing = this.missingProperties;
@@ -281,11 +342,12 @@ class SignedCommitmentTransaction {
     async validateSignature() {
         const prehash = await this.getSignatureData();
         const recoveredAddress = (0, ethers_2.getBytes)((0, ethers_2.recoverAddress)(prehash, (0, ethers_2.hexlify)(this.signature)));
-        return (0, merkle_1.arrayCompare)(recoveredAddress, this.signer);
+        return (0, utils_1.arrayCompare)(recoveredAddress, this.signer);
     }
     getSignatureData() {
+        // TODO: deduplicate logic
         switch (this.version) {
-            case CommitmentTransactionVersion.V1:
+            case CommitmentTransactionVersion.V2:
                 // throw if any of the required fields are missing
                 this.throwOnMissing();
                 // RLP encoding - field ordering matters!
@@ -293,7 +355,7 @@ class SignedCommitmentTransaction {
                     this.version,
                     this.anchor,
                     this.signer,
-                    ...signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
+                    signingEncodeCommitmentType(getOrThrowIfNullish(this, "commitmentType", "Unable to sign commitment tx with missing field {1}")),
                     this.chainId,
                     this.fee,
                     this.value,

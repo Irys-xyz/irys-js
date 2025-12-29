@@ -1,5 +1,5 @@
 import type { Address, Base58, H256, Signature, TransactionId, U256, U32, U64, U8, UTF8 } from "./dataTypes.js";
-import { type MerkleChunk, type MerkleProof } from "./merkle.js";
+import type { MerkleChunk, MerkleProof } from "./merkle.js";
 import { SigningKey } from "ethers";
 import { UnpackedChunk } from "./chunk.js";
 import type { AxiosResponse } from "axios";

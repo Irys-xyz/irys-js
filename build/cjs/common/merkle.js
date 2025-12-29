@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.arrayCompare = exports.bufferToInt = exports.intToBuffer = exports.arrayFlatten = exports.Merkle = void 0;
+exports.bufferToInt = exports.intToBuffer = exports.arrayFlatten = exports.Merkle = void 0;
 const chunker_1 = require("./chunker");
 const constants_1 = require("./constants");
 const utils_1 = require("./utils");
@@ -170,7 +170,7 @@ class Merkle {
                 await this.hash(pathData),
                 await this.hash(endOffsetBuffer),
             ]);
-            const result = (0, exports.arrayCompare)(id, pathDataHash);
+            const result = (0, utils_1.arrayCompare)(id, pathDataHash);
             if (result) {
                 return {
                     offset: rightBound - 1,
@@ -191,7 +191,7 @@ class Merkle {
             await this.hash(right),
             await this.hash(offsetBuffer),
         ]);
-        if ((0, exports.arrayCompare)(id, pathHash)) {
+        if ((0, utils_1.arrayCompare)(id, pathHash)) {
             if (dest < offset) {
                 return await this.validatePath(left, dest, leftBound, Math.min(rightBound, offset), remainder);
             }
@@ -243,7 +243,7 @@ class Merkle {
             await this.hash(right),
             await this.hash(offsetBuffer),
         ]);
-        const updatedOutput = `${output}\n${JSON.stringify(Buffer.from(left))},${JSON.stringify(Buffer.from(right))},${offset} => ${JSON.stringify(pathHash)}`;
+        const updatedOutput = `${output}\n${JSON.stringify(left)},${JSON.stringify(right)},${offset} => ${JSON.stringify(pathHash)}`;
         return this.debug(remainder, updatedOutput);
     }
 }
@@ -271,7 +271,5 @@ function bufferToInt(buffer) {
     return value;
 }
 exports.bufferToInt = bufferToInt;
-const arrayCompare = (a, b) => a.every((value, index) => b[index] === value);
-exports.arrayCompare = arrayCompare;
 exports.default = Merkle;
 //# sourceMappingURL=merkle.js.map

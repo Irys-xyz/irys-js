@@ -1,8 +1,7 @@
 import { createHash, webcrypto } from "crypto";
-import { bigIntDivCeil, bigIntToBytes, concatBuffers, createFixedUint8Array, toFixedUint8Array, } from "../../common/utils.js";
+import { arrayCompare, bigIntDivCeil, bigIntToBytes, concatBuffers, createFixedUint8Array, toFixedUint8Array, } from "../../common/utils.js";
 import { SHA_HASH_SIZE } from "../../common/constants.js";
 import { getBytes } from "ethers/utils";
-import { arrayCompare } from "../../common/merkle.js";
 import { PackedChunk } from "../../common/chunk.js";
 import { UnpackedChunk } from "../../common/chunk.js";
 import IrysClient from "../index.js";

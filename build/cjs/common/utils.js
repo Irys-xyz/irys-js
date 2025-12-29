@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.promisePool = exports.isAsyncIter = exports.isDataTx = exports.isCommitmentTx = exports.irysTomIrys = exports.mirysToIrys = exports.decodeAddress = exports.encodeAddress = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.numberToBytes = exports.bytesToBigInt = exports.bigIntToBytes = exports.numberToHex = exports.bigIntToBuffer = exports.bufferToBigInt = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
+exports.isNullish = exports.arrayCompare = exports.prettyPrintUint8Array = exports.promisePool = exports.isAsyncIter = exports.isDataTx = exports.isCommitmentTx = exports.irysTomIrys = exports.mirysToIrys = exports.decodeAddress = exports.encodeAddress = exports.toExecAddr = exports.toIrysAddr = exports.execToIrysAddr = exports.irysToExecAddr = exports.decodeBase58ToFixed = exports.encodeBase58 = exports.decodeBase58 = exports.sleep = exports.bigIntDivCeil = exports.jsonBigIntSerialize = exports.camelToSnake = exports.snakeToCamel = exports.byteArrayToLong = exports.longTo32ByteArray = exports.longTo16ByteArray = exports.shortTo2ByteArray = exports.longTo8ByteArray = exports.numberToBytes = exports.bytesToBigInt = exports.bigIntToBytes = exports.numberToHex = exports.uint8ArrayToBigInt = exports.bigIntToUint8Array = exports.toFixedUint8Array = exports.isFixedUint8Array = exports.createFixedUint8Array = exports.b64UrlDecode = exports.b64UrlEncode = exports.bufferTob64Url = exports.bufferTob64 = exports.b64UrlToBuffer = exports.stringToB64Url = exports.stringToBuffer = exports.bufferToString = exports.b64UrlToString = exports.uint8ArrayToHexString = exports.writeTo = exports.concatBuffers = void 0;
 const tslib_1 = require("tslib");
 /* eslint-disable no-useless-escape */
 const base64_js_1 = require("base64-js");
@@ -110,21 +110,6 @@ function uint8ArrayToBigInt(bytes) {
             .join(""));
 }
 exports.uint8ArrayToBigInt = uint8ArrayToBigInt;
-// converts a buffer into a bigint
-function bufferToBigInt(buffer) {
-    const hex = buffer.toString("hex");
-    // if (!hex) return 0n;
-    return BigInt(`0x${hex}`);
-}
-exports.bufferToBigInt = bufferToBigInt;
-function bigIntToBuffer(note, size) {
-    // taken from the bigint-buffer package
-    // TODO: use that package as it has a much faster C impl
-    const hex = note.toString(16);
-    const buf = Buffer.from(hex.padStart(size * 2, "0").slice(0, size * 2), "hex");
-    return buf;
-}
-exports.bigIntToBuffer = bigIntToBuffer;
 function numberToHex(number) {
     const hex = number.toString(16);
     return hex.length % 2 ? `0${hex}` : hex;
@@ -240,8 +225,8 @@ exports.decodeBase58ToFixed = decodeBase58ToFixed;
 const irysToExecAddr = (irysAddr) => (0, utils_1.hexlify)((0, exports.decodeBase58)(irysAddr));
 exports.irysToExecAddr = irysToExecAddr;
 const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
-    ? (0, exports.encodeBase58)((0, utils_1.getBytes)(execAddr))
-    : (0, exports.encodeBase58)((0, utils_1.getBytes)("0x" + execAddr));
+    ? (0, exports.encodeBase58)((0, utils_1.getBytes)(execAddr.toLowerCase()))
+    : (0, exports.encodeBase58)((0, utils_1.getBytes)("0x" + execAddr.toLowerCase()));
 exports.execToIrysAddr = execToIrysAddr;
 const toIrysAddr = (addr) => addr.startsWith("0x") ? (0, exports.execToIrysAddr)(addr) : addr;
 exports.toIrysAddr = toIrysAddr;
@@ -301,6 +286,24 @@ async function promisePool(iter, fn, opts) {
     return await Promise.all(promises);
 }
 exports.promisePool = promisePool;
+function prettyPrintUint8Array(arr) {
+    return `[${Array.from(arr).join(", ")}]`;
+}
+exports.prettyPrintUint8Array = prettyPrintUint8Array;
+const arrayCompare = (a, b) => {
+    if (a === b)
+        return true; // ref check
+    if (a.length !== b.length)
+        return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i])
+            return false;
+    }
+    return true;
+};
+exports.arrayCompare = arrayCompare;
+const isNullish = (v) => v === undefined || Number.isNaN(v) || v === null;
+exports.isNullish = isNullish;
 // export async function* asyncPool(
 //   concurrency = 10,
 //   iterable: AsyncIterable<any> | Iterable<any>,

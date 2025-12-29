@@ -89,19 +89,6 @@ export function uint8ArrayToBigInt(bytes) {
             .map((b) => b.toString(16).padStart(2, "0"))
             .join(""));
 }
-// converts a buffer into a bigint
-export function bufferToBigInt(buffer) {
-    const hex = buffer.toString("hex");
-    // if (!hex) return 0n;
-    return BigInt(`0x${hex}`);
-}
-export function bigIntToBuffer(note, size) {
-    // taken from the bigint-buffer package
-    // TODO: use that package as it has a much faster C impl
-    const hex = note.toString(16);
-    const buf = Buffer.from(hex.padStart(size * 2, "0").slice(0, size * 2), "hex");
-    return buf;
-}
 export function numberToHex(number) {
     const hex = number.toString(16);
     return hex.length % 2 ? `0${hex}` : hex;
@@ -199,8 +186,8 @@ export function decodeBase58ToFixed(string, length) {
 }
 export const irysToExecAddr = (irysAddr) => hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr) => execAddr.startsWith("0x")
-    ? encodeBase58(getBytes(execAddr))
-    : encodeBase58(getBytes("0x" + execAddr));
+    ? encodeBase58(getBytes(execAddr.toLowerCase()))
+    : encodeBase58(getBytes("0x" + execAddr.toLowerCase()));
 export const toIrysAddr = (addr) => addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
 export const toExecAddr = (addr) => addr.startsWith("0x") ? addr : irysToExecAddr(addr);
 export const encodeAddress = (addr) => encodeBase58(addr);
@@ -249,6 +236,21 @@ export async function promisePool(iter, fn, opts) {
     }
     return await Promise.all(promises);
 }
+export function prettyPrintUint8Array(arr) {
+    return `[${Array.from(arr).join(", ")}]`;
+}
+export const arrayCompare = (a, b) => {
+    if (a === b)
+        return true; // ref check
+    if (a.length !== b.length)
+        return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i])
+            return false;
+    }
+    return true;
+};
+export const isNullish = (v) => v === undefined || Number.isNaN(v) || v === null;
 // export async function* asyncPool(
 //   concurrency = 10,
 //   iterable: AsyncIterable<any> | Iterable<any>,

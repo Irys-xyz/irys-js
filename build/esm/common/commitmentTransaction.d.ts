@@ -1,4 +1,4 @@
-import type { Address, Base58, H256, Signature, TransactionId, U256, U64, UTF8 } from "./dataTypes.js";
+import type { Address, Base58, FixedUint8Array, H256, Signature, TransactionId, U256, U64, UTF8 } from "./dataTypes.js";
 import { SigningKey } from "ethers";
 import type { AxiosResponse } from "axios";
 import type { IrysClient } from "./irys.js";
@@ -50,7 +50,7 @@ export type CommitmentType = {
 } | {
     type: CommitmentTypeId.UNPLEDGE;
     pledgeCountBeforeExecuting: U64;
-    partitionHash: Base58<H256>;
+    partitionHash: H256;
 };
 export type EncodedCommitmentType = {
     type: EncodedCommitmentTypeId.STAKE | EncodedCommitmentTypeId.UNSTAKE;
@@ -63,9 +63,11 @@ export type EncodedCommitmentType = {
     partitionHash: Base58<H256>;
 };
 export declare function encodeCommitmentType(type: CommitmentType): EncodedCommitmentType;
+export declare function signingEncodeCommitmentType(type: CommitmentType): number | bigint | Uint8Array | (number | bigint | Uint8Array)[];
 export declare enum CommitmentTransactionVersion {
-    V1 = 1
+    V2 = 2
 }
+export declare function decodeBase58ToFixedNullish<N extends number>(string: Base58 | undefined, length: N): FixedUint8Array<N> | undefined;
 export declare class UnsignedCommitmentTransaction implements Partial<UnsignedCommitmentTransactionInterface> {
     version: CommitmentTransactionVersion;
     id?: TransactionId;
@@ -78,6 +80,10 @@ export declare class UnsignedCommitmentTransaction implements Partial<UnsignedCo
     value: U256;
     irys: IrysClient;
     constructor(irys: IrysClient, attributes?: Partial<UnsignedCommitmentTransactionInterface>);
+    isSigned(): boolean;
+    toJSON(): string;
+    encode(): Partial<EncodedUnsignedCommitmentTransactionInterface>;
+    static decode(irys: IrysClient, encoded: Partial<EncodedUnsignedCommitmentTransactionInterface>): UnsignedCommitmentTransaction;
     get missingProperties(): string[];
     fillFee(): Promise<this>;
     fillAnchor(): Promise<this>;
@@ -98,6 +104,7 @@ export declare class SignedCommitmentTransaction implements SignedCommitmentTran
     irys: IrysClient;
     constructor(irys: IrysClient, attributes: SignedCommitmentTransactionInterface);
     get missingProperties(): string[];
+    isSigned(): boolean;
     throwOnMissing(): void;
     getHeader(): SignedCommitmentTransactionInterface;
     toJSON(): string;

@@ -6,7 +6,6 @@ const crypto_1 = require("crypto");
 const utils_1 = require("../../common/utils");
 const constants_1 = require("../../common/constants");
 const utils_2 = require("ethers/utils");
-const merkle_1 = require("../../common/merkle");
 const chunk_1 = require("../../common/chunk");
 const chunk_2 = require("../../common/chunk");
 const __1 = tslib_1.__importDefault(require(".."));
@@ -138,13 +137,13 @@ async function testEntropyGen() {
     const now = performance.now();
     const entropyChunk = await computeEntropyChunk(miningAddress, chunkOffset, partitionHash, iterations, chunkSize, chainId);
     const chunkHash = (0, crypto_1.createHash)("sha-256").update(entropyChunk).digest();
-    if (!(0, merkle_1.arrayCompare)(chunkHash, parityChunkHash))
+    if (!(0, utils_1.arrayCompare)(chunkHash, parityChunkHash))
         throw new Error("Entropy chunk parity mismatch!");
     console.log(performance.now() - now);
     const then = performance.now();
     const entropyChunkWeb = await computeEntropyChunkWebCrypto(miningAddress, chunkOffset, partitionHash, iterations, chunkSize, chainId);
     const chunkHash2 = (0, crypto_1.createHash)("sha-256").update(entropyChunkWeb).digest();
-    if (!(0, merkle_1.arrayCompare)(chunkHash2, parityChunkHash))
+    if (!(0, utils_1.arrayCompare)(chunkHash2, parityChunkHash))
         throw new Error("Web Entropy chunk parity mismatch!");
     console.log(performance.now() - then);
 }
@@ -170,7 +169,7 @@ async function testPacking() {
         partitionHash: partitionHash,
     });
     const unpackedChunk = await unpackChunk(packedChunk, chunkSize, iterations, chainId);
-    console.log((0, merkle_1.arrayCompare)(unpackedChunk.bytes, expectedData));
+    console.log((0, utils_1.arrayCompare)(unpackedChunk.bytes, expectedData));
 }
 (async function () {
     // await testEntropyGen();

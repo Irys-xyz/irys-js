@@ -1,6 +1,5 @@
 /* eslint-disable no-case-declarations */
-import { decodeBase58ToFixed, promisePool, toFixedUint8Array } from "./utils.js";
-import { arrayCompare } from "./merkle.js";
+import { arrayCompare, decodeBase58ToFixed, promisePool, toFixedUint8Array, } from "./utils.js";
 import { encode } from "rlp";
 import { SigningKey } from "ethers";
 import { computeAddress, encodeBase58, getBytes, hexlify, keccak256, recoverAddress, } from "ethers";

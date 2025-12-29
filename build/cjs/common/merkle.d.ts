@@ -88,5 +88,4 @@ export declare class Merkle {
 export declare function arrayFlatten<T = any>(input: T[]): T[];
 export declare function intToBuffer(note: number): Uint8Array;
 export declare function bufferToInt(buffer: Uint8Array): number;
-export declare const arrayCompare: (a: Uint8Array | any[], b: Uint8Array | any[]) => boolean;
 export default Merkle;

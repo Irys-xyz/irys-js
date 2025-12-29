@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import type { Address, Base58, FixedUint8Array } from "./dataTypes.js";
 import BigNumber from "bignumber.js";
 import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction.js";
@@ -21,8 +20,6 @@ export declare function isFixedUint8Array<N extends number>(array: Uint8Array, l
 export declare function toFixedUint8Array<N extends number>(array: Uint8Array, length: N): FixedUint8Array<N>;
 export declare function bigIntToUint8Array(bigInt: bigint): Uint8Array;
 export declare function uint8ArrayToBigInt(bytes: Uint8Array): bigint;
-export declare function bufferToBigInt(buffer: Buffer): bigint;
-export declare function bigIntToBuffer(note: bigint, size: number): Buffer;
 export declare function numberToHex(number: number | bigint): string;
 export declare function bigIntToBytes(value: bigint, numBytes: number): Uint8Array;
 export declare function bytesToBigInt(bytes: Uint8Array): bigint;
@@ -65,3 +62,6 @@ export declare function promisePool<T, N>(iter: Iterable<T> | AsyncIterable<T>, 
     concurrency?: number;
     itemCb?: (idx: number, item: N) => void;
 }): Promise<N[]>;
+export declare function prettyPrintUint8Array(arr: Uint8Array): string;
+export declare const arrayCompare: (a: Uint8Array | any[], b: Uint8Array | any[]) => boolean;
+export declare const isNullish: (v: any) => boolean;

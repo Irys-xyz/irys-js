@@ -4,7 +4,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SignedDataTransaction = exports.DataTransactionVersion = exports.UnsignedDataTransaction = exports.DataLedgerId = void 0;
 const tslib_1 = require("tslib");
 const utils_1 = require("./utils");
-const merkle_1 = require("./merkle");
 const rlp_1 = require("rlp");
 const ethers_1 = require("ethers");
 const ethers_2 = require("ethers");
@@ -228,7 +227,7 @@ class SignedDataTransaction {
         this.chunks = chunks;
         if (this.dataSize !== BigInt(dataSize))
             throw new Error("regenerated chunks dataSize mismatch");
-        if (!(0, merkle_1.arrayCompare)(this.dataRoot, (0, utils_1.toFixedUint8Array)(this.chunks.dataRoot, 32)))
+        if (!(0, utils_1.arrayCompare)(this.dataRoot, (0, utils_1.toFixedUint8Array)(this.chunks.dataRoot, 32)))
             throw new Error("regenerated chunks dataRoot mismatch");
         return this;
     }
@@ -339,7 +338,7 @@ class SignedDataTransaction {
     async validateSignature() {
         const prehash = await this.getSignatureData();
         const recoveredAddress = (0, ethers_2.getBytes)((0, ethers_2.recoverAddress)(prehash, (0, ethers_2.hexlify)(this.signature)));
-        return (0, merkle_1.arrayCompare)(recoveredAddress, this.signer);
+        return (0, utils_1.arrayCompare)(recoveredAddress, this.signer);
     }
     getSignatureData() {
         switch (this.version) {

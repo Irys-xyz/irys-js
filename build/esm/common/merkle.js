@@ -1,6 +1,6 @@
 import { chunker } from "./chunker.js";
 import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants.js";
-import { concatBuffers, promisePool } from "./utils.js";
+import { arrayCompare, concatBuffers, promisePool } from "./utils.js";
 export class Merkle {
     deps;
     constructor(opts) {
@@ -241,7 +241,7 @@ export class Merkle {
             await this.hash(right),
             await this.hash(offsetBuffer),
         ]);
-        const updatedOutput = `${output}\n${JSON.stringify(Buffer.from(left))},${JSON.stringify(Buffer.from(right))},${offset} => ${JSON.stringify(pathHash)}`;
+        const updatedOutput = `${output}\n${JSON.stringify(left)},${JSON.stringify(right)},${offset} => ${JSON.stringify(pathHash)}`;
         return this.debug(remainder, updatedOutput);
     }
 }
@@ -265,6 +265,5 @@ export function bufferToInt(buffer) {
     }
     return value;
 }
-export const arrayCompare = (a, b) => a.every((value, index) => b[index] === value);
 export default Merkle;
 //# sourceMappingURL=merkle.js.map
