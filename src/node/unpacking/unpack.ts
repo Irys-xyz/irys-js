@@ -6,6 +6,7 @@ import type {
   U64,
 } from "../../common/dataTypes";
 import {
+  arrayCompare,
   bigIntDivCeil,
   bigIntToBytes,
   concatBuffers,
@@ -14,7 +15,6 @@ import {
 } from "../../common/utils";
 import { SHA_HASH_SIZE } from "../../common/constants";
 import { getBytes } from "ethers/utils";
-import { arrayCompare } from "../../common/merkle";
 import { PackedChunk } from "../../common/chunk";
 import { UnpackedChunk } from "../../common/chunk";
 import IrysClient from "..";

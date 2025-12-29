@@ -12,8 +12,13 @@ import type {
   U8,
   UTF8,
 } from "./dataTypes";
-import { decodeBase58ToFixed, promisePool, toFixedUint8Array } from "./utils";
-import { arrayCompare, type MerkleChunk, type MerkleProof } from "./merkle";
+import {
+  arrayCompare,
+  decodeBase58ToFixed,
+  promisePool,
+  toFixedUint8Array,
+} from "./utils";
+import type { MerkleChunk, MerkleProof } from "./merkle";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import { SigningKey } from "ethers";
