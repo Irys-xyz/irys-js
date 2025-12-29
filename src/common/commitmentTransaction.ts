@@ -11,12 +11,7 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import {
-  arrayCompare,
-  decodeBase58ToFixed,
-  isNullish,
-  toFixedUint8Array,
-} from "./utils";
+import { arrayCompare, decodeBase58ToFixed, toFixedUint8Array } from "./utils";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import type { BytesLike } from "ethers";
@@ -375,8 +370,8 @@ export class UnsignedCommitmentTransaction
       );
     }
 
-    if (isNullish(this.anchor)) await this.fillAnchor();
-    if (isNullish(this.fee)) await this.fillFee();
+    if (!this.anchor) await this.fillAnchor();
+    if (!this.fee) await this.fillFee();
 
     const prehash = await this.getSignatureData();
 
