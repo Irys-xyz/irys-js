@@ -22,6 +22,7 @@ import {
   execToIrysAddr,
   decodeBase58ToFixed,
 } from "../src/common/utils";
+import type { IrysClient } from "../src/common/irys";
 
 // Mock IrysClient for testing
 const mockIrysClient = {} as any;
@@ -921,6 +922,16 @@ describe("Integration: Complete Transaction Flow", () => {
   it("should handle zero values", async () => {
     const wallet = Wallet.createRandom();
     const anchor = createFixedUint8Array(32).fill(0);
+    const mockIrysClient: IrysClient = {
+      network: {
+        getCommitmentPrice: async () => ({
+          userAddress: undefined,
+          pledgeCount: 10n,
+          value: 1234n,
+          fee: 5678n,
+        }),
+      },
+    } as any;
 
     const unsigned = new UnsignedCommitmentTransaction(mockIrysClient, {
       anchor,
@@ -936,6 +947,12 @@ describe("Integration: Complete Transaction Flow", () => {
     const signed = await unsigned.sign(wallet.privateKey);
     const isValid = await signed.validateSignature();
     expect(isValid).toBe(true);
+    expect(signed.fee).toBe(5678n);
+    expect(signed.value).toBe(1234n);
+    expect(signed.commitmentType).toEqual({
+      type: CommitmentTypeId.PLEDGE,
+      pledgeCountBeforeExecuting: 10n,
+    });
   });
 });
 
