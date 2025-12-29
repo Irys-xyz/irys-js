@@ -32,16 +32,4 @@
     "removeComments": false,
     // "stripInternal": true
   },
-  "ts-node": {
-    "require": [
-      "tsconfig-paths/register"
-    ],
-    "esm": false,
-    "transpileOnly": false,
-    "compilerOptions": {
-      "module": "node16",
-      "target": "es2022",
-      "moduleResolution": "node16"
-    }
-  }
 }

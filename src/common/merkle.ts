@@ -4,7 +4,7 @@ import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./dataTransaction";
 import type { Data } from "./types";
-import { concatBuffers, promisePool } from "./utils";
+import { arrayCompare, concatBuffers, promisePool } from "./utils";
 
 export type MerkleChunk = {
   dataHash: Uint8Array;
@@ -393,11 +393,9 @@ export class Merkle {
       await this.hash(offsetBuffer),
     ]);
 
-    const updatedOutput = `${output}\n${JSON.stringify(
-      Buffer.from(left)
-    )},${JSON.stringify(Buffer.from(right))},${offset} => ${JSON.stringify(
-      pathHash
-    )}`;
+    const updatedOutput = `${output}\n${JSON.stringify(left)},${JSON.stringify(
+      right
+    )},${offset} => ${JSON.stringify(pathHash)}`;
 
     return this.debug(remainder, updatedOutput);
   }
@@ -427,10 +425,5 @@ export function bufferToInt(buffer: Uint8Array): number {
   }
   return value;
 }
-
-export const arrayCompare = (
-  a: Uint8Array | any[],
-  b: Uint8Array | any[]
-): boolean => a.every((value: any, index: any) => b[index] === value);
 
 export default Merkle;

@@ -23,6 +23,8 @@ export type ApiConfig = {
   retry?: AsyncRetry.Options;
 };
 
+// TODO: rewrite to use `fetch`
+
 export type ApiRequestConfig = {
   retry?: AsyncRetry.Options;
 } & AxiosRequestConfig;

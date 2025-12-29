@@ -11,8 +11,7 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import { decodeBase58ToFixed, toFixedUint8Array } from "./utils";
-import { arrayCompare } from "./merkle";
+import { arrayCompare, decodeBase58ToFixed, toFixedUint8Array } from "./utils";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import type { BytesLike } from "ethers";
@@ -254,6 +253,10 @@ export class UnsignedCommitmentTransaction
     validateCommitmentVersion(this);
   }
 
+  public isSigned(): boolean {
+    return false;
+  }
+
   // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return JSON.stringify(this.encode());
@@ -340,11 +343,7 @@ export class UnsignedCommitmentTransaction
   throwOnMissing(): void {
     const missing = this.missingProperties;
     if (missing.length)
-      throw new Error(
-        `Missing required properties: ${missing.join(
-          ", "
-        )} - did you call tx.prepareChunks(<data>)?`
-      );
+      throw new Error(`Missing required properties: ${missing.join(", ")}`);
   }
 
   public async sign(
@@ -354,11 +353,22 @@ export class UnsignedCommitmentTransaction
       typeof key === "string"
         ? new SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
         : key;
-
-    this.signer ??= toFixedUint8Array(
+    const computedSigner = toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
       20
     );
+
+    this.signer ??= computedSigner;
+
+    if (!arrayCompare(computedSigner, this.signer)) {
+      throw new Error(
+        `Provided signer address ${encodeBase58(
+          this.signer
+        )} is not equivalent to the address for the provided signing key (${encodeBase58(
+          computedSigner
+        )})`
+      );
+    }
 
     if (!this.anchor) await this.fillAnchor();
     if (!this.fee) await this.fillFee();
@@ -368,7 +378,9 @@ export class UnsignedCommitmentTransaction
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
-      throw new Error();
+      throw new Error(
+        `signature encode/decode roundtrip error: ${this.signature} ${signature.serialized}`
+      );
     }
 
     const idBytes = getBytes(keccak256(this.signature));
@@ -453,6 +465,10 @@ export class SignedCommitmentTransaction
       if (this[k as keyof this] === undefined) acc.push(k);
       return acc;
     }, []);
+  }
+
+  public isSigned(): boolean {
+    return true;
   }
 
   throwOnMissing(): void {

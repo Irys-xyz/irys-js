@@ -1,0 +1,38 @@
+name: CI
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  merge_group:
+  push:
+  workflow_dispatch:
+
+jobs:
+  lint-and-test: # combo as testing takes less time than installing node & yarn & dependencies
+    runs-on: ubuntu-latest 
+    # runs-on: self-hosted
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+
+    - name: Run lint checks
+      run: yarn lint
+
+    - name: Run tests
+      run: yarn test

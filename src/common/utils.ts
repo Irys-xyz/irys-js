@@ -134,24 +134,6 @@ export function uint8ArrayToBigInt(bytes: Uint8Array): bigint {
   );
 }
 
-// converts a buffer into a bigint
-export function bufferToBigInt(buffer: Buffer): bigint {
-  const hex = buffer.toString("hex");
-  // if (!hex) return 0n;
-  return BigInt(`0x${hex}`);
-}
-
-export function bigIntToBuffer(note: bigint, size: number): Buffer {
-  // taken from the bigint-buffer package
-  // TODO: use that package as it has a much faster C impl
-  const hex = note.toString(16);
-  const buf = Buffer.from(
-    hex.padStart(size * 2, "0").slice(0, size * 2),
-    "hex"
-  );
-  return buf;
-}
-
 export function numberToHex(number: number | bigint): string {
   const hex = number.toString(16);
   return hex.length % 2 ? `0${hex}` : hex;
@@ -276,8 +258,8 @@ export const irysToExecAddr = (irysAddr: string): string =>
   hexlify(decodeBase58(irysAddr));
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
-    ? encodeBase58(getBytes(execAddr))
-    : encodeBase58(getBytes("0x" + execAddr));
+    ? encodeBase58(getBytes(execAddr.toLowerCase()))
+    : encodeBase58(getBytes("0x" + execAddr.toLowerCase()));
 
 export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
@@ -354,6 +336,27 @@ export async function promisePool<T, N>(
   }
   return await Promise.all(promises);
 }
+
+export function prettyPrintUint8Array(arr: Uint8Array): string {
+  return `[${Array.from(arr).join(", ")}]`;
+}
+
+export const arrayCompare = (
+  a: Uint8Array | any[],
+  b: Uint8Array | any[]
+): boolean => {
+  if (a === b) return true; // ref check
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+
+  return true;
+};
+
+export const isNullish = (v: any): boolean =>
+  v === undefined || Number.isNaN(v) || v === null;
 
 // export async function* asyncPool(
 //   concurrency = 10,
