@@ -3,6 +3,7 @@
 import type {
   Address,
   Base58,
+  FixedUint8Array,
   H256,
   Signature,
   TransactionId,
@@ -10,15 +11,11 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import {
-  concatBuffers,
-  decodeBase58ToFixed,
-  numberToHex,
-  toFixedUint8Array,
-} from "./utils";
+import { decodeBase58ToFixed, toFixedUint8Array } from "./utils";
 import { arrayCompare } from "./merkle";
 import type { Input } from "rlp";
-import { encode, utils } from "rlp";
+import { encode } from "rlp";
+import type { BytesLike } from "ethers";
 import { SigningKey } from "ethers";
 import {
   computeAddress,
@@ -120,7 +117,7 @@ export type CommitmentType =
   | {
       type: CommitmentTypeId.UNPLEDGE;
       pledgeCountBeforeExecuting: U64;
-      partitionHash: Base58<H256>;
+      partitionHash: H256;
     };
 
 export type EncodedCommitmentType =
@@ -150,7 +147,7 @@ function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
       return {
         type: CommitmentTypeId.UNPLEDGE,
         pledgeCountBeforeExecuting: BigInt(enc.pledgeCountBeforeExecuting),
-        partitionHash: enc.partitionHash,
+        partitionHash: decodeBase58ToFixed(enc.partitionHash, 32),
       };
     case EncodedCommitmentTypeId.UNSTAKE:
       return { type: CommitmentTypeId.UNSTAKE };
@@ -172,46 +169,71 @@ export function encodeCommitmentType(
       return {
         type: EncodedCommitmentTypeId.UNPLEDGE,
         pledgeCountBeforeExecuting: type.pledgeCountBeforeExecuting.toString(),
-        partitionHash: type.partitionHash,
+        partitionHash: encodeBase58(type.partitionHash),
       };
     case CommitmentTypeId.UNSTAKE:
       return { type: EncodedCommitmentTypeId.UNSTAKE };
   }
 }
 
-function signingEncodeCommitmentType(type: CommitmentType): Uint8Array {
-  const buf = new Uint8Array([type.type]);
+// This will get encoded by RLP encode with a length header for PLEDGE and UNPLEDGE
+// DO NOT CHANGE THIS UNLESS YOU THOROUGHLY TEST IT & 1:1 IT IN RUST (stricter decoder)
+export function signingEncodeCommitmentType(
+  type: CommitmentType
+): number | bigint | Uint8Array | (number | bigint | Uint8Array)[] {
+  // note: values are `encode`ed by the top-level `encode` call (caller's responsibility)
+  // single-byte values MUST be flat (check this with the rust decoder, it will error for non-canonical single byte RLP lists)
+  // multiple elements MUST be in a regular array
+  // ORDERING MATTERS
   switch (type.type) {
     case CommitmentTypeId.STAKE:
-      return buf;
+      // return typeBuf;
+      return type.type;
     case CommitmentTypeId.PLEDGE:
-      return concatBuffers([
-        buf,
-        // below is required for RLP encoding
-        utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
-      ]);
+      return [type.type, type.pledgeCountBeforeExecuting];
     case CommitmentTypeId.UNPLEDGE:
-      // needs to be a single buffer!!!
-      return concatBuffers([
-        buf,
-        // below is required for RLP encoding
-        utils.hexToBytes(numberToHex(type.pledgeCountBeforeExecuting)),
-        decodeBase58ToFixed(type.partitionHash, 32),
-      ]);
+      return [type.type, type.pledgeCountBeforeExecuting, type.partitionHash];
     case CommitmentTypeId.UNSTAKE:
-      return buf;
+      // return typeBuf;
+      return type.type;
   }
 }
 
 export enum CommitmentTransactionVersion {
-  V1 = 1,
+  // V1 = 1, DEPRECATED DO NOT USE
+  V2 = 2,
+}
+
+function validateCommitmentVersion(
+  obj: Partial<UnsignedCommitmentTransactionInterface>
+): undefined {
+  // TODO: once we add more versions (that we want to retain support for in the SDK)
+  // update this logic
+  if (obj.version && obj.version !== CommitmentTransactionVersion.V2) {
+    throw new Error(
+      `Invalid commitment version ${obj.version}, allowable version: ${CommitmentTransactionVersion.V2}`
+    );
+  }
+}
+
+const encodeBase58Nullish = (v: BytesLike | undefined): string | undefined => {
+  if (v === undefined) return undefined;
+  return encodeBase58(v);
+};
+
+export function decodeBase58ToFixedNullish<N extends number>(
+  string: Base58 | undefined,
+  length: N
+): FixedUint8Array<N> | undefined {
+  if (string === undefined) return undefined;
+  return decodeBase58ToFixed<N>(string, length);
 }
 
 export class UnsignedCommitmentTransaction
   implements Partial<UnsignedCommitmentTransactionInterface>
 {
   public version: CommitmentTransactionVersion =
-    CommitmentTransactionVersion.V1;
+    CommitmentTransactionVersion.V2;
   public id?: TransactionId = undefined;
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
@@ -229,6 +251,49 @@ export class UnsignedCommitmentTransaction
     // super();
     this.irys = irys;
     if (attributes) Object.assign(this, attributes);
+    validateCommitmentVersion(this);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  public toJSON(): string {
+    return JSON.stringify(this.encode());
+  }
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  public encode(): Partial<EncodedUnsignedCommitmentTransactionInterface> {
+    return {
+      // id: this.id,
+      version: this.version,
+      anchor: encodeBase58Nullish(this.anchor),
+      signer: encodeBase58Nullish(this.signer),
+      fee: this.fee.toString(),
+      chainId: this.chainId.toString(),
+      // signature: encodeBase58Nullish(this.signature),
+      value: this.value.toString(),
+      commitmentType:
+        this.commitmentType === undefined
+          ? undefined
+          : encodeCommitmentType(this.commitmentType),
+    };
+  }
+
+  public static decode(
+    irys: IrysClient,
+    encoded: Partial<EncodedUnsignedCommitmentTransactionInterface>
+  ): UnsignedCommitmentTransaction {
+    return new UnsignedCommitmentTransaction(irys, {
+      version: encoded.version,
+      anchor: decodeBase58ToFixedNullish(encoded.anchor, 32),
+      signer: decodeBase58ToFixedNullish(encoded.signer, 20),
+      chainId:
+        encoded.chainId === undefined ? undefined : BigInt(encoded.chainId),
+      fee: encoded.fee === undefined ? undefined : BigInt(encoded.fee),
+      value: encoded.value === undefined ? undefined : BigInt(encoded.value),
+      commitmentType:
+        encoded.commitmentType === undefined
+          ? undefined
+          : decodeCommitmentType(encoded.commitmentType),
+    });
   }
 
   get missingProperties(): string[] {
@@ -289,6 +354,7 @@ export class UnsignedCommitmentTransaction
       typeof key === "string"
         ? new SigningKey(key.startsWith("0x") ? key : `0x${key}`) // ethers requires the 0x prefix
         : key;
+
     this.signer ??= toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
       20
@@ -304,7 +370,8 @@ export class UnsignedCommitmentTransaction
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error();
     }
-    const idBytes = getBytes(keccak256(signature.serialized));
+
+    const idBytes = getBytes(keccak256(this.signature));
     this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
 
     return new SignedCommitmentTransaction(
@@ -316,7 +383,7 @@ export class UnsignedCommitmentTransaction
   // / returns the "signature data" aka the prehash (hash of all the tx fields)
   public getSignatureData(): Promise<Uint8Array> {
     switch (this.version) {
-      case CommitmentTransactionVersion.V1:
+      case CommitmentTransactionVersion.V2:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
@@ -327,7 +394,7 @@ export class UnsignedCommitmentTransaction
           this.version,
           this.anchor,
           this.signer,
-          ...signingEncodeCommitmentType(
+          signingEncodeCommitmentType(
             getOrThrowIfNullish(
               this,
               "commitmentType",
@@ -340,7 +407,6 @@ export class UnsignedCommitmentTransaction
         ];
         const encoded = encode(fields);
         const prehash = getBytes(keccak256(encoded));
-
         return Promise.resolve(prehash);
 
       default:
@@ -379,6 +445,7 @@ export class SignedCommitmentTransaction
         );
       this[k as keyof this] = v as any;
     }
+    validateCommitmentVersion(this);
   }
 
   get missingProperties(): string[] {
@@ -470,8 +537,9 @@ export class SignedCommitmentTransaction
   }
 
   public getSignatureData(): Promise<Uint8Array> {
+    // TODO: deduplicate logic
     switch (this.version) {
-      case CommitmentTransactionVersion.V1:
+      case CommitmentTransactionVersion.V2:
         // throw if any of the required fields are missing
         this.throwOnMissing();
         // RLP encoding - field ordering matters!
@@ -479,7 +547,7 @@ export class SignedCommitmentTransaction
           this.version,
           this.anchor,
           this.signer,
-          ...signingEncodeCommitmentType(
+          signingEncodeCommitmentType(
             getOrThrowIfNullish(
               this,
               "commitmentType",
