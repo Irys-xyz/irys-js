@@ -1,4 +1,4 @@
-import { bufferToBigInt, toFixedUint8Array } from "../src/common/utils";
+import { toFixedUint8Array } from "../src/common/utils";
 import type {
   CommitmentType,
   EncodedSignedCommitmentTransactionInterface,
@@ -33,6 +33,13 @@ function randomBigInt(bits: number) {
     result = (result << 8n) + BigInt(byte);
   }
   return result & ((1n << BigInt(bits)) - 1n); // mask to exact bit count
+}
+
+// converts a buffer into a bigint
+function bufferToBigInt(buffer: Buffer): bigint {
+  const hex = buffer.toString("hex");
+  // if (!hex) return 0n;
+  return BigInt(`0x${hex}`);
 }
 
 const u64max = bufferToBigInt(Buffer.alloc(8).fill(255));
