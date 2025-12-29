@@ -14,6 +14,12 @@ import {
   UnsignedCommitmentTransaction,
 } from "../src/common/commitmentTransaction";
 
+/**
+ * Executes an example flow that constructs, signs, encodes, and logs two sample transactions.
+ *
+ * Uses a development test private key to create an UnsignedDataTransaction and an UnsignedCommitmentTransaction,
+ * signs both, validates the commitment transaction's signature, and logs base58 and hex signatures plus the encoded JSON representations.
+ */
 async function main(): Promise<void> {
   // dev test wallet 1
   // safe to commit, random & public already
