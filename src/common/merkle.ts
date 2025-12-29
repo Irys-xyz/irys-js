@@ -417,6 +417,12 @@ export function intToBuffer(note: number): Uint8Array {
   return buffer;
 }
 
+/**
+ * Convert a big-endian unsigned integer encoded in a byte buffer to a JavaScript number.
+ *
+ * @param buffer - Bytes representing an unsigned integer in big-endian order (most significant byte first)
+ * @returns The decoded integer value
+ */
 export function bufferToInt(buffer: Uint8Array): number {
   let value = 0;
   for (let i = 0; i < buffer.length; i++) {

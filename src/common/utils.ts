@@ -125,6 +125,12 @@ export function bigIntToUint8Array(bigInt: bigint): Uint8Array {
   );
 }
 
+/**
+ * Convert a big-endian Uint8Array into a bigint.
+ *
+ * @param bytes - Bytes representing an unsigned integer in big-endian order (most significant byte first)
+ * @returns The unsigned integer value encoded by `bytes` as a `bigint`
+ */
 export function uint8ArrayToBigInt(bytes: Uint8Array): bigint {
   return BigInt(
     "0x" +
@@ -134,6 +140,12 @@ export function uint8ArrayToBigInt(bytes: Uint8Array): bigint {
   );
 }
 
+/**
+ * Convert a number or bigint to a lowercase hexadecimal string with even length.
+ *
+ * @param number - The non-negative number or bigint to convert to hex.
+ * @returns The lowercase hexadecimal representation, padded with a leading `0` when its length is odd so the result has an even number of characters.
+ */
 export function numberToHex(number: number | bigint): string {
   const hex = number.toString(16);
   return hex.length % 2 ? `0${hex}` : hex;
@@ -305,7 +317,15 @@ export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
   typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===
   "function";
 
-// basic promise pool
+/**
+ * Processes items from an (async) iterable with controlled concurrency and collects their results.
+ *
+ * @param iter - An iterable or async iterable that yields input items to process.
+ * @param fn - An async function that processes each item and returns a result; receives the item and its invocation index.
+ * @param opts.concurrency - Maximum number of `fn` calls to run in parallel; defaults to 10.
+ * @param opts.itemCb - Optional callback invoked with `(index, result)` each time an item's processing completes.
+ * @returns An array of results produced by `fn`, ordered by the invocation index assigned when each item was scheduled.
+ */
 export async function promisePool<T, N>(
   iter: Iterable<T> | AsyncIterable<T>,
   fn: (item: T, index: number) => Promise<N>,
@@ -337,6 +357,12 @@ export async function promisePool<T, N>(
   return await Promise.all(promises);
 }
 
+/**
+ * Format a Uint8Array as a human-readable list of its numeric elements.
+ *
+ * @param arr - The array to format
+ * @returns A string in the form `[n, n, ...]` showing each element's numeric value
+ */
 export function prettyPrintUint8Array(arr: Uint8Array): string {
   return `[${Array.from(arr).join(", ")}]`;
 }

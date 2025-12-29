@@ -138,6 +138,12 @@ export type EncodedCommitmentType =
       partitionHash: Base58<H256>;
     };
 
+/**
+ * Convert an encoded commitment type into its internal CommitmentType representation.
+ *
+ * @param enc - Encoded commitment type; `pledgeCountBeforeExecuting` is a UTF-8 string representing an unsigned integer and `partitionHash` (for `unpledge`) is a Base58-encoded 32-byte hash.
+ * @returns The corresponding CommitmentType with `pledgeCountBeforeExecuting` as a `bigint` when present and `partitionHash` decoded to a fixed 32-byte array when present.
+ */
 function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
   switch (enc.type) {
     case EncodedCommitmentTypeId.STAKE:
@@ -158,6 +164,12 @@ function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
   }
 }
 
+/**
+ * Convert an in-memory CommitmentType into its external, encoded representation.
+ *
+ * @param type - The CommitmentType to encode
+ * @returns An EncodedCommitmentType where numeric fields (e.g., `pledgeCountBeforeExecuting`) are represented as UTF-8 strings and binary fields (e.g., `partitionHash`) are Base58-encoded when present
+ */
 export function encodeCommitmentType(
   type: CommitmentType
 ): EncodedCommitmentType {
@@ -181,7 +193,12 @@ export function encodeCommitmentType(
 }
 
 // This will get encoded by RLP encode with a length header for PLEDGE and UNPLEDGE
-// DO NOT CHANGE THIS UNLESS YOU THOROUGHLY TEST IT & 1:1 IT IN RUST (stricter decoder)
+/**
+ * Produce the RLP-ready representation of a CommitmentType for inclusion in the signing envelope.
+ *
+ * @param type - The commitment type to encode for signing
+ * @returns For `STAKE` and `UNSTAKE`, a single numeric type id (flat single-byte value). For `PLEDGE`, an array `[type, pledgeCountBeforeExecuting]`. For `UNPLEDGE`, an array `[type, pledgeCountBeforeExecuting, partitionHash]`. The returned value must be encoded by the caller as part of the top-level RLP envelope; ordering and single-byte vs. array shape are significant for canonical encoding.
+ */
 export function signingEncodeCommitmentType(
   type: CommitmentType
 ): number | bigint | Uint8Array | (number | bigint | Uint8Array)[] {
@@ -208,6 +225,13 @@ export enum CommitmentTransactionVersion {
   V2 = 2,
 }
 
+/**
+ * Validate that the provided commitment transaction object uses a supported version (V2) or has no version.
+ *
+ * Throws an Error if `obj.version` is present and not equal to CommitmentTransactionVersion.V2.
+ *
+ * @param obj - Partial commitment transaction object whose `version` field will be validated
+ */
 function validateCommitmentVersion(
   obj: Partial<UnsignedCommitmentTransactionInterface>
 ): undefined {
@@ -225,6 +249,13 @@ const encodeBase58Nullish = (v: BytesLike | undefined): string | undefined => {
   return encodeBase58(v);
 };
 
+/**
+ * Decodes a Base58-encoded string into a fixed-length Uint8Array, or returns `undefined` when input is undefined.
+ *
+ * @param string - The Base58-encoded input or `undefined`
+ * @param length - Expected byte length of the decoded value
+ * @returns The decoded fixed-length `Uint8Array` of `length` bytes, or `undefined` if `string` is `undefined`
+ */
 export function decodeBase58ToFixedNullish<N extends number>(
   string: Base58 | undefined,
   length: N
