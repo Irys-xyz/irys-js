@@ -5,14 +5,19 @@ import type {
 } from "../src/common/commitmentTransaction";
 import {
   CommitmentTypeId,
+  SignedCommitmentTransaction,
   UnsignedCommitmentTransaction,
+  signingEncodeCommitmentType,
 } from "../src/common/commitmentTransaction";
 import { randomBytes, randomInt } from "crypto";
 import type { H256 } from "../src/common/dataTypes";
 import { Wallet } from "ethers";
+import { encode } from "rlp";
+import { writeFileSync } from "fs";
 
-type TxSigningTestData = EncodedSignedCommitmentTransactionInterface & {
+export type TxSigningTestData = {
   priv: string;
+  tx: EncodedSignedCommitmentTransactionInterface;
 };
 
 function randomBigIntInRange(min: bigint, max: bigint): bigint {
@@ -82,25 +87,45 @@ const makeRandCommitment = async (): Promise<TxSigningTestData> => {
   const randomKey = Wallet.createRandom();
   const signedTx = await unsignedTx.sign(randomKey.privateKey);
   const data: TxSigningTestData = {
-    ...signedTx.encode(),
-    priv: randomKey.privateKey,
+    tx: signedTx.encode(),
+    priv: randomKey.privateKey.slice(2),
   };
   return data;
 };
 
-async function testDataGen() {
-  const count = 10;
+async function testDataGen(): Promise<TxSigningTestData[]> {
+  const count = 50;
   const res = await Promise.all(
     new Array(count).fill(undefined).map(async (_) => {
       const commitment = await makeRandCommitment();
-      return JSON.stringify(commitment);
+      return commitment;
     })
   );
-  console.log(res);
+  // console.log(JSON.stringify(res));
+  return res;
+}
+
+async function testWriteData() {
+  writeFileSync("test-data.json", JSON.stringify(await testDataGen(), null, 2));
+}
+
+async function validateTestData() {
+  const tx: TxSigningTestData = JSON.parse(
+    `{"tx":{"id":"46cg5awBLzmK8zGsFs97J3YJHAQVTyB1FySskjCyVesr","version":2,"anchor":"B7Vu97BLVg5kMRFcrHFCAe8LezsG5oex7nrCCvCvpZ9Z","signer":"26FjURGa5vtqCFVvwFH9uHW6iroD","fee":"17838718446809954154","chainId":"15272589439873686136","signature":"nwWioEVEfkNpW9N1RNB6SmqhxCFTDFShSbiXSCoptWondbn52YWRH7r3M64i7EV6yxzALaq2x4YKAvmtxiLE2qDD","value":"67053412148687973108920691832952047552545674282032343640344973129326284535668","commitmentType":{"type":"pledge","pledgeCountBeforeExecuting":"4021617668727962134"}},"priv":"ab4bb4b151b25d45748d30d027241edcb95c95e41b1eacfb08733b7c7c7bbcdc"}`
+  );
+  const signedTx = SignedCommitmentTransaction.decode({} as any, tx.tx);
+  const encoded1 = signingEncodeCommitmentType(signedTx.commitmentType);
+  const encoded2 = encode(encoded1);
+  console.log(`[${encoded2.toString()}]`);
+  if (!(await signedTx.validateSignature())) {
+    throw new Error("Invalid signature");
+  }
 }
 
 (async function (): Promise<void> {
   // await main();
-  await testDataGen();
+  // await testDataGen();
+  await testWriteData();
+  // await validateTestData();
   console.log("done!");
 })();
