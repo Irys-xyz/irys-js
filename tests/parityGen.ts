@@ -15,6 +15,13 @@ type TxSigningTestData = EncodedSignedCommitmentTransactionInterface & {
   priv: string;
 };
 
+/**
+ * Produces a random bigint uniformly distributed between `min` and `max`, inclusive.
+ *
+ * @param min - Lower bound (inclusive).
+ * @param max - Upper bound (inclusive). Must be greater than or equal to `min`.
+ * @returns A random bigint `x` such that `min <= x <= max`.
+ */
 function randomBigIntInRange(min: bigint, max: bigint): bigint {
   const range = max - min;
   const bits = range.toString(2).length;
@@ -25,6 +32,12 @@ function randomBigIntInRange(min: bigint, max: bigint): bigint {
   return min + result;
 }
 
+/**
+ * Generate a random non-negative BigInt strictly less than 2^bits.
+ *
+ * @param bits - The number of bits of the resulting value (0 returns 0n)
+ * @returns A BigInt in the range 0 to 2^bits - 1 (inclusive)
+ */
 function randomBigInt(bits: number) {
   const bytes = Math.ceil(bits / 8);
   const randomBytesData = randomBytes(bytes);
@@ -47,6 +60,18 @@ const u256max = bufferToBigInt(Buffer.alloc(4 * 8).fill(255));
 
 const randomH256 = (): H256 => toFixedUint8Array(randomBytes(32), 32);
 
+/**
+ * Selects and returns a random CommitmentType.
+ *
+ * The result will be one of:
+ * - `STAKE`
+ * - `PLEDGE` (includes `pledgeCountBeforeExecuting`)
+ * - `UNPLEDGE` (includes `pledgeCountBeforeExecuting` and `partitionHash`)
+ * - `UNSTAKE`
+ *
+ * @returns A randomly chosen CommitmentType with the appropriate fields populated.
+ * @throws Error If the internal random selection yields an unexpected value.
+ */
 function randomCommitmentType(): CommitmentType {
   // 1-4
   switch (randomInt(1, 5)) {
@@ -88,6 +113,9 @@ const makeRandCommitment = async (): Promise<TxSigningTestData> => {
   return data;
 };
 
+/**
+ * Generates ten random encoded signed commitment transactions, JSON-stringifies each, and logs the resulting array.
+ */
 async function testDataGen() {
   const count = 10;
   const res = await Promise.all(
