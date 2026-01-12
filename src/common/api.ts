@@ -4,7 +4,7 @@ import type {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from "axios";
-import Axios from "axios";
+import Axios, { AxiosError } from "axios";
 import http from "node:http";
 import https from "node:https";
 import AsyncRetry from "async-retry";
@@ -30,6 +30,7 @@ export type ApiConfig = {
   headers?: Record<string, string>;
   withCredentials?: boolean;
   retry?: AsyncRetry.Options;
+  maxSockets?: number;
 };
 
 // TODO: rewrite to use `fetch`
@@ -168,8 +169,9 @@ export default class Api {
   public get instance(): AxiosInstance {
     if (this._instance) return this._instance;
 
-    const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
-    const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+    const maxSockets = this.config.maxSockets ?? 50;
+    const httpAgent = new http.Agent({ keepAlive: true, maxSockets });
+    const httpsAgent = new https.Agent({ keepAlive: true, maxSockets });
 
     const instance = Axios.create({
       baseURL: this.config.url.toString(),
@@ -213,17 +215,19 @@ export default class Api {
       async (bail) => {
         try {
           return await instance({ ...config, url });
-        } catch (error: any) {
-          const status = error?.response?.status;
+        } catch (error) {
+          const status =
+            error instanceof AxiosError ? error.response?.status : undefined;
           const isClientError =
+            status !== undefined &&
             status >= HTTP_STATUS.BAD_REQUEST &&
             status < HTTP_STATUS.INTERNAL_SERVER_ERROR;
           const isRetryableClientError =
             status === HTTP_STATUS.REQUEST_TIMEOUT ||
             status === HTTP_STATUS.TOO_MANY_REQUESTS;
 
-          if (status && isClientError && !isRetryableClientError) {
-            bail(error);
+          if (isClientError && !isRetryableClientError) {
+            bail(error as Error);
           }
 
           throw error;
