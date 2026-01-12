@@ -12,6 +12,10 @@ export type Base64UrlString = string;
 export function concatBuffers(
   buffers: Uint8Array[] | ArrayBuffer[]
 ): Uint8Array {
+  if (buffers.length === 0) {
+    return new Uint8Array(0);
+  }
+
   let totalLength = 0;
   for (const b of buffers) totalLength += b.byteLength;
 
