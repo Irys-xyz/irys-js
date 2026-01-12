@@ -9,6 +9,13 @@ import AsyncRetry from "async-retry";
 import { JsonRpcProvider } from "ethers";
 import type { Base58, H256, U64 } from "./dataTypes";
 
+const HTTP_STATUS = {
+  BAD_REQUEST: 400,
+  REQUEST_TIMEOUT: 408,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
 export const isApiConfig = (o: URL | ApiConfig | string): o is ApiConfig =>
   typeof o !== "string" && "url" in o;
 
@@ -195,10 +202,31 @@ export default class Api {
   ): Promise<AxiosResponse<T>> {
     const instance = this.instance;
     const url = config?.url ?? buildUrl(this.config.url, [path]).toString();
-    return AsyncRetry((_) => instance({ ...config, url }), {
-      ...this.config.retry,
-      ...config?.retry,
-    });
+    return AsyncRetry(
+      async (bail) => {
+        try {
+          return await instance({ ...config, url });
+        } catch (error: any) {
+          const status = error?.response?.status;
+          const isClientError =
+            status >= HTTP_STATUS.BAD_REQUEST &&
+            status < HTTP_STATUS.INTERNAL_SERVER_ERROR;
+          const isRetryableClientError =
+            status === HTTP_STATUS.REQUEST_TIMEOUT ||
+            status === HTTP_STATUS.TOO_MANY_REQUESTS;
+
+          if (status && isClientError && !isRetryableClientError) {
+            bail(error);
+          }
+
+          throw error;
+        }
+      },
+      {
+        ...this.config.retry,
+        ...config?.retry,
+      }
+    );
   }
 }
 

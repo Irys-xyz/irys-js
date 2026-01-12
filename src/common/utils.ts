@@ -12,6 +12,9 @@ export type Base64UrlString = string;
 export function concatBuffers(
   buffers: Uint8Array[] | ArrayBuffer[]
 ): Uint8Array {
+  if (buffers.length === 0) {
+    return new Uint8Array(0);
+  }
   let totalLength = 0;
   for (const b of buffers) totalLength += b.byteLength;
 
@@ -305,36 +308,36 @@ export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
   typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===
   "function";
 
-// basic promise pool
+// basic promise pool with bounded memory usage
 export async function promisePool<T, N>(
   iter: Iterable<T> | AsyncIterable<T>,
   fn: (item: T, index: number) => Promise<N>,
   opts?: { concurrency?: number; itemCb?: (idx: number, item: N) => void }
 ): Promise<N[]> {
-  const promises: Promise<N>[] = [];
+  const executing = new Set<Promise<void>>();
+  const results: N[] = [];
   const concurrency = opts?.concurrency ?? 10;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const itemCb = opts?.itemCb ?? ((_1, _2): void => {});
 
-  let processing = 0;
+  let index = 0;
   for await (const item of iter) {
-    while (processing >= concurrency) {
-      await Promise.race(promises);
-    }
-    processing++;
+    const currentIndex = index++;
 
-    const promise = (async (): Promise<any> => {
-      const idx = promises.length;
-      return await fn(item, idx).then((r) => {
-        itemCb(idx, r);
-        processing--;
-        return r;
-      });
+    const promise = (async (): Promise<void> => {
+      const result = await fn(item, currentIndex);
+      results[currentIndex] = result;
+      opts?.itemCb?.(currentIndex, result);
     })();
 
-    promises.push(promise);
+    const tracked = promise.finally(() => executing.delete(tracked));
+    executing.add(tracked);
+
+    if (executing.size >= concurrency) {
+      await Promise.race(executing);
+    }
   }
-  return await Promise.all(promises);
+
+  await Promise.all(executing);
+  return results;
 }
 
 export function prettyPrintUint8Array(arr: Uint8Array): string {
@@ -357,30 +360,3 @@ export const arrayCompare = (
 
 export const isNullish = (v: any): boolean =>
   v === undefined || Number.isNaN(v) || v === null;
-
-// export async function* asyncPool(
-//   concurrency = 10,
-//   iterable: AsyncIterable<any> | Iterable<any>,
-//   iteratorFn: (item: any, iterable: any) => Promise<any>
-// ): AsyncGenerator<any> {
-//   const executing = new Set<Promise<any>>();
-//   async function consume(): Promise<any> {
-//     const [promise, value] = await Promise.race(executing);
-//     executing.delete(promise);
-//     return value;
-//   }
-//   for await (const item of iterable) {
-//     // Wrap iteratorFn() in an async fn to ensure we get a promise.
-//     // Then expose the promise, so it's possible to later reference and
-//     // remove it from the executing pool.
-//     const promise = (async (): Promise<[any, any]> =>
-//       await iteratorFn(item, iterable))().then((value) => [promise, value]);
-//     executing.add(promise);
-//     if (executing.size >= concurrency) {
-//       yield await consume();
-//     }
-//   }
-//   while (executing.size) {
-//     yield await consume();
-//   }
-// }
