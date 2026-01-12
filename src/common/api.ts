@@ -226,6 +226,7 @@ export default class Api {
 
           if (isClientError && !isRetryableClientError) {
             bail(error as Error);
+            return undefined as never;
           }
 
           throw error;
