@@ -1,6 +1,14 @@
-import Axios from "axios";
+import Axios, { AxiosError } from "axios";
+import http from "node:http";
+import https from "node:https";
 import AsyncRetry from "async-retry";
 import { JsonRpcProvider } from "ethers";
+const HTTP_STATUS = {
+    BAD_REQUEST: 400,
+    REQUEST_TIMEOUT: 408,
+    TOO_MANY_REQUESTS: 429,
+    INTERNAL_SERVER_ERROR: 500,
+};
 export const isApiConfig = (o) => typeof o !== "string" && "url" in o;
 // This exists primarily to make route/API changes a lot easier
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -66,17 +74,16 @@ export default class Api {
         return response;
     }
     mergeDefaults(config) {
-        config.headers ??= {};
-        // if (config.network && !Object.keys(config.headers).includes("x-network"))
-        //   config.headers["x-network"] = config.network;
         return {
+            ...config,
             url: normalizeUrl(config.url),
             timeout: config.timeout ?? 20000,
             logging: config.logging ?? false,
             logger: config.logger ?? console.log,
-            // headers: { ...config.headers, "user-agent": `` }, // TODO: check
+            headers: config.headers ?? {},
             withCredentials: config.withCredentials ?? false,
-            retry: { retries: 3, maxTimeout: 5_000 },
+            retry: { retries: 3, maxTimeout: 5_000, ...config.retry },
+            maxSockets: config.maxSockets ?? 50,
         };
     }
     async get(path, config) {
@@ -111,12 +118,17 @@ export default class Api {
     get instance() {
         if (this._instance)
             return this._instance;
+        const maxSockets = this.config.maxSockets ?? 50;
+        const httpAgent = new http.Agent({ keepAlive: true, maxSockets });
+        const httpsAgent = new https.Agent({ keepAlive: true, maxSockets });
         const instance = Axios.create({
             baseURL: this.config.url.toString(),
             timeout: this.config.timeout,
             maxContentLength: 1024 * 1024 * 512,
             headers: this.config.headers,
             withCredentials: this.config.withCredentials,
+            httpAgent,
+            httpsAgent,
         });
         if (this.config.withCredentials) {
             instance.interceptors.request.use(this.requestInterceptor.bind(this));
@@ -137,7 +149,24 @@ export default class Api {
     async request(path, config) {
         const instance = this.instance;
         const url = config?.url ?? buildUrl(this.config.url, [path]).toString();
-        return AsyncRetry((_) => instance({ ...config, url }), {
+        return AsyncRetry(async (bail) => {
+            try {
+                return await instance({ ...config, url });
+            }
+            catch (error) {
+                const status = error instanceof AxiosError ? error.response?.status : undefined;
+                const isClientError = status !== undefined &&
+                    status >= HTTP_STATUS.BAD_REQUEST &&
+                    status < HTTP_STATUS.INTERNAL_SERVER_ERROR;
+                const isRetryableClientError = status === HTTP_STATUS.REQUEST_TIMEOUT ||
+                    status === HTTP_STATUS.TOO_MANY_REQUESTS;
+                if (isClientError && !isRetryableClientError) {
+                    bail(error);
+                    return undefined;
+                }
+                throw error;
+            }
+        }, {
             ...this.config.retry,
             ...config?.retry,
         });

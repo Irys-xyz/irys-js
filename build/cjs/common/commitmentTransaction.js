@@ -364,7 +364,7 @@ class SignedCommitmentTransaction {
                 const prehash = (0, ethers_2.getBytes)((0, ethers_2.keccak256)(encoded));
                 return Promise.resolve(prehash);
             default:
-                throw new Error(`Unknown transaction version : ${this.version}`);
+                throw new Error(`Unknown commitment version : ${this.version}`);
         }
     }
 }

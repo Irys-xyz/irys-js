@@ -13,6 +13,7 @@ export type ApiConfig = {
     headers?: Record<string, string>;
     withCredentials?: boolean;
     retry?: AsyncRetry.Options;
+    maxSockets?: number;
 };
 export type ApiRequestConfig = {
     retry?: AsyncRetry.Options;
