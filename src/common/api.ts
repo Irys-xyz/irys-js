@@ -117,18 +117,16 @@ export default class Api {
   }
 
   private mergeDefaults(config: ApiConfig): ApiConfig {
-    config.headers ??= {};
-    // if (config.network && !Object.keys(config.headers).includes("x-network"))
-    //   config.headers["x-network"] = config.network;
-
     return {
+      ...config,
       url: normalizeUrl(config.url),
       timeout: config.timeout ?? 20000,
       logging: config.logging ?? false,
       logger: config.logger ?? console.log,
-      // headers: { ...config.headers, "user-agent": `` }, // TODO: check
+      headers: config.headers ?? {},
       withCredentials: config.withCredentials ?? false,
-      retry: { retries: 3, maxTimeout: 5_000 },
+      retry: { retries: 3, maxTimeout: 5_000, ...config.retry },
+      maxSockets: config.maxSockets ?? 50,
     };
   }
 
