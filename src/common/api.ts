@@ -5,6 +5,8 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import Axios from "axios";
+import http from "node:http";
+import https from "node:https";
 import AsyncRetry from "async-retry";
 import { JsonRpcProvider } from "ethers";
 import type { Base58, H256, U64 } from "./dataTypes";
@@ -166,12 +168,17 @@ export default class Api {
   public get instance(): AxiosInstance {
     if (this._instance) return this._instance;
 
+    const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50 });
+    const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+
     const instance = Axios.create({
       baseURL: this.config.url.toString(),
       timeout: this.config.timeout,
       maxContentLength: 1024 * 1024 * 512,
       headers: this.config.headers,
       withCredentials: this.config.withCredentials,
+      httpAgent,
+      httpsAgent,
     });
 
     if (this.config.withCredentials) {
