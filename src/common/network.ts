@@ -22,7 +22,10 @@ import type {
   CommitmentType,
   EncodedSignedCommitmentTransactionInterface,
 } from "./commitmentTransaction";
-import { encodeCommitmentType } from "./commitmentTransaction";
+import {
+  EncodedCommitmentTypeId,
+  encodeCommitmentType,
+} from "./commitmentTransaction";
 import type { FixMe } from "./types";
 import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
 
@@ -139,13 +142,26 @@ export class Network {
     type: CommitmentType,
     config?: ApiRequestConfig
   ): Promise<PledgePriceInfo | StakePriceInfo> {
+    const encodedType = encodeCommitmentType(type);
+    let url;
+    if (
+      encodedType.type === EncodedCommitmentTypeId.PLEDGE ||
+      encodedType.type === EncodedCommitmentTypeId.UNPLEDGE
+    ) {
+      url = V1_API_ROUTES.GET_COMMITMENT_PLEDGE_PRICE.replace(
+        "{type}",
+        encodedType.type
+      ).replace("{userAddress}", encodeAddress(address));
+    } else {
+      url = V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
+        "{type}",
+        encodedType.type
+      );
+    }
     const encoded = (
       await Utils.wrapError(
         this.api.get<EncodedPledgePriceInfo | EncodedStakePriceInfo>(
-          V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
-            "{type}",
-            encodeCommitmentType(type).type
-          ).replace("{userAddress}", encodeAddress(address)),
+          url,
           config
         ),
         "getting price for commitment transaction"
@@ -155,11 +171,9 @@ export class Network {
       value: BigInt(encoded.value),
       fee: BigInt(encoded.fee),
       userAddress: address,
-      pledgeCount:
-        // TODO: fix
-        (encoded as EncodedPledgePriceInfo)?.pledgeCount !== undefined
-          ? BigInt((encoded as EncodedPledgePriceInfo).pledgeCount)
-          : undefined,
+      pledgeCount: (encoded as EncodedPledgePriceInfo)?.pledgeCount
+        ? BigInt((encoded as EncodedPledgePriceInfo).pledgeCount)
+        : undefined,
     };
   }
 
