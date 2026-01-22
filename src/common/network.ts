@@ -150,12 +150,12 @@ export class Network {
     ) {
       url = V1_API_ROUTES.GET_COMMITMENT_PLEDGE_PRICE.replace(
         "{type}",
-        encodeCommitmentType(type).type
+        encodedType.type
       ).replace("{userAddress}", encodeAddress(address));
     } else {
       url = V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
         "{type}",
-        encodeCommitmentType(type).type
+        encodedType.type
       );
     }
     const encoded = (
