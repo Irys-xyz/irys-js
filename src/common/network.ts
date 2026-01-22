@@ -37,12 +37,13 @@ export class Network {
     this.api = api;
   }
 
-  public async getStorageConfig(
+  public async getConsensusConfig(
     config?: ApiRequestConfig
+    // TODO: move this to the full consensus config
   ): Promise<EncodedStorageConfigInterface> {
     return (
       await this.api.get<EncodedStorageConfigInterface>(
-        V1_API_ROUTES.GET_NETWORK_CONFIG,
+        V1_API_ROUTES.GET_NETWORK_CONSENSUS_CONFIG,
         config
       )
     ).data;
@@ -75,7 +76,7 @@ export class Network {
     return await Utils.wrapError(
       this.api.get<EncodedCombinedBlockHeader>(
         V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
-          (withPoa ? "/full" : ""),
+        (withPoa ? "/full" : ""),
         config
       ),
       `getting block by param: ${param.toString()}`

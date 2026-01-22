@@ -44,7 +44,7 @@ export type ApiRequestConfig = {
 export enum V1_API_ROUTES {
   GET_TX_HEADER = "/v1/tx/#",
   GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
-  GET_NETWORK_CONFIG = "/v1/network/config",
+  GET_NETWORK_CONSENSUS_CONFIG = "/v1/network/config",
   GET_INFO = "/",
   EXECUTION_RPC = "/v1/execution-rpc",
   GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data-start-offset",

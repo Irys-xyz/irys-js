@@ -77,7 +77,7 @@ export class IrysClient /* extends EventEmitter */ {
     // get storage config
     // TODO: validate chainID, remove/rework this
     this.storageConfig ??= StorageConfig.decode(
-      await this.network.getStorageConfig()
+      await this.network.getConsensusConfig()
     );
     this.utils = new Utils(this);
     this.account = new Account(this);
