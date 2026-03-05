@@ -147,7 +147,7 @@ export class UnsignedDataTransaction
     irys: IrysClient,
     attributes?: Partial<UnsignedDataTransactionInterface>
   ) {
-    // super();
+
     this.irys = irys;
     if (attributes) Object.assign(this, attributes);
   }
@@ -256,45 +256,66 @@ export class UnsignedDataTransaction
     return this;
   }
 
-  // / returns the "signature data" aka the prehash (hash of all the tx fields)
   public getSignatureData(): Promise<Uint8Array> {
-    switch (this.version) {
-      case DataTransactionVersion.V1:
-        // throw if any of the required fields are missing
-        this.throwOnMissing();
-        // RLP encoding - field ordering matters!
-        // BE VERY CAREFUL ABOUT HOW WE SERIALIZE AND DESERIALIZE
-        // note: `undefined`/nullish and 0 serialize to the same thing
-        // this is notable for `bundleFormat` and `permFee`
-        const fields: Input = [
-          this.version,
-          this.anchor,
-          this.signer,
-          this.dataRoot,
-          this.dataSize,
-          this.headerSize,
-          this.termFee,
-          this.ledgerId,
-          this.chainId,
-        ];
-
-        // Add optional fields only if they are defined
-        // note: encode handles null/undefined fields
-        fields.push(this.bundleFormat);
-        fields.push(this.permFee);
-        const encoded = encode(fields);
-        const prehash = getBytes(keccak256(encoded));
-
-        return Promise.resolve(prehash);
-
-      default:
-        throw new Error(`Unknown transaction version : ${this.version}`);
-    }
+    this.throwOnMissing();
+    return Promise.resolve(computeDataSignatureData(this as any));
   }
 }
 
 export enum DataTransactionVersion {
   V1 = 1,
+}
+
+function computeDataSignatureData(
+  tx: Pick<
+    UnsignedDataTransactionInterface,
+    | "version"
+    | "anchor"
+    | "signer"
+    | "dataRoot"
+    | "dataSize"
+    | "headerSize"
+    | "termFee"
+    | "ledgerId"
+    | "chainId"
+    | "bundleFormat"
+    | "permFee"
+  >
+): Uint8Array {
+  switch (tx.version) {
+    case DataTransactionVersion.V1: {
+      const fields: Input = [
+        tx.version,
+        tx.anchor,
+        tx.signer,
+        tx.dataRoot,
+        tx.dataSize,
+        tx.headerSize,
+        tx.termFee,
+        tx.ledgerId,
+        tx.chainId,
+      ];
+      fields.push(tx.bundleFormat);
+      fields.push(tx.permFee);
+      return getBytes(keccak256(encode(fields)));
+    }
+    default:
+      throw new Error(`Unknown transaction version : ${tx.version}`);
+  }
+}
+
+function validateTxSignature(
+  prehash: Uint8Array,
+  signature: Uint8Array,
+  signer: Uint8Array
+): boolean {
+  const recoveredAddress = getBytes(
+    recoverAddress(prehash, hexlify(signature))
+  );
+  return constantTimeEqual(
+    new Uint8Array(recoveredAddress),
+    new Uint8Array(signer)
+  );
 }
 
 export class SignedDataTransaction
@@ -323,7 +344,7 @@ export class SignedDataTransaction
     irys: IrysClient,
     attributes: SignedDataTransactionInterface
   ) {
-    // super();
+
     this.irys = irys;
     // safer than object.assign, given we will be getting passed a class instance
     // this should "copy" over all header properties & chunks
@@ -567,46 +588,13 @@ export class SignedDataTransaction
     );
   }
 
-  // Validate the signature by computing the prehash and recovering the signer's address using the prehash and the signature.
-  // compares the recovered signer address to the tx's address, and returns true if they match
   public async validateSignature(): Promise<boolean> {
     const prehash = await this.getSignatureData();
-    const recoveredAddress = getBytes(
-      recoverAddress(prehash, hexlify(this.signature))
-    );
-    return constantTimeEqual(new Uint8Array(recoveredAddress), new Uint8Array(this.signer));
+    return validateTxSignature(prehash, this.signature, this.signer);
   }
 
   public getSignatureData(): Promise<Uint8Array> {
-    switch (this.version) {
-      case DataTransactionVersion.V1:
-        // throw if any of the required fields are missing
-        this.throwOnMissing();
-        // RLP encoding - field ordering matters!
-        const fields: Input = [
-          this.version,
-          this.anchor,
-          this.signer,
-          this.dataRoot,
-          this.dataSize,
-          this.headerSize,
-          this.termFee,
-          this.ledgerId,
-          this.chainId,
-        ];
-
-        // Add optional fields only if they are defined
-        // note: encode handles null/undefined fields
-        fields.push(this.bundleFormat);
-        fields.push(this.permFee);
-
-        const encoded = encode(fields);
-        const prehash = getBytes(keccak256(encoded));
-
-        return Promise.resolve(prehash);
-
-      default:
-        throw new Error(`Unknown transaction version : ${this.version}`);
-    }
+    this.throwOnMissing();
+    return Promise.resolve(computeDataSignatureData(this));
   }
 }
