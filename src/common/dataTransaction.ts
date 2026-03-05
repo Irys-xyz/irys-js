@@ -227,7 +227,9 @@ export class UnsignedDataTransaction
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
-      throw new Error();
+      throw new Error(
+        `signature encode/decode roundtrip error: ${this.signature} ${signature.serialized}`
+      );
     }
     const idBytes = getBytes(keccak256(signature.serialized));
     this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
