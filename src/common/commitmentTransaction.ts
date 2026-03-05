@@ -205,7 +205,7 @@ export enum CommitmentTransactionVersion {
 
 function validateCommitmentVersion(
   obj: Partial<UnsignedCommitmentTransactionInterface>
-): undefined {
+): void {
   // TODO: once we add more versions (that we want to retain support for in the SDK)
   // update this logic
   if (obj.version && obj.version !== CommitmentTransactionVersion.V2) {
@@ -588,12 +588,11 @@ export class SignedCommitmentTransaction
 
 export function getOrThrowIfNullish<T, K extends keyof T & string>(
   obj: T,
-  key: K,
-  msg = "Missing required property {1}"
+  key: K
 ): Exclude<T[K], undefined | null> {
   const v = obj[key];
   if (v === undefined || v === null) {
-    throw new Error(msg.replace("{1}", key));
+    throw new Error(`Missing required property ${key}`);
   } else {
     // this is because NonNullable doesn't perserve the types properly
     return v as Exclude<T[K], undefined | null>;
