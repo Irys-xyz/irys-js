@@ -294,7 +294,6 @@ export class UnsignedCommitmentTransaction
     return JSON.stringify(this.encode());
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   public encode(): Partial<EncodedUnsignedCommitmentTransactionInterface> {
     return {
       // id: this.id,
@@ -501,7 +500,6 @@ export class SignedCommitmentTransaction
     return this.id;
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   public encode(): EncodedSignedCommitmentTransactionInterface {
     return {
       id: this.id,

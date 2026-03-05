@@ -403,7 +403,6 @@ export class SignedDataTransaction
     return this;
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   public encode(withChunks = false): EncodedSignedDataTransactionInterface {
     return {
       id: this.id,
