@@ -133,7 +133,7 @@ export class Network {
     return {
       permFee: BigInt(encoded.permFee),
       termFee: BigInt(encoded.termFee),
-      ledger: Number(encoded.termFee),
+      ledger: Number(encoded.ledger),
       bytes: BigInt(encoded.bytes),
     };
   }
