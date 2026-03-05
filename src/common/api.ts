@@ -75,7 +75,7 @@ export default class Api {
   protected _instance?: AxiosInstance;
   protected rpcInstance?: JsonRpcProvider;
 
-  public cookieMap = new Map();
+  private cookieMap = new Map<string, string[]>();
 
   public config!: ApiConfig;
 
