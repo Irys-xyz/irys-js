@@ -244,7 +244,7 @@ export default class Api {
 export function normalizeUrl(url: URL): URL {
   const pathComponents = url.pathname.split("/");
   // strip the "v<number>" suffix if it exists - the client implementation decides what version to use
-  if (/v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
+  if (/^v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
     pathComponents.pop();
   return buildUrl(new URL(url.origin), [...pathComponents]);
 }
