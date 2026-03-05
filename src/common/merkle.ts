@@ -179,13 +179,12 @@ export class Merkle {
     nodes: MerkleNode[],
     level = 0
   ): Promise<MerkleNode> {
-    // If there is only 1 node left, this is going to be the root node
-    if (nodes.length < 2) {
-      const root = nodes[0];
+    if (nodes.length === 0) {
+      throw new Error("Cannot build Merkle tree from empty node list");
+    }
 
-      // console.log("Root layer", root);
-
-      return root;
+    if (nodes.length === 1) {
+      return nodes[0];
     }
 
     const nextLayer: MerkleNode[] = [];
