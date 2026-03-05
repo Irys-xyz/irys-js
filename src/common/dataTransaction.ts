@@ -124,7 +124,6 @@ const fullSignedDataTxHeaderProps = [
 const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
 
 export class UnsignedDataTransaction
-  // extends BaseObject
   implements Partial<UnsignedDataTransactionInterface>
 {
   public version: DataTransactionVersion = DataTransactionVersion.V1;

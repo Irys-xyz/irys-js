@@ -83,13 +83,9 @@ const requiredSignedCommitmentTxHeaderProps = [
 
 const fullSignedCommitmentTxHeaderProps = [
   ...requiredSignedCommitmentTxHeaderProps,
-  /*   "bundleFormat",
-  "permFee", */
 ];
 
-const fullSignedCommitmentTxProps = [
-  ...fullSignedCommitmentTxHeaderProps /* "chunks" */,
-];
+const fullSignedCommitmentTxProps = [...fullSignedCommitmentTxHeaderProps];
 
 export enum CommitmentTypeId {
   STAKE = 1,
@@ -584,13 +580,15 @@ export class SignedCommitmentTransaction
 
 export function getOrThrowIfNullish<T, K extends keyof T & string>(
   obj: T,
-  key: K
+  key: K,
+  message?: string
 ): Exclude<T[K], undefined | null> {
   const v = obj[key];
   if (v === undefined || v === null) {
-    throw new Error(`Missing required property ${key}`);
+    throw new Error(
+      message ? message.replace("{1}", key) : `Missing required property ${key}`
+    );
   } else {
-    // this is because NonNullable doesn't perserve the types properly
     return v as Exclude<T[K], undefined | null>;
   }
 }

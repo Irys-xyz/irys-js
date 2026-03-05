@@ -36,11 +36,6 @@ export class IrysClientBuilder {
     this.builderConfig = config;
     return this;
   }
-  // TODO: re-enable once we support multiple backing nodes properly
-  //   public nodes(nodes: AnyUrl[]): this {
-  //     this.builderConfig.nodes = nodes;
-  //     return this;
-  //   }
 
   public node(url: AnyUrl): this {
     this.builderConfig.nodes = [isApiConfig(url) ? url : { url: new URL(url) }];

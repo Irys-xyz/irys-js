@@ -123,14 +123,6 @@ export type EncodedPackedChunkInterface = EncodedUnpackedChunkInterface & {
   partitionHash: Base58;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const packedChunkProperties = [
-  ...unpackedChunkProperties,
-  "packingAddress",
-  "partitionOffset",
-  "partitionHash",
-];
-
 export class PackedChunk implements PackedChunkInterface {
   public dataRoot!: H256;
   public dataSize!: bigint;

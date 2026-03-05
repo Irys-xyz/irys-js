@@ -4,7 +4,7 @@ import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./dataTransaction";
 import type { Data } from "./types";
-import { arrayCompare, constantTimeEqual, concatBuffers, promisePool } from "./utils";
+import { constantTimeEqual, concatBuffers, promisePool } from "./utils";
 
 export type MerkleChunk = {
   dataHash: Uint8Array;
@@ -62,7 +62,6 @@ export class Merkle {
   ): Promise<{ chunks: MerkleChunk[]; dataSize: number }> {
     const chunks: MerkleChunk[] = [];
 
-    // let rest = data as Uint8Array;
     let cursor = 0;
 
     for await (const chunk of chunker(+this.storageConfig.chunkSize, {
@@ -77,31 +76,6 @@ export class Merkle {
       });
     }
     return { chunks, dataSize: cursor };
-
-    // while (rest.byteLength >= this.storageConfig.chunkSize) {
-    //   const chunkSize = this.storageConfig.chunkSize;
-
-    //   // If the total bytes left will produce a chunk < MIN_CHUNK_SIZE,
-    //   // then adjust the amount we put in this 2nd last chunk.
-
-    //   // const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
-    //   // if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
-    //   //   chunkSize = Math.ceil(rest.byteLength / 2);
-    //   //   // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
-    //   // }
-
-    //   const chunk = rest.slice(0, chunkSize);
-
-    //   rest = rest.slice(chunkSize);
-    // }
-
-    // chunks.push({
-    //   dataHash: await this.deps.crypto.hash(rest),
-    //   minByteRange: cursor,
-    //   maxByteRange: cursor + rest.byteLength,
-    // });
-
-    // return chunks;
   }
 
   public async generateLeaves(
@@ -209,7 +183,7 @@ export class Merkle {
     if (!Array.isArray(proofs)) {
       return [proofs];
     }
-    return arrayFlatten<MerkleProof>(proofs);
+    return proofs.flat(Infinity) as MerkleProof[];
   }
 
   public resolveBranchProofs(
@@ -397,10 +371,6 @@ export class Merkle {
 
     return this.debug(remainder, updatedOutput);
   }
-}
-
-export function arrayFlatten<T = any>(input: T[]): T[] {
-  return input.flat(Infinity) as T[];
 }
 
 export function intToBuffer(note: number): Uint8Array {

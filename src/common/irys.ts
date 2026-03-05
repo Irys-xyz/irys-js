@@ -21,37 +21,7 @@ export type IrysConfig = {
   storageConfig?: StorageConfig;
 };
 
-// // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unsafe-declaration-merging
-// export declare interface IrysClient {
-//   on<U extends keyof IrysClientEvents>(
-//     event: U,
-//     listener: IrysClientEvents[U]
-//   ): this;
-
-//   emit<U extends keyof IrysClientEvents>(
-//     event: U,
-//     ...args: Parameters<IrysClientEvents[U]>
-//   ): boolean;
-// }
-
-// type IrysClientEvents = {
-//   chunkUpload: ({
-//     txId,
-//     offset,
-//     index,
-//   }: {
-//     txId: TransactionId;
-//     offset: bigint;
-//     index: number;
-//   }) => void;
-//   debugLog: (msg: string, meta?: any) => void;
-//   infoLog: (msg: string, meta?: any) => void;
-//   warnLog: (msg: string, meta?: any) => void;
-//   errorLog: (msg: string, meta?: any) => void;
-// };
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-export class IrysClient /* extends EventEmitter */ {
+export class IrysClient {
   public config: IrysConfig;
   public api!: Api;
   public merkle!: Merkle;
@@ -64,7 +34,6 @@ export class IrysClient /* extends EventEmitter */ {
   public storageTransactions!: StorageTransactions;
 
   constructor(config: IrysConfig) {
-    // super({ captureRejections: true });
     this.config = config;
     this.cryptoDriver = config.cryptoDriver;
     if (config.storageConfig) this.storageConfig = config.storageConfig;
@@ -92,6 +61,10 @@ export class IrysClient /* extends EventEmitter */ {
     this.programmableData = new ProgrammableData(this);
 
     return this;
+  }
+
+  public get chainId(): U64 {
+    return this.config.chainId;
   }
 
   public get executionRpcUrl(): URL {

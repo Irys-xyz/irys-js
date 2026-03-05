@@ -2,8 +2,6 @@ import type CryptoInterface from "../common/cryptoInterface";
 import { createHash } from "crypto";
 
 export class NodeCryptoDriver implements CryptoInterface {
-  public readonly hashAlgorithm = "sha256";
-
   public hash(data: Uint8Array, algorithm = "SHA-256"): Promise<Uint8Array> {
     return new Promise((resolve) => {
       resolve(

@@ -18,9 +18,4 @@ export class Account /* extends ExecWallet */ {
     const wallet = new Wallet(key);
     return { irys: toIrysAddr(wallet.address), exec: wallet.address };
   }
-
-  //   public transfer(to: string, amount: bigint, wallet: Wallet | string) {
-  //     const _wallet: Wallet = typeof wallet === "string" ? new Wallet(wallet) : wallet;
-  //    _wallet.populateTransaction
-  //   }
 }

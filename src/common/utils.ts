@@ -1,8 +1,6 @@
-/* eslint-disable no-useless-escape */
 import { fromByteArray, toByteArray } from "base64-js";
 import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
-import BigNumber from "bignumber.js";
 import { getBytes, hexlify } from "ethers/utils";
 import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
 import type { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
@@ -30,10 +28,6 @@ export function concatBuffers(
   }
 
   return temp;
-}
-
-export function writeTo(dest: Uint8Array, src: Readonly<Uint8Array>): void {
-  dest.set(src, dest.length);
 }
 
 export function uint8ArrayToHexString(uint8Array: Uint8Array): string {
@@ -76,26 +70,17 @@ export function b64UrlEncode(b64UrlString: string): string {
   return b64UrlString
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
-    .replace(/\=/g, "");
+    .replace(/=/g, "");
 }
 
 export function b64UrlDecode(b64UrlString: string): string {
-  b64UrlString = b64UrlString.replace(/\-/g, "+").replace(/\_/g, "/");
+  b64UrlString = b64UrlString.replace(/-/g, "+").replace(/_/g, "/");
   let padding;
   b64UrlString.length % 4 === 0
     ? (padding = 0)
     : (padding = 4 - (b64UrlString.length % 4));
   return b64UrlString.concat("=".repeat(padding));
 }
-
-// // TODO: TEMP
-
-// export async function hash(data: Uint8Array): Promise<Uint8Array> {
-//   // createHash("SHA-256").update(data).digest();
-//   return webcrypto.subtle
-//     .digest("SHA-256", data)
-//     .then((v) => new Uint8Array(v));
-// }
 
 export function createFixedUint8Array<N extends number>(
   length: N
@@ -119,22 +104,6 @@ export function toFixedUint8Array<N extends number>(
       `Unable to assert array ${array} has length ${length}, as it has length ${array.length}`
     );
   return array as FixedUint8Array<N>;
-}
-
-export function bigIntToUint8Array(bigInt: bigint): Uint8Array {
-  const s = bigInt.toString(16).padStart(2, "0");
-  return Uint8Array.from(
-    s.match(/.{2}/g)?.map((byte) => parseInt(byte, 16)) || []
-  );
-}
-
-export function uint8ArrayToBigInt(bytes: Uint8Array): bigint {
-  return BigInt(
-    "0x" +
-      Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")
-  );
 }
 
 export function numberToHex(number: number | bigint): string {
@@ -181,14 +150,6 @@ export function longTo8ByteArray(long: number): Uint8Array {
 
 export function shortTo2ByteArray(short: number): Uint8Array {
   return numberToBytes(short, 2);
-}
-
-export function longTo16ByteArray(long: number): Uint8Array {
-  return numberToBytes(long, 16);
-}
-
-export function longTo32ByteArray(long: number): Uint8Array {
-  return numberToBytes(long, 32);
 }
 
 export function byteArrayToLong(byteArray: Uint8Array): number {
@@ -275,14 +236,6 @@ export const encodeAddress = (addr: Address): Base58<Address> =>
 export const decodeAddress = (addr: Base58<Address> | string): Address =>
   decodeBase58ToFixed(toIrysAddr(addr), 20);
 
-export function mirysToIrys(mIrys: BigNumber.Value): BigNumber {
-  return new BigNumber(mIrys).shiftedBy(-18);
-}
-
-export function irysTomIrys(irys: BigNumber.Value): BigNumber {
-  return new BigNumber(irys).shiftedBy(18);
-}
-
 export const isCommitmentTx = (
   tx:
     | EncodedUnsignedCommitmentTransactionInterface
@@ -335,10 +288,6 @@ export async function promisePool<T, N>(
   return results;
 }
 
-export function prettyPrintUint8Array(arr: Uint8Array): string {
-  return `[${Array.from(arr).join(", ")}]`;
-}
-
 export const arrayCompare = (
   a: Uint8Array | any[],
   b: Uint8Array | any[]
@@ -366,6 +315,3 @@ export const constantTimeEqual = (
 
   return result === 0;
 };
-
-export const isNullish = (v: any): boolean =>
-  v === undefined || Number.isNaN(v) || v === null;
