@@ -219,8 +219,8 @@ export class UnsignedDataTransaction
       20
     );
 
-    if (!this.anchor) await this.fillAnchor();
-    if (!this.termFee) await this.fillFee();
+    if (this.anchor === undefined) await this.fillAnchor();
+    if (this.termFee === undefined) await this.fillFee();
 
     const prehash = await this.getSignatureData();
 

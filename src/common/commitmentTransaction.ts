@@ -370,8 +370,8 @@ export class UnsignedCommitmentTransaction
       );
     }
 
-    if (!this.anchor) await this.fillAnchor();
-    if (!this.fee) await this.fillFee();
+    if (this.anchor === undefined) await this.fillAnchor();
+    if (this.fee === undefined) await this.fillFee();
 
     const prehash = await this.getSignatureData();
 
