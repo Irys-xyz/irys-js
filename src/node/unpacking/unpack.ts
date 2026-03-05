@@ -56,12 +56,12 @@ export async function computeEntropyChunk(
   return outputEntropy;
 }
 
-export async function computeSeedHash(
+export function computeSeedHash(
   address: Address,
   offset: U64,
   partitionHash: H256,
   chainId: U64
-): Promise<Uint8Array> {
+): Uint8Array {
   const hasher = createHash("sha-256");
   hasher.update(address);
   hasher.update(partitionHash);
