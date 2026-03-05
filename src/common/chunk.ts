@@ -18,7 +18,6 @@ import {
 } from "./utils";
 import type { IrysClient } from "./irys";
 import { unpackChunk } from "./packing";
-import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 
 export enum ChunkFormat {
   // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -187,7 +186,7 @@ export class PackedChunk implements PackedChunkInterface {
       this,
       this.irys.storageConfig.chunkSize,
       this.irys.storageConfig.entropyPackingIterations,
-      IRYS_TESTNET_CHAIN_ID
+      this.irys.chainId
     );
   }
 }
