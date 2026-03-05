@@ -1,6 +1,6 @@
 import {
   CHUNK_SIZE,
-  ENTROPY_PACKING_INTERATIONS,
+  ENTROPY_PACKING_ITERATIONS,
   MAX_CHUNK_SIZE,
   MIN_CHUNK_SIZE,
   NUM_CHUNKS_IN_PARTITION,
@@ -49,7 +49,7 @@ export class StorageConfig implements StorageConfigInterface {
   public numChunksInPartition: number = NUM_CHUNKS_IN_PARTITION;
   public numChunksInRecallRange: number = NUM_CHUNKS_IN_RECALL_RANGE;
   public numPartitionsInSlot: number = NUM_PARTITIONS_PER_SLOT;
-  public entropyPackingIterations: number = ENTROPY_PACKING_INTERATIONS;
+  public entropyPackingIterations: number = ENTROPY_PACKING_ITERATIONS;
 
   constructor(config?: Partial<StorageConfigInterface>) {
     if (config) {
