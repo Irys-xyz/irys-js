@@ -23,7 +23,7 @@ export async function computeEntropyChunk(
   let outputCursor = 0;
   let hashCount = chunkSize / SHA_HASH_SIZE;
   for (let i = 0; i < hashCount; i++) {
-    previousSegment = createHash("sha-256").update(previousSegment).digest();
+    previousSegment = createHash("sha256").update(previousSegment).digest();
     for (let j = 0; j < SHA_HASH_SIZE; j++) {
       outputEntropy[outputCursor++] = previousSegment[j];
     }
@@ -31,7 +31,7 @@ export async function computeEntropyChunk(
   // 2D hash packing
   while (hashCount < entropyPackingIterations) {
     const i = (hashCount % (chunkSize / SHA_HASH_SIZE)) * SHA_HASH_SIZE;
-    const hasher = createHash("sha-256");
+    const hasher = createHash("sha256");
     if (i === 0) {
       hasher.update(outputEntropy.subarray(chunkSize - SHA_HASH_SIZE));
     } else {
@@ -52,7 +52,7 @@ export function computeSeedHash(
   partitionHash: H256,
   chainId: U64
 ): Uint8Array {
-  const hasher = createHash("sha-256");
+  const hasher = createHash("sha256");
   hasher.update(address);
   hasher.update(partitionHash);
   hasher.update(bigIntToBytes(chainId, 8));
@@ -131,7 +131,7 @@ export async function computeEntropyChunkWebCrypto(
   let outputCursor = 0;
   let hashCount = chunkSize / SHA_HASH_SIZE;
   for (let i = 0; i < hashCount; i++) {
-    previousSegment = createHash("sha-256").update(previousSegment).digest();
+    previousSegment = createHash("sha256").update(previousSegment).digest();
     for (let j = 0; j < SHA_HASH_SIZE; j++) {
       outputEntropy[outputCursor++] = previousSegment[j];
     }
