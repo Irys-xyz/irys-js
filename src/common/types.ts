@@ -6,4 +6,4 @@ export type AnyUrl = ApiConfig | string | URL;
 
 export type Data = Uint8Array | AsyncIterable<Uint8Array>;
 
-export type FixMe = any;
+export type FixMe = unknown;
