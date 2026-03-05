@@ -362,11 +362,7 @@ export class UnsignedCommitmentTransaction
 
     if (!arrayCompare(computedSigner, this.signer)) {
       throw new Error(
-        `Provided signer address ${encodeBase58(
-          this.signer
-        )} is not equivalent to the address for the provided signing key (${encodeBase58(
-          computedSigner
-        )})`
+        "Provided signer address does not match the address derived from the signing key"
       );
     }
 
