@@ -190,10 +190,12 @@ export class Merkle {
     const nextLayer: MerkleNode[] = [];
 
     for (let i = 0; i < nodes.length; i += 2) {
-      nextLayer.push(await this.hashBranch(nodes[i], nodes[i + 1]));
+      if (i + 1 < nodes.length) {
+        nextLayer.push(await this.hashBranch(nodes[i], nodes[i + 1]));
+      } else {
+        nextLayer.push(nodes[i]);
+      }
     }
-
-    // console.log("Layer", nextLayer);
 
     return this.buildLayers(nextLayer, level + 1);
   }
@@ -336,9 +338,6 @@ export class Merkle {
     left: MerkleNode,
     right: MerkleNode
   ): Promise<MerkleNode> {
-    if (!right) {
-      return left as BranchNode;
-    }
     const branch = {
       type: "branch",
       id: await this.hash([
