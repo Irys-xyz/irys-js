@@ -288,12 +288,7 @@ export const isCommitmentTx = (
     | EncodedUnsignedCommitmentTransactionInterface
     | EncodedUnsignedDataTransactionInterface
 ): tx is EncodedUnsignedCommitmentTransactionInterface => {
-  // @ts-expect-error TS is dum sometimes
-  if (tx?.commitmentType) {
-    return true;
-  } else {
-    return false;
-  }
+  return "commitmentType" in tx;
 };
 
 export const isDataTx = (
