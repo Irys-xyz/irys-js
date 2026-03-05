@@ -45,11 +45,8 @@ export class ReadBuilder {
 
     for (const { txId, start, length } of this.readRanges) {
       // get the data start for this tx from cache, populating if we haven't seen this tx before.
-      let dataStart = 0n;
-      if (dataStartCache.has(txId)) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        dataStart = dataStartCache.get(txId)!;
-      } else {
+      let dataStart = dataStartCache.get(txId);
+      if (dataStart === undefined) {
         const txMeta = (
           await Utils.wrapError(this.irys.storageTransactions.getHeader(txId))
         ).data;
@@ -57,9 +54,10 @@ export class ReadBuilder {
           throw new Error(
             `Transaction ${txId} is not permanent (ledger 0) and cannot be used.`
           );
-        dataStart = await Utils.wrapError(
+        const offsetRes = await Utils.wrapError(
           await this.irys.storageTransactions.getLocalDataStartOffset(txId)
-        ).then((r) => BigInt(r.data.dataStartOffset as string));
+        );
+        dataStart = BigInt(offsetRes.data.dataStartOffset as string);
         dataStartCache.set(txId, dataStart);
       }
 
