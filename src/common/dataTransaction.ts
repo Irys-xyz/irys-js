@@ -14,6 +14,7 @@ import type {
 } from "./dataTypes";
 import {
   arrayCompare,
+  constantTimeEqual,
   decodeBase58ToFixed,
   promisePool,
   toFixedUint8Array,
@@ -572,7 +573,7 @@ export class SignedDataTransaction
     const recoveredAddress = getBytes(
       recoverAddress(prehash, hexlify(this.signature))
     );
-    return arrayCompare(recoveredAddress, this.signer);
+    return constantTimeEqual(new Uint8Array(recoveredAddress), new Uint8Array(this.signer));
   }
 
   public getSignatureData(): Promise<Uint8Array> {

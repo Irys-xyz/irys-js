@@ -4,7 +4,7 @@ import type CryptoInterface from "./cryptoInterface";
 import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./dataTransaction";
 import type { Data } from "./types";
-import { arrayCompare, concatBuffers, promisePool } from "./utils";
+import { arrayCompare, constantTimeEqual, concatBuffers, promisePool } from "./utils";
 
 export type MerkleChunk = {
   dataHash: Uint8Array;
@@ -282,7 +282,7 @@ export class Merkle {
         await this.hash(pathData),
         await this.hash(endOffsetBuffer),
       ]);
-      const result = arrayCompare(id, pathDataHash);
+      const result = constantTimeEqual(new Uint8Array(id), new Uint8Array(pathDataHash));
       if (result) {
         return {
           offset: rightBound - 1,
@@ -312,7 +312,7 @@ export class Merkle {
       await this.hash(offsetBuffer),
     ]);
 
-    if (arrayCompare(id, pathHash)) {
+    if (constantTimeEqual(new Uint8Array(id), new Uint8Array(pathHash))) {
       if (dest < offset) {
         return await this.validatePath(
           left,

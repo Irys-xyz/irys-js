@@ -11,7 +11,7 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import { arrayCompare, decodeBase58ToFixed, toFixedUint8Array } from "./utils";
+import { arrayCompare, constantTimeEqual, decodeBase58ToFixed, toFixedUint8Array } from "./utils";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import type { BytesLike } from "ethers";
@@ -549,7 +549,7 @@ export class SignedCommitmentTransaction
     const recoveredAddress = getBytes(
       recoverAddress(prehash, hexlify(this.signature))
     );
-    return arrayCompare(recoveredAddress, this.signer);
+    return constantTimeEqual(new Uint8Array(recoveredAddress), new Uint8Array(this.signer));
   }
 
   public getSignatureData(): Promise<Uint8Array> {
