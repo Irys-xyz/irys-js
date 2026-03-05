@@ -56,7 +56,7 @@ export class StorageTransactions {
     route: string,
     config?: ApiRequestConfig
   ): Promise<AxiosResponse<T>> {
-    return this.api.get(route.replace("#", txId), config);
+    return this.api.get(route.replace("#", encodeURIComponent(txId)), config);
   }
 }
 

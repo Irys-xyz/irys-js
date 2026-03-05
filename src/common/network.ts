@@ -75,7 +75,7 @@ export class Network {
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
     return await Utils.wrapError(
       this.api.get<EncodedCombinedBlockHeader>(
-        V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
+        V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", encodeURIComponent(param.toString())) +
         (withPoa ? "/full" : ""),
         config
       ),
@@ -96,7 +96,7 @@ export class Network {
       this.api.get<
         | EncodedSignedCommitmentTransactionInterface
         | EncodedSignedDataTransactionInterface
-      >(V1_API_ROUTES.GET_TX.replace("{txId}", id.toString()), config),
+      >(V1_API_ROUTES.GET_TX.replace("{txId}", encodeURIComponent(id.toString())), config),
       `getting tx by ID: ${id.toString()}`
     );
   }
@@ -123,8 +123,8 @@ export class Network {
         this.api.get<EncodedPriceInfo>(
           V1_API_ROUTES.GET_TX_PRICE.replace(
             "{ledgerId}",
-            ledgerId.toString()
-          ).replace("{size}", size.toString()),
+            encodeURIComponent(ledgerId.toString())
+          ).replace("{size}", encodeURIComponent(size.toString())),
           config
         ),
         "getting price for data transaction"
@@ -151,12 +151,12 @@ export class Network {
     ) {
       url = V1_API_ROUTES.GET_COMMITMENT_PLEDGE_PRICE.replace(
         "{type}",
-        encodedType.type
-      ).replace("{userAddress}", encodeAddress(address));
+        encodeURIComponent(encodedType.type)
+      ).replace("{userAddress}", encodeURIComponent(encodeAddress(address)));
     } else {
       url = V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
         "{type}",
-        encodedType.type
+        encodeURIComponent(encodedType.type)
       );
     }
     const encoded = (
@@ -188,8 +188,8 @@ export class Network {
         this.api.get(
           V1_API_ROUTES.GET_BLOCK_INDEX.replace(
             "{height}",
-            fromHeight.toString()
-          ).replace("{limit}", pageSize.toString()),
+            encodeURIComponent(fromHeight.toString())
+          ).replace("{limit}", encodeURIComponent(pageSize.toString())),
           config
         ),
         "Getting block index page"
