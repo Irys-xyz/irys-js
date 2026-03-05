@@ -16,8 +16,8 @@ export class Utils {
   ): Promise<AxiosResponse<T, D>> {
     try {
       return await response;
-    } catch (e: any) {
-      throw new HttpError(e, context);
+    } catch (e: unknown) {
+      throw new HttpError(e instanceof Error ? e : new Error(String(e)), context);
     }
   }
 }

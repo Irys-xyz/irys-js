@@ -3,7 +3,7 @@ import type { Base58, U64 } from "./dataTypes";
 import { toExecAddr, toIrysAddr } from "./utils";
 import { Wallet } from "ethers/wallet";
 
-export class Account /* extends ExecWallet */ {
+export class Account {
   public irys: IrysClient;
 
   constructor(irys: IrysClient) {

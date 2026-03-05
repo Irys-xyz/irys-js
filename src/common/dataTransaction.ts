@@ -233,7 +233,7 @@ export class UnsignedDataTransaction
 
     return new SignedDataTransaction(
       this.irys,
-      this as any as SignedDataTransactionInterface
+      this as unknown as SignedDataTransactionInterface
     );
   }
 
@@ -256,7 +256,11 @@ export class UnsignedDataTransaction
 
   public getSignatureData(): Promise<Uint8Array> {
     this.throwOnMissing();
-    return Promise.resolve(computeDataSignatureData(this as any));
+    return Promise.resolve(
+      computeDataSignatureData(
+        this as unknown as UnsignedDataTransactionInterface
+      )
+    );
   }
 }
 
@@ -317,7 +321,6 @@ function validateTxSignature(
 }
 
 export class SignedDataTransaction
-  // extends UnsignedDataTransaction
   implements SignedDataTransactionInterface
 {
   public id!: TransactionId;
@@ -335,8 +338,6 @@ export class SignedDataTransaction
   public signature!: Signature;
   public irys: IrysClient;
   public chunks: Chunks | undefined;
-  // TODO: implement! this is so we upload the last chunk _first_, which lets nodes confirm the data_size immediately
-  // public lastChunk: Uint8Array | undefined;
 
   public constructor(
     irys: IrysClient,
@@ -493,7 +494,6 @@ export class SignedDataTransaction
       throw new Error(`Chunks have not been prepared`);
     }
     const proof = this.chunks.proofs[idx];
-    // const chunk = this.chunks.chunks[idx];
 
     if (
       !(await this.irys.merkle.validatePath(

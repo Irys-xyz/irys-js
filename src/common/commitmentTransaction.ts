@@ -180,14 +180,12 @@ export function signingEncodeCommitmentType(
   // ORDERING MATTERS
   switch (type.type) {
     case CommitmentTypeId.STAKE:
-      // return typeBuf;
       return type.type;
     case CommitmentTypeId.PLEDGE:
       return [type.type, type.pledgeCountBeforeExecuting];
     case CommitmentTypeId.UNPLEDGE:
       return [type.type, type.pledgeCountBeforeExecuting, type.partitionHash];
     case CommitmentTypeId.UNSTAKE:
-      // return typeBuf;
       return type.type;
   }
 }
@@ -296,13 +294,11 @@ export class UnsignedCommitmentTransaction
 
   public encode(): Partial<EncodedUnsignedCommitmentTransactionInterface> {
     return {
-      // id: this.id,
       version: this.version,
       anchor: encodeBase58Nullish(this.anchor),
       signer: encodeBase58Nullish(this.signer),
       fee: this.fee.toString(),
       chainId: this.chainId.toString(),
-      // signature: encodeBase58Nullish(this.signature),
       value: this.value.toString(),
       commitmentType:
         this.commitmentType === undefined
@@ -415,7 +411,7 @@ export class UnsignedCommitmentTransaction
 
     return new SignedCommitmentTransaction(
       this.irys,
-      this as any as SignedCommitmentTransactionInterface
+      this as unknown as SignedCommitmentTransactionInterface
     );
   }
 
@@ -490,7 +486,6 @@ export class SignedCommitmentTransaction
     ) as SignedCommitmentTransactionInterface;
   }
 
-  // if you want the encoded header without chunks, use `this.encode(false)`
   // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return JSON.stringify(this.encode());

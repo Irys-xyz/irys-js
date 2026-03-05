@@ -137,8 +137,9 @@ export default class Api {
   ): Promise<AxiosResponse<T>> {
     try {
       return await this.request(path, { ...config, method: "GET" });
-    } catch (error: any) {
-      if (error.response?.status) return error.response;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status)
+        return error.response;
       throw error;
     }
   }
@@ -154,13 +155,13 @@ export default class Api {
         ...config,
         method: "POST",
         retry: {
-          retries: 0, // default to 0 so the user gets the actual error
-          // TODO: only retry for specific status codes (non 200, 400, i.e 500, 429, etc.)
+          retries: 0,
           ...config?.retry,
         },
       });
-    } catch (error: any) {
-      if (error.response?.status) return error.response;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status)
+        return error.response;
       throw error;
     }
   }
@@ -176,6 +177,7 @@ export default class Api {
       baseURL: this.config.url.toString(),
       timeout: this.config.timeout,
       maxContentLength: 1024 * 1024 * 512,
+      maxBodyLength: 1024 * 1024 * 512,
       headers: this.config.headers,
       withCredentials: this.config.withCredentials,
       httpAgent,
