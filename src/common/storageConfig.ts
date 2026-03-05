@@ -1,6 +1,8 @@
 import {
   CHUNK_SIZE,
   ENTROPY_PACKING_INTERATIONS,
+  MAX_CHUNK_SIZE,
+  MIN_CHUNK_SIZE,
   NUM_CHUNKS_IN_PARTITION,
   NUM_CHUNKS_IN_RECALL_RANGE,
   NUM_PARTITIONS_PER_SLOT,
@@ -59,13 +61,34 @@ export class StorageConfig implements StorageConfigInterface {
   }
 
   public static decode(encoded: EncodedStorageConfigInterface): StorageConfig {
-    return new StorageConfig({
+    const config = {
       chunkSize: Number(encoded.chunkSize),
       numChunksInPartition: Number(encoded.numChunksInPartition),
       numChunksInRecallRange: Number(encoded.numChunksInRecallRange),
       numPartitionsInSlot: Number(encoded.numPartitionsInSlot),
       entropyPackingIterations: Number(encoded.entropyPackingIterations),
-    });
+    };
+
+    const MAX_ENTROPY_ITERATIONS = 100_000_000;
+    const MAX_PARTITION_CHUNKS = 1_000_000;
+
+    const validations: [string, number, number, number][] = [
+      ["chunkSize", config.chunkSize, MIN_CHUNK_SIZE, MAX_CHUNK_SIZE],
+      ["numChunksInPartition", config.numChunksInPartition, 1, MAX_PARTITION_CHUNKS],
+      ["numChunksInRecallRange", config.numChunksInRecallRange, 1, MAX_PARTITION_CHUNKS],
+      ["numPartitionsInSlot", config.numPartitionsInSlot, 1, MAX_PARTITION_CHUNKS],
+      ["entropyPackingIterations", config.entropyPackingIterations, 1, MAX_ENTROPY_ITERATIONS],
+    ];
+
+    for (const [name, value, min, max] of validations) {
+      if (!Number.isInteger(value) || value < min || value > max) {
+        throw new Error(
+          `Invalid StorageConfig: ${name} must be an integer between ${min} and ${max}, got ${value}`
+        );
+      }
+    }
+
+    return new StorageConfig(config);
   }
 
   // // creates a StorageConfig from a snake_case JSON object (i.e from the API)
