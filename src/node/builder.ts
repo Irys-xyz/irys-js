@@ -59,21 +59,21 @@ export class IrysClientBuilder {
       | undefined
       | null,
     onRejected?:
-      | ((reason: Error) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
       | null
   ): Promise<TResult> {
     const res = this.build();
-    return res.then(onFulfilled as any, onRejected as any) as Promise<TResult>;
+    return res.then(onFulfilled, onRejected) as Promise<TResult>;
   }
 
   public async catch<TResult = NodeIrysClient>(
     onRejected?:
-      | ((reason: Error) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
       | null
   ): Promise<NodeIrysClient | TResult> {
-    return this.then().catch(onRejected as any);
+    return this.then().catch(onRejected);
   }
 
   public async finally(
