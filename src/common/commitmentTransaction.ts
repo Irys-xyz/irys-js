@@ -1,5 +1,3 @@
-/* eslint-disable no-case-declarations */
-
 import type {
   Address,
   Base58,
@@ -199,6 +197,44 @@ export enum CommitmentTransactionVersion {
   V2 = 2,
 }
 
+function computeCommitmentSignatureData(
+  tx: Pick<
+    UnsignedCommitmentTransactionInterface,
+    "version" | "anchor" | "signer" | "commitmentType" | "chainId" | "fee" | "value"
+  >
+): Uint8Array {
+  switch (tx.version) {
+    case CommitmentTransactionVersion.V2: {
+      const fields: Input = [
+        tx.version,
+        tx.anchor,
+        tx.signer,
+        signingEncodeCommitmentType(tx.commitmentType),
+        tx.chainId,
+        tx.fee,
+        tx.value,
+      ];
+      return getBytes(keccak256(encode(fields)));
+    }
+    default:
+      throw new Error(`Unknown commitment version : ${tx.version}`);
+  }
+}
+
+function validateCommitmentTxSignature(
+  prehash: Uint8Array,
+  signature: Uint8Array,
+  signer: Uint8Array
+): boolean {
+  const recoveredAddress = getBytes(
+    recoverAddress(prehash, hexlify(signature))
+  );
+  return constantTimeEqual(
+    new Uint8Array(recoveredAddress),
+    new Uint8Array(signer)
+  );
+}
+
 function validateCommitmentVersion(
   obj: Partial<UnsignedCommitmentTransactionInterface>
 ): void {
@@ -243,7 +279,7 @@ export class UnsignedCommitmentTransaction
     irys: IrysClient,
     attributes?: Partial<UnsignedCommitmentTransactionInterface>
   ) {
-    // super();
+
     this.irys = irys;
     if (attributes) Object.assign(this, attributes);
     validateCommitmentVersion(this);
@@ -384,38 +420,13 @@ export class UnsignedCommitmentTransaction
     );
   }
 
-  // / returns the "signature data" aka the prehash (hash of all the tx fields)
   public getSignatureData(): Promise<Uint8Array> {
-    switch (this.version) {
-      case CommitmentTransactionVersion.V2:
-        // throw if any of the required fields are missing
-        this.throwOnMissing();
-        // RLP encoding - field ordering matters!
-        // BE VERY CAREFUL ABOUT HOW WE SERIALIZE AND DESERIALIZE
-        // note: `undefined`/nullish and 0 serialize to the same thing
-        // this is notable for `bundleFormat` and `permFee`
-        const fields: Input = [
-          this.version,
-          this.anchor,
-          this.signer,
-          signingEncodeCommitmentType(
-            getOrThrowIfNullish(
-              this,
-              "commitmentType",
-              "Unable to sign commitment tx with missing field {1}"
-            )
-          ),
-          this.chainId,
-          this.fee,
-          this.value,
-        ];
-        const encoded = encode(fields);
-        const prehash = getBytes(keccak256(encoded));
-        return Promise.resolve(prehash);
-
-      default:
-        throw new Error(`Unknown transaction version : ${this.version}`);
-    }
+    this.throwOnMissing();
+    return Promise.resolve(
+      computeCommitmentSignatureData(
+        this as unknown as UnsignedCommitmentTransactionInterface
+      )
+    );
   }
 }
 
@@ -437,7 +448,7 @@ export class SignedCommitmentTransaction
     irys: IrysClient,
     attributes: SignedCommitmentTransactionInterface
   ) {
-    // super();
+
     this.irys = irys;
     // safer than object.assign, given we will be getting passed a class instance
     // this should "copy" over all header properties & chunks
@@ -534,47 +545,14 @@ export class SignedCommitmentTransaction
     );
   }
 
-  // Validate the signature by computing the prehash and recovering the signer's address using the prehash and the signature.
-  // compares the recovered signer address to the tx's address, and returns true if they match
   public async validateSignature(): Promise<boolean> {
     const prehash = await this.getSignatureData();
-    const recoveredAddress = getBytes(
-      recoverAddress(prehash, hexlify(this.signature))
-    );
-    return constantTimeEqual(new Uint8Array(recoveredAddress), new Uint8Array(this.signer));
+    return validateCommitmentTxSignature(prehash, this.signature, this.signer);
   }
 
   public getSignatureData(): Promise<Uint8Array> {
-    // TODO: deduplicate logic
-    switch (this.version) {
-      case CommitmentTransactionVersion.V2:
-        // throw if any of the required fields are missing
-        this.throwOnMissing();
-        // RLP encoding - field ordering matters!
-        const fields: Input = [
-          this.version,
-          this.anchor,
-          this.signer,
-          signingEncodeCommitmentType(
-            getOrThrowIfNullish(
-              this,
-              "commitmentType",
-              "Unable to sign commitment tx with missing field {1}"
-            )
-          ),
-          this.chainId,
-          this.fee,
-          this.value,
-        ];
-
-        const encoded = encode(fields);
-        const prehash = getBytes(keccak256(encoded));
-
-        return Promise.resolve(prehash);
-
-      default:
-        throw new Error(`Unknown commitment version : ${this.version}`);
-    }
+    this.throwOnMissing();
+    return Promise.resolve(computeCommitmentSignatureData(this));
   }
 }
 

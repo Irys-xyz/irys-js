@@ -1,5 +1,3 @@
-/* eslint-disable no-case-declarations */
-
 import type {
   Address,
   Base58,
