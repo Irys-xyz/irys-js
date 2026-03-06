@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Wallet } from "ethers";
-import { arrayCompare, concatBuffers, encodeBase58, sleep } from "../src/common/utils";
+import {
+  arrayCompare,
+  concatBuffers,
+  encodeBase58,
+  sleep,
+} from "../src/common/utils";
 import IrysClient from "../src/node";
 import { PackedChunk } from "../src/common/chunk";
 import { CommitmentTypeId } from "../src/common/commitmentTransaction";

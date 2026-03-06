@@ -9,7 +9,14 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import { arrayCompare, decodeBase58ToFixed, getMissingProperties, throwOnMissingProperties, toFixedUint8Array, validateSignature } from "./utils";
+import {
+  arrayCompare,
+  decodeBase58ToFixed,
+  getMissingProperties,
+  throwOnMissingProperties,
+  toFixedUint8Array,
+  validateSignature,
+} from "./utils";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import type { BytesLike } from "ethers";
@@ -191,7 +198,13 @@ export enum CommitmentTransactionVersion {
 function computeCommitmentSignatureData(
   tx: Pick<
     UnsignedCommitmentTransactionInterface,
-    "version" | "anchor" | "signer" | "commitmentType" | "chainId" | "fee" | "value"
+    | "version"
+    | "anchor"
+    | "signer"
+    | "commitmentType"
+    | "chainId"
+    | "fee"
+    | "value"
   >
 ): Uint8Array {
   switch (tx.version) {
@@ -256,15 +269,16 @@ export class UnsignedCommitmentTransaction
     irys: IrysClient,
     attributes?: Partial<UnsignedCommitmentTransactionInterface>
   ) {
-
     this.irys = irys;
     if (attributes) {
-      for (const k of requiredUnsignedCommitmentTxHeaderProps) {
-        const v = attributes[k as keyof UnsignedCommitmentTransactionInterface];
-        if (v !== undefined) {
-          this[k as keyof this] = v as any;
-        }
-      }
+      if (attributes.version !== undefined) this.version = attributes.version;
+      if (attributes.anchor !== undefined) this.anchor = attributes.anchor;
+      if (attributes.signer !== undefined) this.signer = attributes.signer;
+      if (attributes.commitmentType !== undefined)
+        this.commitmentType = attributes.commitmentType;
+      if (attributes.fee !== undefined) this.fee = attributes.fee;
+      if (attributes.value !== undefined) this.value = attributes.value;
+      if (attributes.chainId !== undefined) this.chainId = attributes.chainId;
     }
     validateCommitmentVersion(this);
   }
@@ -419,18 +433,17 @@ export class SignedCommitmentTransaction
     irys: IrysClient,
     attributes: SignedCommitmentTransactionInterface
   ) {
-
     this.irys = irys;
-    // safer than object.assign, given we will be getting passed a class instance
-    // this should "copy" over all header properties & chunks
-    for (const k of requiredSignedCommitmentTxHeaderProps) {
-      const v = attributes[k as keyof SignedCommitmentTransactionInterface];
-      if (v === undefined)
-        throw new Error(
-          `Unable to build signed transaction - missing field ${k}`
-        );
-      this[k as keyof this] = v as any;
-    }
+    throwOnMissingProperties(attributes, requiredSignedCommitmentTxHeaderProps);
+    this.version = attributes.version;
+    this.id = attributes.id;
+    this.anchor = attributes.anchor;
+    this.signer = attributes.signer;
+    this.commitmentType = attributes.commitmentType;
+    this.fee = attributes.fee;
+    this.chainId = attributes.chainId;
+    this.signature = attributes.signature;
+    this.value = attributes.value;
     validateCommitmentVersion(this);
   }
 
@@ -447,14 +460,13 @@ export class SignedCommitmentTransaction
   }
 
   public getHeader(): SignedCommitmentTransactionInterface {
-    return requiredSignedCommitmentTxHeaderProps.reduce<Record<string, any>>(
-      (acc, k) => {
-        acc[k as keyof SignedCommitmentTransactionInterface] =
-          this[k as keyof this];
-        return acc;
-      },
-      {}
-    ) as SignedCommitmentTransactionInterface;
+    return requiredSignedCommitmentTxHeaderProps.reduce<
+      Record<string, unknown>
+    >((acc, k) => {
+      acc[k as keyof SignedCommitmentTransactionInterface] =
+        this[k as keyof this];
+      return acc;
+    }, {}) as SignedCommitmentTransactionInterface;
   }
 
   // eslint-disable-next-line @typescript-eslint/naming-convention

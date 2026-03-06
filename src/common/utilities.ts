@@ -17,7 +17,10 @@ export class Utils {
     try {
       return await response;
     } catch (e: unknown) {
-      throw new HttpError(e instanceof Error ? e : new Error(String(e)), context);
+      throw new HttpError(
+        e instanceof Error ? e : new Error(String(e)),
+        context
+      );
     }
   }
 }

@@ -42,14 +42,6 @@ export type EncodedUnpackedChunkInterface = {
   bytes: Base64Url;
 };
 
-const unpackedChunkProperties = [
-  "dataRoot",
-  "dataSize",
-  "dataPath",
-  "txOffset",
-  "bytes",
-];
-
 // Computes a chunk's end byte offset
 // (this is used for the merkle proof)
 export function chunkEndByteOffset(
@@ -74,11 +66,11 @@ export class UnpackedChunk implements UnpackedChunkInterface {
   public bytes!: Uint8Array; // Raw bytes to be stored. should be network constant `chunk_size` unless it's the very last chunk
 
   constructor(attributes: UnpackedChunkInterface) {
-    for (const k of unpackedChunkProperties) {
-      this[k as keyof this] = attributes[
-        k as keyof UnpackedChunkInterface
-      ] as any;
-    }
+    this.dataRoot = attributes.dataRoot;
+    this.dataSize = attributes.dataSize;
+    this.dataPath = attributes.dataPath;
+    this.txOffset = attributes.txOffset;
+    this.bytes = attributes.bytes;
   }
 
   public byteOffset(chunkSize: number): U64 {
@@ -123,13 +115,6 @@ export type EncodedPackedChunkInterface = EncodedUnpackedChunkInterface & {
   partitionHash: Base58;
 };
 
-const packedChunkProperties = [
-  ...unpackedChunkProperties,
-  "packingAddress",
-  "partitionOffset",
-  "partitionHash",
-];
-
 export class PackedChunk implements PackedChunkInterface {
   public dataRoot!: H256;
   public dataSize!: bigint;
@@ -143,12 +128,17 @@ export class PackedChunk implements PackedChunkInterface {
 
   constructor(irys: IrysClient, attributes: Partial<PackedChunkInterface>) {
     this.irys = irys;
-    for (const k of packedChunkProperties) {
-      const v = attributes[k as keyof PackedChunkInterface];
-      if (v !== undefined) {
-        this[k as keyof this] = v as any;
-      }
-    }
+    if (attributes.dataRoot !== undefined) this.dataRoot = attributes.dataRoot;
+    if (attributes.dataSize !== undefined) this.dataSize = attributes.dataSize;
+    if (attributes.dataPath !== undefined) this.dataPath = attributes.dataPath;
+    if (attributes.txOffset !== undefined) this.txOffset = attributes.txOffset;
+    if (attributes.bytes !== undefined) this.bytes = attributes.bytes;
+    if (attributes.packingAddress !== undefined)
+      this.packingAddress = attributes.packingAddress;
+    if (attributes.partitionOffset !== undefined)
+      this.partitionOffset = attributes.partitionOffset;
+    if (attributes.partitionHash !== undefined)
+      this.partitionHash = attributes.partitionHash;
   }
 
   public encode(): EncodedPackedChunkInterface {
@@ -187,6 +177,7 @@ export class PackedChunk implements PackedChunkInterface {
 
   public async unpack(): Promise<UnpackedChunk> {
     return unpackChunk(
+      this.irys.cryptoDriver,
       this,
       this.irys.storageConfig.chunkSize,
       this.irys.storageConfig.entropyPackingIterations,

@@ -51,10 +51,7 @@ export function bufferTob64Url(buffer: Uint8Array): string {
 }
 
 export function b64UrlEncode(b64UrlString: string): string {
-  return b64UrlString
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
+  return b64UrlString.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 export function b64UrlDecode(b64UrlString: string): string {
@@ -116,7 +113,7 @@ export function numberToBytes(value: number, numBytes: number): Uint8Array {
   return bytes;
 }
 
-export function jsonBigIntSerialize(obj: any): string {
+export function jsonBigIntSerialize(obj: unknown): string {
   return JSON.stringify(obj, (_, v) =>
     typeof v === "bigint" ? v.toString() : v
   );
@@ -161,9 +158,11 @@ export const encodeAddress = (addr: Address): Base58<Address> =>
 export const decodeAddress = (addr: Base58<Address> | string): Address =>
   decodeBase58ToFixed(toIrysAddr(addr), 20);
 
-export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
-  typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===
-  "function";
+export const isAsyncIter = (obj: unknown): obj is AsyncIterable<Uint8Array> =>
+  obj !== null &&
+  obj !== undefined &&
+  typeof obj === "object" &&
+  Symbol.asyncIterator in obj;
 
 // basic promise pool with bounded memory usage
 export async function promisePool<T, N>(
@@ -201,9 +200,7 @@ export function getMissingProperties<T>(
   obj: T,
   requiredProps: readonly string[]
 ): string[] {
-  return requiredProps.filter(
-    (k) => obj[k as keyof T] === undefined
-  );
+  return requiredProps.filter((k) => obj[k as keyof T] === undefined);
 }
 
 export function throwOnMissingProperties<T>(
@@ -216,8 +213,8 @@ export function throwOnMissingProperties<T>(
 }
 
 export const arrayCompare = (
-  a: Uint8Array | any[],
-  b: Uint8Array | any[]
+  a: Uint8Array | unknown[],
+  b: Uint8Array | unknown[]
 ): boolean => {
   if (a === b) return true; // ref check
   if (a.length !== b.length) return false;
@@ -229,10 +226,7 @@ export const arrayCompare = (
   return true;
 };
 
-export const constantTimeEqual = (
-  a: Uint8Array,
-  b: Uint8Array
-): boolean => {
+export const constantTimeEqual = (a: Uint8Array, b: Uint8Array): boolean => {
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 };

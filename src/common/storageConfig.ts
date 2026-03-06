@@ -36,14 +36,6 @@ export type EncodedStorageConfigInterface = {
   entropyPackingIterations: string;
 };
 
-const storageConfigProps = [
-  "chunkSize",
-  "numChunksInPartition",
-  "numChunksInRecallRange",
-  "numPartitionsInSlot",
-  "entropyPackingIterations",
-];
-
 export class StorageConfig implements StorageConfigInterface {
   public chunkSize: number = CHUNK_SIZE;
   public numChunksInPartition: number = NUM_CHUNKS_IN_PARTITION;
@@ -53,10 +45,15 @@ export class StorageConfig implements StorageConfigInterface {
 
   constructor(config?: Partial<StorageConfigInterface>) {
     if (config) {
-      for (const k of storageConfigProps) {
-        const v = config[k as keyof StorageConfigInterface];
-        if (v !== undefined) this[k as keyof this] = v as any;
-      }
+      if (config.chunkSize !== undefined) this.chunkSize = config.chunkSize;
+      if (config.numChunksInPartition !== undefined)
+        this.numChunksInPartition = config.numChunksInPartition;
+      if (config.numChunksInRecallRange !== undefined)
+        this.numChunksInRecallRange = config.numChunksInRecallRange;
+      if (config.numPartitionsInSlot !== undefined)
+        this.numPartitionsInSlot = config.numPartitionsInSlot;
+      if (config.entropyPackingIterations !== undefined)
+        this.entropyPackingIterations = config.entropyPackingIterations;
     }
   }
 
@@ -74,10 +71,30 @@ export class StorageConfig implements StorageConfigInterface {
 
     const validations: [string, number, number, number][] = [
       ["chunkSize", config.chunkSize, MIN_CHUNK_SIZE, MAX_CHUNK_SIZE],
-      ["numChunksInPartition", config.numChunksInPartition, 1, MAX_PARTITION_CHUNKS],
-      ["numChunksInRecallRange", config.numChunksInRecallRange, 1, MAX_PARTITION_CHUNKS],
-      ["numPartitionsInSlot", config.numPartitionsInSlot, 1, MAX_PARTITION_CHUNKS],
-      ["entropyPackingIterations", config.entropyPackingIterations, 1, MAX_ENTROPY_ITERATIONS],
+      [
+        "numChunksInPartition",
+        config.numChunksInPartition,
+        1,
+        MAX_PARTITION_CHUNKS,
+      ],
+      [
+        "numChunksInRecallRange",
+        config.numChunksInRecallRange,
+        1,
+        MAX_PARTITION_CHUNKS,
+      ],
+      [
+        "numPartitionsInSlot",
+        config.numPartitionsInSlot,
+        1,
+        MAX_PARTITION_CHUNKS,
+      ],
+      [
+        "entropyPackingIterations",
+        config.entropyPackingIterations,
+        1,
+        MAX_ENTROPY_ITERATIONS,
+      ],
     ];
 
     for (const [name, value, min, max] of validations) {

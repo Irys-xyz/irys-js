@@ -9,7 +9,7 @@ import NodeCryptoDriver from "./cryptoDriver";
 import { NodeIrysClient } from "./irys";
 
 export type NodeConfig = {
-  nodes: ApiConfig[];
+  node: ApiConfig;
   chainId: U64;
   cryptoDriver: CryptoInterface;
   storageConfig?: StorageConfig;
@@ -20,13 +20,11 @@ export class IrysClientBuilder {
 
   constructor(url?: AnyUrl) {
     this.builderConfig = {
-      nodes: [
-        url
-          ? isApiConfig(url)
-            ? url
-            : { url: new URL(url) }
-          : { url: new URL("https://testnet-rpc.irys.xyz/v1/") },
-      ],
+      node: url
+        ? isApiConfig(url)
+          ? url
+          : { url: new URL(url) }
+        : { url: new URL("https://testnet-rpc.irys.xyz/v1/") },
       chainId: IRYS_TESTNET_CHAIN_ID,
       cryptoDriver: new NodeCryptoDriver(),
     };
@@ -38,14 +36,14 @@ export class IrysClientBuilder {
   }
 
   public node(url: AnyUrl): this {
-    this.builderConfig.nodes = [isApiConfig(url) ? url : { url: new URL(url) }];
+    this.builderConfig.node = isApiConfig(url) ? url : { url: new URL(url) };
     return this;
   }
 
   public async build(): Promise<NodeIrysClient> {
     const client = new NodeIrysClient({
       ...this.builderConfig,
-      api: this.builderConfig.nodes[0],
+      api: this.builderConfig.node,
     });
     await client.ready();
     return client;

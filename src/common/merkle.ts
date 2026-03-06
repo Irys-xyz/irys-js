@@ -17,8 +17,8 @@ type BranchNode = {
   readonly type: "branch";
   readonly byteRange: number;
   readonly maxByteRange: number;
-  readonly leftChild?: MerkleNode;
-  readonly rightChild?: MerkleNode;
+  readonly leftChild: MerkleNode;
+  readonly rightChild: MerkleNode;
 };
 
 type LeafNode = {
@@ -198,13 +198,13 @@ export class Merkle {
     if (node.type === "branch") {
       const partialProof = concatBuffers([
         proof,
-        node.leftChild!.id!,
-        node.rightChild!.id!,
+        node.leftChild.id,
+        node.rightChild.id,
         intToBuffer(node.byteRange),
       ]);
       return [
-        this.resolveBranchProofs(node.leftChild!, partialProof, depth + 1),
-        this.resolveBranchProofs(node.rightChild!, partialProof, depth + 1),
+        this.resolveBranchProofs(node.leftChild, partialProof, depth + 1),
+        this.resolveBranchProofs(node.rightChild, partialProof, depth + 1),
       ] as [MerkleProof, MerkleProof];
     }
 
@@ -249,7 +249,10 @@ export class Merkle {
         await this.hash(pathData),
         await this.hash(endOffsetBuffer),
       ]);
-      const result = constantTimeEqual(new Uint8Array(id), new Uint8Array(pathDataHash));
+      const result = constantTimeEqual(
+        new Uint8Array(id),
+        new Uint8Array(pathDataHash)
+      );
       if (result) {
         return {
           offset: rightBound - 1,
@@ -380,9 +383,9 @@ export function intToBuffer(note: number): Uint8Array {
 
 export function bufferToInt(buffer: Uint8Array): number {
   let value = 0;
-  for (let i = 0; i < buffer.length; i++) {
+  for (const byte of buffer) {
     value *= 256;
-    value += buffer[i];
+    value += byte;
   }
   return value;
 }

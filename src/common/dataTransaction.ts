@@ -120,15 +120,6 @@ const fullSignedDataTxHeaderProps = [
   "permFee",
 ];
 
-const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
-
-const unsignedDataTxProps = [
-  ...requiredUnsignedDataTxHeaderProps,
-  "bundleFormat",
-  "permFee",
-  "chunks",
-];
-
 export class UnsignedDataTransaction
   implements Partial<UnsignedDataTransactionInterface>
 {
@@ -138,7 +129,7 @@ export class UnsignedDataTransaction
   public signer?: Address = undefined;
   public dataRoot?: H256 = undefined;
   public dataSize: U64 = 0n;
-  public termFee: U256 = 0n;
+  public termFee?: U256 = undefined;
   public chainId: U64 = IRYS_TESTNET_CHAIN_ID;
   public signature?: Signature = undefined;
   public bundleFormat?: U64 = undefined;
@@ -153,15 +144,25 @@ export class UnsignedDataTransaction
     irys: IrysClient,
     attributes?: Partial<UnsignedDataTransactionInterface>
   ) {
-
     this.irys = irys;
     if (attributes) {
-      for (const k of unsignedDataTxProps) {
-        const v = attributes[k as keyof UnsignedDataTransactionInterface];
-        if (v !== undefined) {
-          this[k as keyof this] = v as any;
-        }
-      }
+      if (attributes.version !== undefined) this.version = attributes.version;
+      if (attributes.anchor !== undefined) this.anchor = attributes.anchor;
+      if (attributes.signer !== undefined) this.signer = attributes.signer;
+      if (attributes.dataRoot !== undefined)
+        this.dataRoot = attributes.dataRoot;
+      if (attributes.dataSize !== undefined)
+        this.dataSize = attributes.dataSize;
+      if (attributes.termFee !== undefined) this.termFee = attributes.termFee;
+      if (attributes.ledgerId !== undefined)
+        this.ledgerId = attributes.ledgerId;
+      if (attributes.chainId !== undefined) this.chainId = attributes.chainId;
+      if (attributes.headerSize !== undefined)
+        this.headerSize = attributes.headerSize;
+      if (attributes.bundleFormat !== undefined)
+        this.bundleFormat = attributes.bundleFormat;
+      if (attributes.permFee !== undefined) this.permFee = attributes.permFee;
+      if (attributes.chunks !== undefined) this.chunks = attributes.chunks;
     }
   }
 
@@ -175,7 +176,10 @@ export class UnsignedDataTransaction
   }
 
   public async fillFee(): Promise<this> {
-    const priceInfo = await this.irys.network.getPrice(this.dataSize, this.ledgerId);
+    const priceInfo = await this.irys.network.getPrice(
+      this.dataSize,
+      this.ledgerId
+    );
     this.termFee = priceInfo.termFee;
     if (this.ledgerId === 0) {
       this.permFee = priceInfo.permFee;
@@ -185,12 +189,16 @@ export class UnsignedDataTransaction
 
   public async getFees(): Promise<{ termFee: U64; permFee: U64 }> {
     await this.fillFee();
-    return { termFee: this.termFee!, permFee: this.permFee ?? 0n };
+    if (this.termFee === undefined)
+      throw new Error("termFee is undefined after fillFee");
+    return { termFee: this.termFee, permFee: this.permFee ?? 0n };
   }
 
   public async getFee(): Promise<U64> {
     await this.fillFee();
-    return this.termFee! + (this.permFee ?? 0n);
+    if (this.termFee === undefined)
+      throw new Error("termFee is undefined after fillFee");
+    return this.termFee + (this.permFee ?? 0n);
   }
 
   public async fillAnchor(): Promise<this> {
@@ -203,7 +211,9 @@ export class UnsignedDataTransaction
     const missing = this.missingProperties;
     if (missing.length)
       throw new Error(
-        `Missing required properties: ${missing.join(", ")} - did you call tx.prepareChunks(<data>)?`
+        `Missing required properties: ${missing.join(
+          ", "
+        )} - did you call tx.prepareChunks(<data>)?`
       );
   }
 
@@ -225,7 +235,11 @@ export class UnsignedDataTransaction
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
-      throw new Error("Signature encode/decode roundtrip verification failed");
+      throw new Error(
+        `Signature encode/decode roundtrip verification failed: computed=${hexlify(
+          this.signature
+        )} serialized=${signature.serialized}`
+      );
     }
     const idBytes = getBytes(keccak256(signature.serialized));
     this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
@@ -305,9 +319,7 @@ function computeDataSignatureData(
   }
 }
 
-export class SignedDataTransaction
-  implements SignedDataTransactionInterface
-{
+export class SignedDataTransaction implements SignedDataTransactionInterface {
   public id!: TransactionId;
   public version!: DataTransactionVersion;
   public anchor!: H256;
@@ -328,18 +340,22 @@ export class SignedDataTransaction
     irys: IrysClient,
     attributes: SignedDataTransactionInterface
   ) {
-
     this.irys = irys;
-    // safer than object.assign, given we will be getting passed a class instance
-    // this should "copy" over all header properties & chunks
-    for (const k of fullSignedDataTxProps) {
-      const v = attributes[k as keyof SignedDataTransactionInterface];
-      if (v === undefined && requiredSignedDataTxHeaderProps.includes(k))
-        throw new Error(
-          `Unable to build signed transaction - missing field ${k}`
-        );
-      this[k as keyof this] = v as any;
-    }
+    throwOnMissingProperties(attributes, requiredSignedDataTxHeaderProps);
+    this.id = attributes.id;
+    this.version = attributes.version;
+    this.anchor = attributes.anchor;
+    this.signer = attributes.signer;
+    this.dataRoot = attributes.dataRoot;
+    this.dataSize = attributes.dataSize;
+    this.termFee = attributes.termFee;
+    this.ledgerId = attributes.ledgerId;
+    this.chainId = attributes.chainId;
+    this.headerSize = attributes.headerSize;
+    this.signature = attributes.signature;
+    this.bundleFormat = attributes.bundleFormat;
+    this.permFee = attributes.permFee;
+    this.chunks = attributes.chunks;
   }
 
   get missingProperties(): string[] {
@@ -351,10 +367,13 @@ export class SignedDataTransaction
   }
 
   public getHeader(): SignedDataTransactionInterface {
-    return fullSignedDataTxHeaderProps.reduce<Record<string, any>>((acc, k) => {
-      acc[k as keyof SignedDataTransactionInterface] = this[k as keyof this];
-      return acc;
-    }, {}) as SignedDataTransactionInterface;
+    return fullSignedDataTxHeaderProps.reduce<Record<string, unknown>>(
+      (acc, k) => {
+        acc[k as keyof SignedDataTransactionInterface] = this[k as keyof this];
+        return acc;
+      },
+      {}
+    ) as SignedDataTransactionInterface;
   }
 
   // if you want the encoded header without chunks, use `this.encode(false)`

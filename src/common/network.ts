@@ -75,8 +75,10 @@ export class Network {
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
     return await Utils.wrapError(
       this.api.get<EncodedCombinedBlockHeader>(
-        V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", encodeURIComponent(param.toString())) +
-        (withPoa ? "/full" : ""),
+        V1_API_ROUTES.GET_BLOCK.replace(
+          "{blockParam}",
+          encodeURIComponent(param.toString())
+        ) + (withPoa ? "/full" : ""),
         config
       ),
       `getting block by param: ${param.toString()}`
@@ -96,7 +98,13 @@ export class Network {
       this.api.get<
         | EncodedSignedCommitmentTransactionInterface
         | EncodedSignedDataTransactionInterface
-      >(V1_API_ROUTES.GET_TX.replace("{txId}", encodeURIComponent(id.toString())), config),
+      >(
+        V1_API_ROUTES.GET_TX.replace(
+          "{txId}",
+          encodeURIComponent(id.toString())
+        ),
+        config
+      ),
       `getting tx by ID: ${id.toString()}`
     );
   }
