@@ -123,6 +123,13 @@ export type EncodedPackedChunkInterface = EncodedUnpackedChunkInterface & {
   partitionHash: Base58;
 };
 
+const packedChunkProperties = [
+  ...unpackedChunkProperties,
+  "packingAddress",
+  "partitionOffset",
+  "partitionHash",
+];
+
 export class PackedChunk implements PackedChunkInterface {
   public dataRoot!: H256;
   public dataSize!: bigint;
@@ -135,8 +142,13 @@ export class PackedChunk implements PackedChunkInterface {
   public irys: IrysClient;
 
   constructor(irys: IrysClient, attributes: Partial<PackedChunkInterface>) {
-    Object.assign(this, attributes);
     this.irys = irys;
+    for (const k of packedChunkProperties) {
+      const v = attributes[k as keyof PackedChunkInterface];
+      if (v !== undefined) {
+        this[k as keyof this] = v as any;
+      }
+    }
   }
 
   public encode(): EncodedPackedChunkInterface {

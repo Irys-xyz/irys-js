@@ -12,10 +12,12 @@ import type {
 } from "./dataTypes";
 import {
   arrayCompare,
-  constantTimeEqual,
   decodeBase58ToFixed,
+  getMissingProperties,
   promisePool,
+  throwOnMissingProperties,
   toFixedUint8Array,
+  validateSignature,
 } from "./utils";
 import type { MerkleChunk, MerkleProof } from "./merkle";
 import type { Input } from "rlp";
@@ -27,7 +29,6 @@ import {
   getBytes,
   hexlify,
   keccak256,
-  recoverAddress,
 } from "ethers";
 import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import { UnpackedChunk, chunkEndByteOffset } from "./chunk";
@@ -121,6 +122,13 @@ const fullSignedDataTxHeaderProps = [
 
 const fullSignedDataTxProps = [...fullSignedDataTxHeaderProps, "chunks"];
 
+const unsignedDataTxProps = [
+  ...requiredUnsignedDataTxHeaderProps,
+  "bundleFormat",
+  "permFee",
+  "chunks",
+];
+
 export class UnsignedDataTransaction
   implements Partial<UnsignedDataTransactionInterface>
 {
@@ -147,14 +155,18 @@ export class UnsignedDataTransaction
   ) {
 
     this.irys = irys;
-    if (attributes) Object.assign(this, attributes);
+    if (attributes) {
+      for (const k of unsignedDataTxProps) {
+        const v = attributes[k as keyof UnsignedDataTransactionInterface];
+        if (v !== undefined) {
+          this[k as keyof this] = v as any;
+        }
+      }
+    }
   }
 
   get missingProperties(): string[] {
-    return requiredUnsignedDataTxHeaderProps.reduce<string[]>((acc, k) => {
-      if (this[k as keyof this] === undefined) acc.push(k);
-      return acc;
-    }, []);
+    return getMissingProperties(this, requiredUnsignedDataTxHeaderProps);
   }
 
   public ledger(ledgerId: number | DataLedgerId): this {
@@ -163,19 +175,10 @@ export class UnsignedDataTransaction
   }
 
   public async fillFee(): Promise<this> {
-    if (this.ledgerId === undefined)
-      throw new Error("missing required field ledgerId");
-    // if we're ledger 0, get term & perm fee
+    const priceInfo = await this.irys.network.getPrice(this.dataSize, this.ledgerId);
+    this.termFee = priceInfo.termFee;
     if (this.ledgerId === 0) {
-      const priceInfo = await this.irys.network.getPrice(this.dataSize, 0);
       this.permFee = priceInfo.permFee;
-      this.termFee = priceInfo.termFee;
-    } else {
-      const priceInfo = await this.irys.network.getPrice(
-        this.dataSize,
-        this.ledgerId
-      );
-      this.termFee = priceInfo.termFee;
     }
     return this;
   }
@@ -200,9 +203,7 @@ export class UnsignedDataTransaction
     const missing = this.missingProperties;
     if (missing.length)
       throw new Error(
-        `Missing required properties: ${missing.join(
-          ", "
-        )} - did you call tx.prepareChunks(<data>)?`
+        `Missing required properties: ${missing.join(", ")} - did you call tx.prepareChunks(<data>)?`
       );
   }
 
@@ -224,9 +225,7 @@ export class UnsignedDataTransaction
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
-      throw new Error(
-        `signature encode/decode roundtrip error: ${this.signature} ${signature.serialized}`
-      );
+      throw new Error("Signature encode/decode roundtrip verification failed");
     }
     const idBytes = getBytes(keccak256(signature.serialized));
     this.id = encodeBase58(toFixedUint8Array(idBytes, 32));
@@ -306,20 +305,6 @@ function computeDataSignatureData(
   }
 }
 
-function validateTxSignature(
-  prehash: Uint8Array,
-  signature: Uint8Array,
-  signer: Uint8Array
-): boolean {
-  const recoveredAddress = getBytes(
-    recoverAddress(prehash, hexlify(signature))
-  );
-  return constantTimeEqual(
-    new Uint8Array(recoveredAddress),
-    new Uint8Array(signer)
-  );
-}
-
 export class SignedDataTransaction
   implements SignedDataTransactionInterface
 {
@@ -358,16 +343,11 @@ export class SignedDataTransaction
   }
 
   get missingProperties(): string[] {
-    return requiredSignedDataTxHeaderProps.reduce<string[]>((acc, k) => {
-      if (this[k as keyof this] === undefined) acc.push(k);
-      return acc;
-    }, []);
+    return getMissingProperties(this, requiredSignedDataTxHeaderProps);
   }
 
   throwOnMissing(): void {
-    const missing = this.missingProperties;
-    if (missing.length)
-      throw new Error(`Missing required properties: ${missing.join(", ")}`);
+    throwOnMissingProperties(this, requiredSignedDataTxHeaderProps);
   }
 
   public getHeader(): SignedDataTransactionInterface {
@@ -587,7 +567,7 @@ export class SignedDataTransaction
 
   public async validateSignature(): Promise<boolean> {
     const prehash = await this.getSignatureData();
-    return validateTxSignature(prehash, this.signature, this.signer);
+    return validateSignature(prehash, this.signature, this.signer);
   }
 
   public getSignatureData(): Promise<Uint8Array> {

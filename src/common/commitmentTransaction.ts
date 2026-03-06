@@ -9,7 +9,7 @@ import type {
   U64,
   UTF8,
 } from "./dataTypes";
-import { arrayCompare, constantTimeEqual, decodeBase58ToFixed, toFixedUint8Array } from "./utils";
+import { arrayCompare, decodeBase58ToFixed, getMissingProperties, throwOnMissingProperties, toFixedUint8Array, validateSignature } from "./utils";
 import type { Input } from "rlp";
 import { encode } from "rlp";
 import type { BytesLike } from "ethers";
@@ -20,7 +20,6 @@ import {
   getBytes,
   hexlify,
   keccak256,
-  recoverAddress,
 } from "ethers";
 import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import type { AxiosResponse } from "axios";
@@ -78,12 +77,6 @@ const requiredSignedCommitmentTxHeaderProps = [
   "id",
   "signature",
 ];
-
-const fullSignedCommitmentTxHeaderProps = [
-  ...requiredSignedCommitmentTxHeaderProps,
-];
-
-const fullSignedCommitmentTxProps = [...fullSignedCommitmentTxHeaderProps];
 
 export enum CommitmentTypeId {
   STAKE = 1,
@@ -219,20 +212,6 @@ function computeCommitmentSignatureData(
   }
 }
 
-function validateCommitmentTxSignature(
-  prehash: Uint8Array,
-  signature: Uint8Array,
-  signer: Uint8Array
-): boolean {
-  const recoveredAddress = getBytes(
-    recoverAddress(prehash, hexlify(signature))
-  );
-  return constantTimeEqual(
-    new Uint8Array(recoveredAddress),
-    new Uint8Array(signer)
-  );
-}
-
 function validateCommitmentVersion(
   obj: Partial<UnsignedCommitmentTransactionInterface>
 ): void {
@@ -267,10 +246,10 @@ export class UnsignedCommitmentTransaction
   public anchor?: H256 = undefined;
   public signer?: Address = undefined;
   public commitmentType?: CommitmentType = undefined;
-  public fee: U64 = 0n;
+  public fee?: U64;
   public chainId: U64 = IRYS_TESTNET_CHAIN_ID;
   public signature?: Signature = undefined;
-  public value: U256 = 0n;
+  public value?: U256;
   public irys!: IrysClient;
 
   public constructor(
@@ -279,7 +258,14 @@ export class UnsignedCommitmentTransaction
   ) {
 
     this.irys = irys;
-    if (attributes) Object.assign(this, attributes);
+    if (attributes) {
+      for (const k of requiredUnsignedCommitmentTxHeaderProps) {
+        const v = attributes[k as keyof UnsignedCommitmentTransactionInterface];
+        if (v !== undefined) {
+          this[k as keyof this] = v as any;
+        }
+      }
+    }
     validateCommitmentVersion(this);
   }
 
@@ -297,9 +283,9 @@ export class UnsignedCommitmentTransaction
       version: this.version,
       anchor: encodeBase58Nullish(this.anchor),
       signer: encodeBase58Nullish(this.signer),
-      fee: this.fee.toString(),
+      fee: this.fee?.toString(),
       chainId: this.chainId.toString(),
-      value: this.value.toString(),
+      value: this.value?.toString(),
       commitmentType:
         this.commitmentType === undefined
           ? undefined
@@ -327,13 +313,7 @@ export class UnsignedCommitmentTransaction
   }
 
   get missingProperties(): string[] {
-    return requiredUnsignedCommitmentTxHeaderProps.reduce<string[]>(
-      (acc, k) => {
-        if (this[k as keyof this] === undefined) acc.push(k);
-        return acc;
-      },
-      []
-    );
+    return getMissingProperties(this, requiredUnsignedCommitmentTxHeaderProps);
   }
 
   public async fillFee(): Promise<this> {
@@ -368,9 +348,7 @@ export class UnsignedCommitmentTransaction
   }
 
   throwOnMissing(): void {
-    const missing = this.missingProperties;
-    if (missing.length)
-      throw new Error(`Missing required properties: ${missing.join(", ")}`);
+    throwOnMissingProperties(this, requiredUnsignedCommitmentTxHeaderProps);
   }
 
   public async sign(
@@ -401,9 +379,7 @@ export class UnsignedCommitmentTransaction
     const signature = signingKey.sign(prehash);
     this.signature = toFixedUint8Array(getBytes(signature.serialized), 65);
     if (hexlify(this.signature) !== signature.serialized) {
-      throw new Error(
-        `signature encode/decode roundtrip error: ${this.signature} ${signature.serialized}`
-      );
+      throw new Error("Signature encode/decode roundtrip verification failed");
     }
 
     const idBytes = getBytes(keccak256(this.signature));
@@ -447,9 +423,9 @@ export class SignedCommitmentTransaction
     this.irys = irys;
     // safer than object.assign, given we will be getting passed a class instance
     // this should "copy" over all header properties & chunks
-    for (const k of fullSignedCommitmentTxProps) {
+    for (const k of requiredSignedCommitmentTxHeaderProps) {
       const v = attributes[k as keyof SignedCommitmentTransactionInterface];
-      if (v === undefined && requiredSignedCommitmentTxHeaderProps.includes(k))
+      if (v === undefined)
         throw new Error(
           `Unable to build signed transaction - missing field ${k}`
         );
@@ -459,10 +435,7 @@ export class SignedCommitmentTransaction
   }
 
   get missingProperties(): string[] {
-    return requiredSignedCommitmentTxHeaderProps.reduce<string[]>((acc, k) => {
-      if (this[k as keyof this] === undefined) acc.push(k);
-      return acc;
-    }, []);
+    return getMissingProperties(this, requiredSignedCommitmentTxHeaderProps);
   }
 
   public isSigned(): boolean {
@@ -470,13 +443,11 @@ export class SignedCommitmentTransaction
   }
 
   throwOnMissing(): void {
-    const missing = this.missingProperties;
-    if (missing.length)
-      throw new Error(`Missing required properties: ${missing.join(", ")}`);
+    throwOnMissingProperties(this, requiredSignedCommitmentTxHeaderProps);
   }
 
   public getHeader(): SignedCommitmentTransactionInterface {
-    return fullSignedCommitmentTxHeaderProps.reduce<Record<string, any>>(
+    return requiredSignedCommitmentTxHeaderProps.reduce<Record<string, any>>(
       (acc, k) => {
         acc[k as keyof SignedCommitmentTransactionInterface] =
           this[k as keyof this];
@@ -540,7 +511,7 @@ export class SignedCommitmentTransaction
 
   public async validateSignature(): Promise<boolean> {
     const prehash = await this.getSignatureData();
-    return validateCommitmentTxSignature(prehash, this.signature, this.signer);
+    return validateSignature(prehash, this.signature, this.signer);
   }
 
   public getSignatureData(): Promise<Uint8Array> {

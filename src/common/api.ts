@@ -58,7 +58,6 @@ export enum V1_API_ROUTES {
   GET_COMMITMENT_PRICE = "/v1/price/commitment/{type}",
   GET_ANCHOR = "/v1/anchor",
   GET_BLOCK_INDEX = "/v1/block-index?height={height}&limit={limit}",
-  GET_ASSIGNMENTS = "/v1/ledger/{address}/assignments",
 }
 
 export enum BlockTag {
@@ -68,8 +67,6 @@ export enum BlockTag {
 }
 
 export type BlockParam = number | Base58<H256> | U64 | BlockTag;
-
-export const API_VERSIONS = ["v1"];
 
 export default class Api {
   protected _instance?: AxiosInstance;
@@ -95,10 +92,6 @@ export default class Api {
   public applyConfig(config: ApiConfig): void {
     this.config = this.mergeDefaults(config);
     this._instance = undefined;
-  }
-
-  public getConfig(): ApiConfig {
-    return this.config;
   }
 
   private async requestInterceptor(

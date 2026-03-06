@@ -922,16 +922,6 @@ describe("Integration: Complete Transaction Flow", () => {
   it("should handle zero values", async () => {
     const wallet = Wallet.createRandom();
     const anchor = createFixedUint8Array(32).fill(0);
-    const mockIrysClient: IrysClient = {
-      network: {
-        getCommitmentPrice: async () => ({
-          userAddress: undefined,
-          pledgeCount: 10n,
-          value: 1234n,
-          fee: 5678n,
-        }),
-      },
-    } as any;
 
     const unsigned = new UnsignedCommitmentTransaction(mockIrysClient, {
       anchor,
@@ -943,6 +933,43 @@ describe("Integration: Complete Transaction Flow", () => {
         pledgeCountBeforeExecuting: 0n,
       },
     });
+
+    const signed = await unsigned.sign(wallet.privateKey);
+    const isValid = await signed.validateSignature();
+    expect(isValid).toBe(true);
+    expect(signed.fee).toBe(0n);
+    expect(signed.value).toBe(0n);
+    expect(signed.commitmentType).toEqual({
+      type: CommitmentTypeId.PLEDGE,
+      pledgeCountBeforeExecuting: 0n,
+    });
+  });
+
+  it("should fill fee from network when fee is undefined", async () => {
+    const wallet = Wallet.createRandom();
+    const anchor = createFixedUint8Array(32).fill(0);
+    const priceMockIrysClient: IrysClient = {
+      network: {
+        getCommitmentPrice: async () => ({
+          userAddress: undefined,
+          pledgeCount: 10n,
+          value: 1234n,
+          fee: 5678n,
+        }),
+      },
+    } as any;
+
+    const unsigned = new UnsignedCommitmentTransaction(priceMockIrysClient, {
+      anchor,
+      chainId: 0n,
+      commitmentType: {
+        type: CommitmentTypeId.PLEDGE,
+        pledgeCountBeforeExecuting: 0n,
+      },
+    });
+
+    expect(unsigned.fee).toBeUndefined();
+    expect(unsigned.value).toBeUndefined();
 
     const signed = await unsigned.sign(wallet.privateKey);
     const isValid = await signed.validateSignature();

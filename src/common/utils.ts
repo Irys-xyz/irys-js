@@ -2,8 +2,8 @@ import { fromByteArray, toByteArray } from "base64-js";
 import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 import bs58 from "bs58";
 import { getBytes, hexlify } from "ethers/utils";
-import type { EncodedUnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
-import type { EncodedUnsignedDataTransactionInterface } from "./dataTransaction";
+import { recoverAddress } from "ethers";
+import { timingSafeEqual } from "node:crypto";
 
 export type Base64UrlString = string;
 
@@ -30,28 +30,12 @@ export function concatBuffers(
   return temp;
 }
 
-export function uint8ArrayToHexString(uint8Array: Uint8Array): string {
-  return Array.from(uint8Array)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export function b64UrlToString(b64UrlString: string): string {
-  const buffer = b64UrlToBuffer(b64UrlString);
-
-  return bufferToString(buffer);
-}
-
 export function bufferToString(buffer: Uint8Array | ArrayBuffer): string {
   return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
 }
 
 export function stringToBuffer(string: string): Uint8Array {
   return new TextEncoder().encode(string);
-}
-
-export function stringToB64Url(string: string): string {
-  return bufferTob64Url(stringToBuffer(string));
 }
 
 export function b64UrlToBuffer(b64UrlString: string): Uint8Array {
@@ -88,13 +72,6 @@ export function createFixedUint8Array<N extends number>(
   return new Uint8Array(length) as FixedUint8Array<N>;
 }
 
-export function isFixedUint8Array<N extends number>(
-  array: Uint8Array,
-  length: N
-): array is FixedUint8Array<N> {
-  return array.length === length;
-}
-
 export function toFixedUint8Array<N extends number>(
   array: Uint8Array,
   length: N
@@ -104,11 +81,6 @@ export function toFixedUint8Array<N extends number>(
       `Unable to assert array ${array} has length ${length}, as it has length ${array.length}`
     );
   return array as FixedUint8Array<N>;
-}
-
-export function numberToHex(number: number | bigint): string {
-  const hex = number.toString(16);
-  return hex.length % 2 ? `0${hex}` : hex;
 }
 
 // clamped versions - LE encoding
@@ -142,53 +114,6 @@ export function numberToBytes(value: number, numBytes: number): Uint8Array {
   }
 
   return bytes;
-}
-
-export function longTo8ByteArray(long: number): Uint8Array {
-  return numberToBytes(long, 8);
-}
-
-export function shortTo2ByteArray(short: number): Uint8Array {
-  return numberToBytes(short, 2);
-}
-
-export function byteArrayToLong(byteArray: Uint8Array): number {
-  let value = 0;
-  for (let i = byteArray.length - 1; i >= 0; i--) {
-    value = value * 256 + byteArray[i];
-  }
-  return value;
-}
-
-/**
- * Converts a snake_case string to camelCase
- * @param snakeCase The snake_case string to convert
- * @returns The camelCase converted string
- */
-export function snakeToCamel(snakeCase: string): string {
-  // Handle edge cases
-  if (!snakeCase) return "";
-  if (!snakeCase.includes("_")) return snakeCase;
-
-  return snakeCase
-    .toLowerCase()
-    .replace(/_+([a-z])/g, (_, char) => char.toUpperCase());
-}
-
-/**
- * Converts a camelCase string to snake_case
- * @param camelCase The camelCase string to convert
- * @returns The snake_case converted string
- */
-export function camelToSnake(camelCase: string): string {
-  // Handle edge cases
-  if (!camelCase) return "";
-  if (!/[A-Z]/.test(camelCase)) return camelCase;
-
-  return camelCase
-    .replace(/([A-Z])/g, "_$1")
-    .toLowerCase()
-    .replace(/^_/, ""); // Remove leading underscore if present
 }
 
 export function jsonBigIntSerialize(obj: any): string {
@@ -236,22 +161,6 @@ export const encodeAddress = (addr: Address): Base58<Address> =>
 export const decodeAddress = (addr: Base58<Address> | string): Address =>
   decodeBase58ToFixed(toIrysAddr(addr), 20);
 
-export const isCommitmentTx = (
-  tx:
-    | EncodedUnsignedCommitmentTransactionInterface
-    | EncodedUnsignedDataTransactionInterface
-): tx is EncodedUnsignedCommitmentTransactionInterface => {
-  return "commitmentType" in tx;
-};
-
-export const isDataTx = (
-  tx:
-    | EncodedUnsignedCommitmentTransactionInterface
-    | EncodedUnsignedDataTransactionInterface
-): tx is EncodedUnsignedDataTransactionInterface => {
-  return !isCommitmentTx(tx);
-};
-
 export const isAsyncIter = (obj: any): obj is AsyncIterable<Uint8Array> =>
   typeof obj[Symbol.asyncIterator as keyof AsyncIterable<Buffer>] ===
   "function";
@@ -288,6 +197,24 @@ export async function promisePool<T, N>(
   return results;
 }
 
+export function getMissingProperties<T>(
+  obj: T,
+  requiredProps: readonly string[]
+): string[] {
+  return requiredProps.filter(
+    (k) => obj[k as keyof T] === undefined
+  );
+}
+
+export function throwOnMissingProperties<T>(
+  obj: T,
+  requiredProps: readonly string[]
+): void {
+  const missing = getMissingProperties(obj, requiredProps);
+  if (missing.length)
+    throw new Error(`Missing required properties: ${missing.join(", ")}`);
+}
+
 export const arrayCompare = (
   a: Uint8Array | any[],
   b: Uint8Array | any[]
@@ -307,11 +234,19 @@ export const constantTimeEqual = (
   b: Uint8Array
 ): boolean => {
   if (a.length !== b.length) return false;
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a[i] ^ b[i];
-  }
-
-  return result === 0;
+  return timingSafeEqual(a, b);
 };
+
+export function validateSignature(
+  prehash: Uint8Array,
+  signature: Uint8Array,
+  signer: Uint8Array
+): boolean {
+  const recoveredAddress = getBytes(
+    recoverAddress(prehash, hexlify(signature))
+  );
+  return constantTimeEqual(
+    new Uint8Array(recoveredAddress),
+    new Uint8Array(signer)
+  );
+}
