@@ -1,15 +1,34 @@
+import AsyncRetry from "async-retry";
+import type { AxiosResponse } from "axios";
+import {
+  computeAddress,
+  encodeBase58,
+  getBytes,
+  hexlify,
+  keccak256,
+  SigningKey,
+} from "ethers";
+import type { Input } from "rlp";
+import { encode } from "rlp";
+import { type ApiRequestConfig, V1_API_ROUTES } from "./api";
+import { chunkEndByteOffset, UnpackedChunk } from "./chunk";
+import { chunker } from "./chunker";
+import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import type {
   Address,
   Base58,
   H256,
   Signature,
   TransactionId,
-  U256,
+  U8,
   U32,
   U64,
-  U8,
+  U256,
   UTF8,
 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import type { MerkleChunk, MerkleProof } from "./merkle";
+import type { Data } from "./types";
 import {
   arrayCompare,
   decodeBase58ToFixed,
@@ -19,25 +38,6 @@ import {
   toFixedUint8Array,
   validateSignature,
 } from "./utils";
-import type { MerkleChunk, MerkleProof } from "./merkle";
-import type { Input } from "rlp";
-import { encode } from "rlp";
-import { SigningKey } from "ethers";
-import {
-  computeAddress,
-  encodeBase58,
-  getBytes,
-  hexlify,
-  keccak256,
-} from "ethers";
-import { IRYS_TESTNET_CHAIN_ID } from "./constants";
-import { UnpackedChunk, chunkEndByteOffset } from "./chunk";
-import type { AxiosResponse } from "axios";
-import type { IrysClient } from "./irys";
-import type { Data } from "./types";
-import { chunker } from "./chunker";
-import AsyncRetry from "async-retry";
-import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
 
 export type DataTransactionInterface =
   | UnsignedDataTransactionInterface
@@ -142,7 +142,7 @@ export class UnsignedDataTransaction
 
   public constructor(
     irys: IrysClient,
-    attributes?: Partial<UnsignedDataTransactionInterface>
+    attributes?: Partial<UnsignedDataTransactionInterface>,
   ) {
     this.irys = irys;
     if (attributes) {
@@ -178,7 +178,7 @@ export class UnsignedDataTransaction
   public async fillFee(): Promise<this> {
     const priceInfo = await this.irys.network.getPrice(
       this.dataSize,
-      this.ledgerId
+      this.ledgerId,
     );
     this.termFee = priceInfo.termFee;
     if (this.ledgerId === 0) {
@@ -212,8 +212,8 @@ export class UnsignedDataTransaction
     if (missing.length)
       throw new Error(
         `Missing required properties: ${missing.join(
-          ", "
-        )} - did you call tx.prepareChunks(<data>)?`
+          ", ",
+        )} - did you call tx.prepareChunks(<data>)?`,
       );
   }
 
@@ -224,7 +224,7 @@ export class UnsignedDataTransaction
         : key;
     this.signer ??= toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
-      20
+      20,
     );
 
     if (this.anchor === undefined) await this.fillAnchor();
@@ -237,8 +237,8 @@ export class UnsignedDataTransaction
     if (hexlify(this.signature) !== signature.serialized) {
       throw new Error(
         `Signature encode/decode roundtrip verification failed: computed=${hexlify(
-          this.signature
-        )} serialized=${signature.serialized}`
+          this.signature,
+        )} serialized=${signature.serialized}`,
       );
     }
     const idBytes = getBytes(keccak256(signature.serialized));
@@ -246,7 +246,7 @@ export class UnsignedDataTransaction
 
     return new SignedDataTransaction(
       this.irys,
-      this as unknown as SignedDataTransactionInterface
+      this as unknown as SignedDataTransactionInterface,
     );
   }
 
@@ -271,8 +271,8 @@ export class UnsignedDataTransaction
     this.throwOnMissing();
     return Promise.resolve(
       computeDataSignatureData(
-        this as unknown as UnsignedDataTransactionInterface
-      )
+        this as unknown as UnsignedDataTransactionInterface,
+      ),
     );
   }
 }
@@ -295,7 +295,7 @@ function computeDataSignatureData(
     | "chainId"
     | "bundleFormat"
     | "permFee"
-  >
+  >,
 ): Uint8Array {
   switch (tx.version) {
     case DataTransactionVersion.V1: {
@@ -338,7 +338,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
 
   public constructor(
     irys: IrysClient,
-    attributes: SignedDataTransactionInterface
+    attributes: SignedDataTransactionInterface,
   ) {
     this.irys = irys;
     throwOnMissingProperties(attributes, requiredSignedDataTxHeaderProps);
@@ -372,12 +372,11 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
         acc[k as keyof SignedDataTransactionInterface] = this[k as keyof this];
         return acc;
       },
-      {}
+      {},
     ) as SignedDataTransactionInterface;
   }
 
   // if you want the encoded header without chunks, use `this.encode(false)`
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return JSON.stringify(this.encode(true));
   }
@@ -425,7 +424,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
 
   public static decode(
     irys: IrysClient,
-    encoded: EncodedSignedDataTransactionInterface
+    encoded: EncodedSignedDataTransactionInterface,
   ): SignedDataTransaction {
     return new SignedDataTransaction(irys, {
       id: encoded.id,
@@ -450,7 +449,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
   // Returns an unpacked chunk, slicing from the provided full data
   public async getChunk(
     idx: number,
-    fullData: Uint8Array
+    fullData: Uint8Array,
   ): Promise<UnpackedChunk> {
     if (!this.chunks) {
       throw new Error(`Chunks have not been prepared`);
@@ -465,12 +464,12 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
           chunkEndByteOffset(
             idx,
             this.dataSize,
-            this.irys.storageConfig.chunkSize
-          )
+            this.irys.storageConfig.chunkSize,
+          ),
         ),
         0,
         Number(this.dataSize),
-        proof.proof
+        proof.proof,
       ))
     )
       throw new Error("Invalid chunk, check your data");
@@ -487,7 +486,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
   // Returns an unpacked chunk, passing through the provided data as the chunk's full data
   public async getChunkPassthrough(
     idx: number,
-    data: Uint8Array
+    data: Uint8Array,
   ): Promise<UnpackedChunk> {
     if (!this.chunks) {
       throw new Error(`Chunks have not been prepared`);
@@ -501,12 +500,12 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
           chunkEndByteOffset(
             idx,
             this.dataSize,
-            this.irys.storageConfig.chunkSize
-          )
+            this.irys.storageConfig.chunkSize,
+          ),
         ),
         0,
         Number(this.dataSize),
-        proof.proof
+        proof.proof,
       ))
     )
       throw new Error("Invalid chunk, check your data");
@@ -527,7 +526,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
       retry?: AsyncRetry.Options;
       concurrency?: number;
       onProgress?: (idx: number) => void;
-    }
+    },
   ): Promise<AxiosResponse> {
     const headerRes = await this.uploadHeader(opts);
     await this.uploadChunks(data, opts);
@@ -535,7 +534,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
   }
 
   public async uploadHeader(
-    apiConfig?: ApiRequestConfig
+    apiConfig?: ApiRequestConfig,
   ): Promise<AxiosResponse> {
     return await this.irys.api.post(
       V1_API_ROUTES.POST_DATA_TX_HEADER,
@@ -544,7 +543,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
         ...apiConfig,
         headers: { "Content-Type": "application/json" },
         validateStatus: (s) => s < 400,
-      }
+      },
     );
   }
 
@@ -556,7 +555,7 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
       retry?: AsyncRetry.Options;
       concurrency?: number;
       onProgress?: (idx: number) => void;
-    }
+    },
   ): Promise<void> {
     await promisePool(
       chunker(this.irys.storageConfig.chunkSize, { flush: true })(data),
@@ -571,16 +570,16 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
               serializedChunk,
               {
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             );
             if (res.status >= 400)
               bail(
-                new Error(`Error uploading chunk ${idx}: ${res.statusText}`)
+                new Error(`Error uploading chunk ${idx}: ${res.statusText}`),
               );
           },
-          { retries: 3, minTimeout: 300, maxTimeout: 1000, ...opts?.retry }
+          { retries: 3, minTimeout: 300, maxTimeout: 1000, ...opts?.retry },
         ),
-      { concurrency: opts?.concurrency ?? 10, itemCb: opts?.onProgress }
+      { concurrency: opts?.concurrency ?? 10, itemCb: opts?.onProgress },
     );
   }
 

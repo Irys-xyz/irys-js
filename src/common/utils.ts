@@ -1,14 +1,14 @@
-import { fromByteArray, toByteArray } from "base64-js";
-import type { Address, Base58, FixedUint8Array } from "./dataTypes";
-import bs58 from "bs58";
-import { getBytes, hexlify } from "ethers/utils";
-import { recoverAddress } from "ethers";
 import { timingSafeEqual } from "node:crypto";
+import { fromByteArray, toByteArray } from "base64-js";
+import bs58 from "bs58";
+import { recoverAddress } from "ethers";
+import { getBytes, hexlify } from "ethers/utils";
+import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 
 export type Base64UrlString = string;
 
 export function concatBuffers(
-  buffers: Uint8Array[] | ArrayBuffer[]
+  buffers: Uint8Array[] | ArrayBuffer[],
 ): Uint8Array {
   if (buffers.length === 0) {
     return new Uint8Array(0);
@@ -56,26 +56,24 @@ export function b64UrlEncode(b64UrlString: string): string {
 
 export function b64UrlDecode(b64UrlString: string): string {
   b64UrlString = b64UrlString.replace(/-/g, "+").replace(/_/g, "/");
-  let padding;
-  b64UrlString.length % 4 === 0
-    ? (padding = 0)
-    : (padding = 4 - (b64UrlString.length % 4));
+  const padding =
+    b64UrlString.length % 4 === 0 ? 0 : 4 - (b64UrlString.length % 4);
   return b64UrlString.concat("=".repeat(padding));
 }
 
 export function createFixedUint8Array<N extends number>(
-  length: N
+  length: N,
 ): FixedUint8Array<N> {
   return new Uint8Array(length) as FixedUint8Array<N>;
 }
 
 export function toFixedUint8Array<N extends number>(
   array: Uint8Array,
-  length: N
+  length: N,
 ): FixedUint8Array<N> {
   if (array.length !== length)
     throw new Error(
-      `Unable to assert array ${array} has length ${length}, as it has length ${array.length}`
+      `Unable to assert array ${array} has length ${length}, as it has length ${array.length}`,
     );
   return array as FixedUint8Array<N>;
 }
@@ -103,7 +101,7 @@ export function numberToBytes(value: number, numBytes: number): Uint8Array {
     throw new Error("Array is unsigned, cannot represent -ve numbers");
   if (value > 2 ** (numBytes * 8) - 1)
     throw new Error(
-      `Number ${value} is too large for an array of ${numBytes} bytes`
+      `Number ${value} is too large for an array of ${numBytes} bytes`,
     );
 
   for (let i = 0; i < numBytes; i++) {
@@ -115,7 +113,7 @@ export function numberToBytes(value: number, numBytes: number): Uint8Array {
 
 export function jsonBigIntSerialize(obj: unknown): string {
   return JSON.stringify(obj, (_, v) =>
-    typeof v === "bigint" ? v.toString() : v
+    typeof v === "bigint" ? v.toString() : v,
   );
 }
 
@@ -135,7 +133,7 @@ export const encodeBase58 = (bytes: Uint8Array): Base58 => bs58.encode(bytes);
 
 export function decodeBase58ToFixed<N extends number>(
   string: Base58,
-  length: N
+  length: N,
 ): FixedUint8Array<N> {
   return toFixedUint8Array(decodeBase58(string), length);
 }
@@ -145,7 +143,7 @@ export const irysToExecAddr = (irysAddr: string): string =>
 export const execToIrysAddr = (execAddr: string): string =>
   execAddr.startsWith("0x")
     ? encodeBase58(getBytes(execAddr.toLowerCase()))
-    : encodeBase58(getBytes("0x" + execAddr.toLowerCase()));
+    : encodeBase58(getBytes(`0x${execAddr.toLowerCase()}`));
 
 export const toIrysAddr = (addr: string): string =>
   addr.startsWith("0x") ? execToIrysAddr(addr) : addr;
@@ -168,7 +166,7 @@ export const isAsyncIter = (obj: unknown): obj is AsyncIterable<Uint8Array> =>
 export async function promisePool<T, N>(
   iter: Iterable<T> | AsyncIterable<T>,
   fn: (item: T, index: number) => Promise<N>,
-  opts?: { concurrency?: number; itemCb?: (idx: number, item: N) => void }
+  opts?: { concurrency?: number; itemCb?: (idx: number, item: N) => void },
 ): Promise<N[]> {
   const executing = new Set<Promise<void>>();
   const results: N[] = [];
@@ -198,14 +196,14 @@ export async function promisePool<T, N>(
 
 export function getMissingProperties<T>(
   obj: T,
-  requiredProps: readonly string[]
+  requiredProps: readonly string[],
 ): string[] {
   return requiredProps.filter((k) => obj[k as keyof T] === undefined);
 }
 
 export function throwOnMissingProperties<T>(
   obj: T,
-  requiredProps: readonly string[]
+  requiredProps: readonly string[],
 ): void {
   const missing = getMissingProperties(obj, requiredProps);
   if (missing.length)
@@ -214,7 +212,7 @@ export function throwOnMissingProperties<T>(
 
 export const arrayCompare = (
   a: Uint8Array | unknown[],
-  b: Uint8Array | unknown[]
+  b: Uint8Array | unknown[],
 ): boolean => {
   if (a === b) return true; // ref check
   if (a.length !== b.length) return false;
@@ -234,13 +232,13 @@ export const constantTimeEqual = (a: Uint8Array, b: Uint8Array): boolean => {
 export function validateSignature(
   prehash: Uint8Array,
   signature: Uint8Array,
-  signer: Uint8Array
+  signer: Uint8Array,
 ): boolean {
   const recoveredAddress = getBytes(
-    recoverAddress(prehash, hexlify(signature))
+    recoverAddress(prehash, hexlify(signature)),
   );
   return constantTimeEqual(
     new Uint8Array(recoveredAddress),
-    new Uint8Array(signer)
+    new Uint8Array(signer),
   );
 }

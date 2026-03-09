@@ -45,10 +45,10 @@ export class ChunkBuffer {
 
 export function chunker(
   chunkSize: number,
-  { flush = true }: { flush?: boolean } = {}
+  { flush = true }: { flush?: boolean } = {},
 ) {
   return async function* (
-    data: Uint8Array | AsyncIterable<Uint8Array>
+    data: Uint8Array | AsyncIterable<Uint8Array>,
   ): AsyncIterable<Uint8Array> {
     const chunkBuffer = new ChunkBuffer();
 
@@ -74,7 +74,7 @@ export function chunker(
 
 async function* yieldCompleteChunks(
   buffer: ChunkBuffer,
-  size: number
+  size: number,
 ): AsyncGenerator<Uint8Array> {
   while (true) {
     const chunk = buffer.pop(size);

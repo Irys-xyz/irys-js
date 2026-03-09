@@ -1,8 +1,8 @@
 import type { AxiosResponse } from "axios";
 import type Api from "./api";
-import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
-import type { TransactionId, U64, UTF8 } from "./dataTypes";
+import { type ApiRequestConfig, V1_API_ROUTES } from "./api";
 import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
+import type { TransactionId, U64, UTF8 } from "./dataTypes";
 
 export type LocalDataStartEncoded = {
   dataStartOffset: UTF8<U64>;
@@ -17,7 +17,7 @@ export class StorageTransactions {
 
   async getHeader(
     txId: TransactionId,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<EncodedSignedDataTransactionInterface>> {
     return this.getTxId(txId, V1_API_ROUTES.GET_TX_HEADER, config);
   }
@@ -27,12 +27,12 @@ export class StorageTransactions {
    */
   async getLocalDataStartOffset(
     txId: TransactionId,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<LocalDataStartEncoded>> {
     return this.getTxId(
       txId,
       V1_API_ROUTES.GET_LOCAL_DATA_START_OFFSET,
-      config
+      config,
     );
   }
 
@@ -41,12 +41,12 @@ export class StorageTransactions {
    */
   async getPromotionStatus(
     txId: TransactionId,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<PromotionStatus> {
     const res = await this.getTxId<PromotionStatus>(
       txId,
       V1_API_ROUTES.GET_PROMOTION_STATUS,
-      config
+      config,
     );
     return res.data;
   }
@@ -54,7 +54,7 @@ export class StorageTransactions {
   protected getTxId<T>(
     txId: TransactionId,
     route: string,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     return this.api.get(route.replace("#", encodeURIComponent(txId)), config);
   }

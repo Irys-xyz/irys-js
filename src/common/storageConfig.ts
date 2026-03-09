@@ -100,7 +100,7 @@ export class StorageConfig implements StorageConfigInterface {
     for (const [name, value, min, max] of validations) {
       if (!Number.isInteger(value) || value < min || value > max) {
         throw new Error(
-          `Invalid StorageConfig: ${name} must be an integer between ${min} and ${max}, got ${value}`
+          `Invalid StorageConfig: ${name} must be an integer between ${min} and ${max}, got ${value}`,
         );
       }
     }

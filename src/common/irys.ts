@@ -1,18 +1,18 @@
+import { Account } from "./account";
 import type { ApiConfig } from "./api";
 import Api from "./api";
-import type CryptoInterface from "./cryptoInterface";
-import type { U64 } from "./dataTypes";
-import Merkle from "./merkle";
-import { ProgrammableData } from "./programmableData";
-import { StorageConfig } from "./storageConfig";
-import type { UnsignedDataTransactionInterface } from "./dataTransaction";
-import { UnsignedDataTransaction } from "./dataTransaction";
-import { Utils } from "./utilities";
-import { Account } from "./account";
-import { Network } from "./network";
-import { StorageTransactions } from "./storageTransactions";
 import type { UnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
 import { UnsignedCommitmentTransaction } from "./commitmentTransaction";
+import type CryptoInterface from "./cryptoInterface";
+import type { UnsignedDataTransactionInterface } from "./dataTransaction";
+import { UnsignedDataTransaction } from "./dataTransaction";
+import type { U64 } from "./dataTypes";
+import Merkle from "./merkle";
+import { Network } from "./network";
+import { ProgrammableData } from "./programmableData";
+import { StorageConfig } from "./storageConfig";
+import { StorageTransactions } from "./storageTransactions";
+import { Utils } from "./utilities";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -46,7 +46,7 @@ export class IrysClient {
     // get storage config
     // TODO: validate chainID, remove/rework this
     this.storageConfig ??= StorageConfig.decode(
-      await this.network.getConsensusConfig()
+      await this.network.getConsensusConfig(),
     );
     this.utils = new Utils(this);
     this.account = new Account(this);
@@ -72,13 +72,13 @@ export class IrysClient {
   }
 
   public createDataTransaction(
-    attributes?: Partial<UnsignedDataTransactionInterface>
+    attributes?: Partial<UnsignedDataTransactionInterface>,
   ): UnsignedDataTransaction {
     return new UnsignedDataTransaction(this, attributes);
   }
 
   public createCommitmentTransaction(
-    attributes?: Partial<UnsignedCommitmentTransactionInterface>
+    attributes?: Partial<UnsignedCommitmentTransactionInterface>,
   ): UnsignedCommitmentTransaction {
     return new UnsignedCommitmentTransaction(this, attributes);
   }

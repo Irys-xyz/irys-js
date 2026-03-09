@@ -8,6 +8,8 @@ import type {
   TxRelativeChunkOffset,
   U64,
 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import { unpackChunk } from "./packing";
 import {
   b64UrlToBuffer,
   bigIntDivCeil,
@@ -16,13 +18,9 @@ import {
   jsonBigIntSerialize,
   toFixedUint8Array,
 } from "./utils";
-import type { IrysClient } from "./irys";
-import { unpackChunk } from "./packing";
 
 export enum ChunkFormat {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   PackedChunk = "packed",
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   UnpackedChunk = "unpacked",
 }
 
@@ -47,7 +45,7 @@ export type EncodedUnpackedChunkInterface = {
 export function chunkEndByteOffset(
   txOffset: number,
   dataSize: U64,
-  chunkSize: number
+  chunkSize: number,
 ): U64 {
   const bnChunkSize = BigInt(chunkSize);
   const biTxOffset = BigInt(txOffset);
@@ -97,7 +95,6 @@ export class UnpackedChunk implements UnpackedChunkInterface {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return jsonBigIntSerialize(this.encode());
   }
@@ -154,14 +151,13 @@ export class PackedChunk implements PackedChunkInterface {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return jsonBigIntSerialize(this.encode());
   }
 
   public static decode(
     irys: IrysClient,
-    data: EncodedPackedChunkInterface
+    data: EncodedPackedChunkInterface,
   ): PackedChunk {
     return new PackedChunk(irys, {
       dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
@@ -181,7 +177,7 @@ export class PackedChunk implements PackedChunkInterface {
       this,
       this.irys.storageConfig.chunkSize,
       this.irys.storageConfig.entropyPackingIterations,
-      this.irys.chainId
+      this.irys.chainId,
     );
   }
 }

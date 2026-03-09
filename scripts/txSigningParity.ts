@@ -1,4 +1,10 @@
 import { hexlify } from "ethers/utils";
+import type { UnsignedCommitmentTransactionInterface } from "../src/common/commitmentTransaction";
+import {
+  CommitmentTypeId,
+  UnsignedCommitmentTransaction,
+} from "../src/common/commitmentTransaction";
+import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
 import {
   UnsignedDataTransaction,
   type UnsignedDataTransactionInterface,
@@ -7,12 +13,6 @@ import {
   createFixedUint8Array,
   decodeBase58ToFixed,
 } from "../src/common/utils";
-import { IRYS_TESTNET_CHAIN_ID } from "../src/common/constants";
-import type { UnsignedCommitmentTransactionInterface } from "../src/common/commitmentTransaction";
-import {
-  CommitmentTypeId,
-  UnsignedCommitmentTransaction,
-} from "../src/common/commitmentTransaction";
 
 async function main(): Promise<void> {
   // dev test wallet 1
@@ -44,14 +44,14 @@ async function main(): Promise<void> {
   const txProps2: Partial<UnsignedCommitmentTransactionInterface> = {
     anchor: decodeBase58ToFixed(
       "GqrCZEc5WU4gXj9qveAUDkNRPhsPPjWrD8buKAc5sXdZ",
-      32
+      32,
     ),
     commitmentType: {
       type: CommitmentTypeId.UNPLEDGE,
       pledgeCountBeforeExecuting: 18446744073709551615n,
       partitionHash: decodeBase58ToFixed(
         "12Yjd3YA9xjzkqDfdcXVWgyu6TpAq9WJdh6NJRWzZBKt",
-        32
+        32,
       ),
     },
     version: 2,
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
   console.log("bs58", bs58Sig2, "hex", hexSig2, "enc", signedTx2.toJSON());
 }
 
-(async function (): Promise<void> {
+(async (): Promise<void> => {
   await main();
   console.log("done!");
 })();

@@ -1,3 +1,17 @@
+import type { AxiosResponse } from "axios";
+import type { BytesLike } from "ethers";
+import {
+  computeAddress,
+  encodeBase58,
+  getBytes,
+  hexlify,
+  keccak256,
+  SigningKey,
+} from "ethers";
+import type { Input } from "rlp";
+import { encode } from "rlp";
+import { type ApiRequestConfig, V1_API_ROUTES } from "./api";
+import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 import type {
   Address,
   Base58,
@@ -5,10 +19,12 @@ import type {
   H256,
   Signature,
   TransactionId,
-  U256,
   U64,
+  U256,
   UTF8,
 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import type { PledgePriceInfo } from "./network";
 import {
   arrayCompare,
   decodeBase58ToFixed,
@@ -17,22 +33,6 @@ import {
   toFixedUint8Array,
   validateSignature,
 } from "./utils";
-import type { Input } from "rlp";
-import { encode } from "rlp";
-import type { BytesLike } from "ethers";
-import { SigningKey } from "ethers";
-import {
-  computeAddress,
-  encodeBase58,
-  getBytes,
-  hexlify,
-  keccak256,
-} from "ethers";
-import { IRYS_TESTNET_CHAIN_ID } from "./constants";
-import type { AxiosResponse } from "axios";
-import type { IrysClient } from "./irys";
-import { V1_API_ROUTES, type ApiRequestConfig } from "./api";
-import type { PledgePriceInfo } from "./network";
 
 export type CommitmentTransactionInterface =
   | UnsignedCommitmentTransactionInterface
@@ -148,7 +148,7 @@ function decodeCommitmentType(enc: EncodedCommitmentType): CommitmentType {
 }
 
 export function encodeCommitmentType(
-  type: CommitmentType
+  type: CommitmentType,
 ): EncodedCommitmentType {
   switch (type.type) {
     case CommitmentTypeId.STAKE:
@@ -172,7 +172,7 @@ export function encodeCommitmentType(
 // This will get encoded by RLP encode with a length header for PLEDGE and UNPLEDGE
 // DO NOT CHANGE THIS UNLESS YOU THOROUGHLY TEST IT & 1:1 IT IN RUST (stricter decoder)
 export function signingEncodeCommitmentType(
-  type: CommitmentType
+  type: CommitmentType,
 ): number | bigint | Uint8Array | (number | bigint | Uint8Array)[] {
   // note: values are `encode`ed by the top-level `encode` call (caller's responsibility)
   // single-byte values MUST be flat (check this with the rust decoder, it will error for non-canonical single byte RLP lists)
@@ -205,7 +205,7 @@ function computeCommitmentSignatureData(
     | "chainId"
     | "fee"
     | "value"
-  >
+  >,
 ): Uint8Array {
   switch (tx.version) {
     case CommitmentTransactionVersion.V2: {
@@ -226,13 +226,13 @@ function computeCommitmentSignatureData(
 }
 
 function validateCommitmentVersion(
-  obj: Partial<UnsignedCommitmentTransactionInterface>
+  obj: Partial<UnsignedCommitmentTransactionInterface>,
 ): void {
   // TODO: once we add more versions (that we want to retain support for in the SDK)
   // update this logic
   if (obj.version && obj.version !== CommitmentTransactionVersion.V2) {
     throw new Error(
-      `Invalid commitment version ${obj.version}, allowable version: ${CommitmentTransactionVersion.V2}`
+      `Invalid commitment version ${obj.version}, allowable version: ${CommitmentTransactionVersion.V2}`,
     );
   }
 }
@@ -244,7 +244,7 @@ const encodeBase58Nullish = (v: BytesLike | undefined): string | undefined => {
 
 export function decodeBase58ToFixedNullish<N extends number>(
   string: Base58 | undefined,
-  length: N
+  length: N,
 ): FixedUint8Array<N> | undefined {
   if (string === undefined) return undefined;
   return decodeBase58ToFixed<N>(string, length);
@@ -267,7 +267,7 @@ export class UnsignedCommitmentTransaction
 
   public constructor(
     irys: IrysClient,
-    attributes?: Partial<UnsignedCommitmentTransactionInterface>
+    attributes?: Partial<UnsignedCommitmentTransactionInterface>,
   ) {
     this.irys = irys;
     if (attributes) {
@@ -287,7 +287,6 @@ export class UnsignedCommitmentTransaction
     return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return JSON.stringify(this.encode());
   }
@@ -309,7 +308,7 @@ export class UnsignedCommitmentTransaction
 
   public static decode(
     irys: IrysClient,
-    encoded: Partial<EncodedUnsignedCommitmentTransactionInterface>
+    encoded: Partial<EncodedUnsignedCommitmentTransactionInterface>,
   ): UnsignedCommitmentTransaction {
     return new UnsignedCommitmentTransaction(irys, {
       version: encoded.version,
@@ -334,11 +333,11 @@ export class UnsignedCommitmentTransaction
     const commitmentType = getOrThrowIfNullish(
       this,
       "commitmentType",
-      "Unable to get fee for a commitment without {1} set"
+      "Unable to get fee for a commitment without {1} set",
     );
     const commitmentPrice = await this.irys.network.getCommitmentPrice(
       getOrThrowIfNullish(this, "signer"),
-      commitmentType
+      commitmentType,
     );
     this.fee = commitmentPrice.fee;
     this.value = commitmentPrice.value;
@@ -349,7 +348,7 @@ export class UnsignedCommitmentTransaction
       commitmentType.pledgeCountBeforeExecuting = getOrThrowIfNullish(
         commitmentPrice as PledgePriceInfo,
         "pledgeCount",
-        "Service error: expected {1} to be set for pledge/unpledge price request"
+        "Service error: expected {1} to be set for pledge/unpledge price request",
       );
     }
     return this;
@@ -366,7 +365,7 @@ export class UnsignedCommitmentTransaction
   }
 
   public async sign(
-    key: SigningKey | string
+    key: SigningKey | string,
   ): Promise<SignedCommitmentTransaction> {
     const signingKey =
       typeof key === "string"
@@ -374,14 +373,14 @@ export class UnsignedCommitmentTransaction
         : key;
     const computedSigner = toFixedUint8Array(
       getBytes(computeAddress(signingKey.publicKey)),
-      20
+      20,
     );
 
     this.signer ??= computedSigner;
 
     if (!arrayCompare(computedSigner, this.signer)) {
       throw new Error(
-        "Provided signer address does not match the address derived from the signing key"
+        "Provided signer address does not match the address derived from the signing key",
       );
     }
 
@@ -401,7 +400,7 @@ export class UnsignedCommitmentTransaction
 
     return new SignedCommitmentTransaction(
       this.irys,
-      this as unknown as SignedCommitmentTransactionInterface
+      this as unknown as SignedCommitmentTransactionInterface,
     );
   }
 
@@ -409,8 +408,8 @@ export class UnsignedCommitmentTransaction
     this.throwOnMissing();
     return Promise.resolve(
       computeCommitmentSignatureData(
-        this as unknown as UnsignedCommitmentTransactionInterface
-      )
+        this as unknown as UnsignedCommitmentTransactionInterface,
+      ),
     );
   }
 }
@@ -431,7 +430,7 @@ export class SignedCommitmentTransaction
 
   public constructor(
     irys: IrysClient,
-    attributes: SignedCommitmentTransactionInterface
+    attributes: SignedCommitmentTransactionInterface,
   ) {
     this.irys = irys;
     throwOnMissingProperties(attributes, requiredSignedCommitmentTxHeaderProps);
@@ -469,7 +468,6 @@ export class SignedCommitmentTransaction
     }, {}) as SignedCommitmentTransactionInterface;
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return JSON.stringify(this.encode());
   }
@@ -494,7 +492,7 @@ export class SignedCommitmentTransaction
 
   public static decode(
     irys: IrysClient,
-    encoded: EncodedSignedCommitmentTransactionInterface
+    encoded: EncodedSignedCommitmentTransactionInterface,
   ): SignedCommitmentTransaction {
     return new SignedCommitmentTransaction(irys, {
       id: encoded.id,
@@ -517,7 +515,7 @@ export class SignedCommitmentTransaction
         ...apiConfig,
         headers: { "Content-Type": "application/json" },
         validateStatus: (s) => s < 400,
-      }
+      },
     );
   }
 
@@ -535,12 +533,14 @@ export class SignedCommitmentTransaction
 export function getOrThrowIfNullish<T, K extends keyof T & string>(
   obj: T,
   key: K,
-  message?: string
+  message?: string,
 ): Exclude<T[K], undefined | null> {
   const v = obj[key];
   if (v === undefined || v === null) {
     throw new Error(
-      message ? message.replace("{1}", key) : `Missing required property ${key}`
+      message
+        ? message.replace("{1}", key)
+        : `Missing required property ${key}`,
     );
   } else {
     return v as Exclude<T[K], undefined | null>;

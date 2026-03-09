@@ -51,6 +51,7 @@ export class IrysClientBuilder {
 
   // Promise contract functions, so users can `await` a builder instance to resolve the builder, instead of having to call build().
   // very cool, thanks Knex.
+  // biome-ignore lint/suspicious/noThenProperty: intentional thenable pattern for await support
   public async then<TResult = NodeIrysClient>(
     onFulfilled?:
       | ((value: NodeIrysClient) => TResult | PromiseLike<TResult>)
@@ -59,7 +60,7 @@ export class IrysClientBuilder {
     onRejected?:
       | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
-      | null
+      | null,
   ): Promise<TResult> {
     const res = this.build();
     return res.then(onFulfilled, onRejected) as Promise<TResult>;
@@ -69,13 +70,13 @@ export class IrysClientBuilder {
     onRejected?:
       | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
-      | null
+      | null,
   ): Promise<NodeIrysClient | TResult> {
     return this.then().catch(onRejected);
   }
 
   public async finally(
-    onFinally?: (() => void) | null | undefined
+    onFinally?: (() => void) | null | undefined,
   ): Promise<NodeIrysClient> {
     return this.then().finally(onFinally);
   }

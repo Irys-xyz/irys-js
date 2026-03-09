@@ -1,13 +1,13 @@
-import type {
-  AxiosResponse,
-  AxiosRequestConfig,
-  AxiosInstance,
-  InternalAxiosRequestConfig,
-} from "axios";
-import Axios, { AxiosError } from "axios";
 import http from "node:http";
 import https from "node:https";
 import AsyncRetry from "async-retry";
+import type {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
+import Axios, { AxiosError } from "axios";
 import { JsonRpcProvider } from "ethers";
 import type { Base58, H256, U64 } from "./dataTypes";
 
@@ -40,7 +40,6 @@ export type ApiRequestConfig = {
 } & AxiosRequestConfig;
 
 // This exists primarily to make route/API changes a lot easier
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export enum V1_API_ROUTES {
   GET_TX_HEADER = "/v1/tx/#",
   GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
@@ -95,7 +94,7 @@ export default class Api {
   }
 
   private async requestInterceptor(
-    request: InternalAxiosRequestConfig
+    request: InternalAxiosRequestConfig,
   ): Promise<InternalAxiosRequestConfig> {
     const cookies = this.cookieMap.get(new URL(request.baseURL ?? "").host);
     if (cookies) request.headers!.cookie = cookies;
@@ -103,7 +102,7 @@ export default class Api {
   }
 
   private async responseInterceptor(
-    response: AxiosResponse
+    response: AxiosResponse,
   ): Promise<AxiosResponse> {
     const setCookie = response.headers?.["set-cookie"];
     if (setCookie) this.cookieMap.set(response.request.host, setCookie);
@@ -126,7 +125,7 @@ export default class Api {
 
   public async get<T = any>(
     path: string,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     try {
       return await this.request(path, { ...config, method: "GET" });
@@ -140,7 +139,7 @@ export default class Api {
   public async post<T = any>(
     path: string,
     body: Buffer | string | object | null,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     try {
       return await this.request(path, {
@@ -184,24 +183,25 @@ export default class Api {
 
     if (this.config.logging) {
       instance.interceptors.request.use((request) => {
-        this.config.logger!(`Requesting: ${request.baseURL}/${request.url}`);
+        this.config.logger?.(`Requesting: ${request.baseURL}/${request.url}`);
         return request;
       });
 
       instance.interceptors.response.use((response) => {
-        this.config.logger!(
-          `Response: ${response.config.url} - ${response.status}`
+        this.config.logger?.(
+          `Response: ${response.config.url} - ${response.status}`,
         );
         return response;
       });
     }
 
-    return (this._instance = instance);
+    this._instance = instance;
+    return this._instance;
   }
 
   public async request<T = any>(
     path: string,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     const instance = this.instance;
     const url = config?.url ?? buildUrl(this.config.url, [path]).toString();
@@ -231,7 +231,7 @@ export default class Api {
       {
         ...this.config.retry,
         ...config?.retry,
-      }
+      },
     );
   }
 }

@@ -12,21 +12,24 @@ export class Utils {
   // wraps a HTTP error with some context
   public static async wrapError<T, D>(
     response: Resolvable<AxiosResponse<T, D>>,
-    context?: string
+    context?: string,
   ): Promise<AxiosResponse<T, D>> {
     try {
       return await response;
     } catch (e: unknown) {
       throw new HttpError(
         e instanceof Error ? e : new Error(String(e)),
-        context
+        context,
       );
     }
   }
 }
 
 export class HttpError extends Error {
-  constructor(public inner: Error, ctx?: string) {
+  constructor(
+    public inner: Error,
+    ctx?: string,
+  ) {
     super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
   }
 }

@@ -1,9 +1,9 @@
-import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
-import type CryptoInterface from "./cryptoInterface";
-import { bigIntDivCeil, bigIntToBytes, concatBuffers } from "./utils";
-import { SHA_HASH_SIZE } from "./constants";
 import type { PackedChunk } from "./chunk";
 import { UnpackedChunk } from "./chunk";
+import { SHA_HASH_SIZE } from "./constants";
+import type CryptoInterface from "./cryptoInterface";
+import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
+import { bigIntDivCeil, bigIntToBytes, concatBuffers } from "./utils";
 
 export async function computeEntropyChunk(
   crypto: CryptoInterface,
@@ -12,14 +12,14 @@ export async function computeEntropyChunk(
   partitionHash: FixedUint8Array<32>,
   entropyPackingIterations: number,
   chunkSize: number,
-  chainId: U64
+  chainId: U64,
 ): Promise<Uint8Array> {
   let previousSegment = await computeSeedHash(
     crypto,
     packingAddress,
     partitionOffset,
     partitionHash,
-    chainId
+    chainId,
   );
   const outputEntropy = new Uint8Array(chunkSize);
   let outputCursor = 0;
@@ -51,7 +51,7 @@ export async function computeSeedHash(
   address: Address,
   offset: U64,
   partitionHash: H256,
-  chainId: U64
+  chainId: U64,
 ): Promise<Uint8Array> {
   return crypto.hash(
     concatBuffers([
@@ -59,7 +59,7 @@ export async function computeSeedHash(
       partitionHash,
       bigIntToBytes(chainId, 8),
       bigIntToBytes(offset, 8),
-    ])
+    ]),
   );
 }
 
@@ -68,7 +68,7 @@ export async function unpackChunk(
   chunk: PackedChunk,
   chunkSize: number,
   entropyPackingIterations: number,
-  chainId: bigint
+  chainId: bigint,
 ): Promise<UnpackedChunk> {
   const entropy = await computeEntropyChunk(
     crypto,
@@ -77,7 +77,7 @@ export async function unpackChunk(
     chunk.partitionHash,
     entropyPackingIterations,
     chunkSize,
-    chainId
+    chainId,
   );
   // xor and slice
   let data = packingXor(entropy, chunk.bytes, chunkSize);
@@ -103,7 +103,7 @@ export async function unpackChunk(
 function packingXor(
   entropy: Uint8Array,
   data: Uint8Array,
-  chunkSize: number
+  chunkSize: number,
 ): Uint8Array {
   if (entropy.byteLength !== +chunkSize)
     throw new Error("Entropy needs to be exactly chunkSize bytes");

@@ -1,4 +1,6 @@
-import { toFixedUint8Array } from "../src/common/utils";
+import { randomBytes, randomInt } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { Wallet } from "ethers";
 import type {
   CommitmentType,
   EncodedSignedCommitmentTransactionInterface,
@@ -7,10 +9,8 @@ import {
   CommitmentTypeId,
   UnsignedCommitmentTransaction,
 } from "../src/common/commitmentTransaction";
-import { randomBytes, randomInt } from "crypto";
 import type { H256 } from "../src/common/dataTypes";
-import { Wallet } from "ethers";
-import { writeFileSync } from "fs";
+import { toFixedUint8Array } from "../src/common/utils";
 
 export type TxSigningTestData = {
   priv: string;
@@ -20,7 +20,7 @@ export type TxSigningTestData = {
 function randomBigIntInRange(min: bigint, max: bigint): bigint {
   const range = max - min;
   const bits = range.toString(2).length;
-  let result;
+  let result: bigint;
   do {
     result = randomBigInt(bits);
   } while (result > range);
@@ -96,7 +96,7 @@ async function testDataGen(): Promise<TxSigningTestData[]> {
     new Array(count).fill(undefined).map(async (_) => {
       const commitment = await makeRandCommitment();
       return commitment;
-    })
+    }),
   );
   // console.log(JSON.stringify(res));
   return res;
@@ -106,7 +106,7 @@ async function testWriteData() {
   writeFileSync("test-data.json", JSON.stringify(await testDataGen(), null, 2));
 }
 
-(async function (): Promise<void> {
+(async (): Promise<void> => {
   await testWriteData();
   console.log("done!");
 })();

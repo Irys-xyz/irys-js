@@ -1,5 +1,5 @@
 // Range offsets are used by PD to figure out what chunks/bytes are required to fulfill a precompile call.
-import type { U16, U18, U200, U32, U34, U8 } from "./dataTypes";
+import type { U8, U16, U18, U32, U34, U200 } from "./dataTypes";
 import { bigIntToBytes, bytesToBigInt } from "./utils";
 
 enum PdAccessListArgsTypeId {
@@ -45,7 +45,7 @@ export class ChunkRangeSpecifier extends PdAccessListArgBase {
   constructor(
     public partitionIndex: U200,
     public offset: U32,
-    public chunkCount: U16
+    public chunkCount: U16,
   ) {
     super();
 
@@ -81,7 +81,6 @@ export class ChunkRangeSpecifier extends PdAccessListArgBase {
   }
 
   static decode(buffer: Uint8Array): ChunkRangeSpecifier {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (buffer[0] !== PdAccessListArgsTypeId.ChunkRead) {
       throw new Error("Invalid type ID for ChunkRangeSpecifier");
     }
@@ -103,7 +102,7 @@ export class ByteRangeSpecifier extends PdAccessListArgBase {
     public index: U8,
     public chunkOffset: U16,
     public byteOffset: U18,
-    public length: U34
+    public length: U34,
   ) {
     super();
 
@@ -150,7 +149,6 @@ export class ByteRangeSpecifier extends PdAccessListArgBase {
   }
 
   static decode(buffer: Uint8Array): ByteRangeSpecifier {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     if (buffer[0] !== PdAccessListArgsTypeId.ByteRead) {
       throw new Error("Invalid type ID for ByteRangeSpecifier");
     }
@@ -193,7 +191,7 @@ export class ByteRangeSpecifier extends PdAccessListArgBase {
       this.index,
       newChunkOffset,
       newByteOffset,
-      this.length
+      this.length,
     );
   }
 }

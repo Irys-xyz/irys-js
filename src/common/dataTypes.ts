@@ -23,11 +23,8 @@ export type EpochTimestampMs = U64;
 
 // the generic is used to hint at the decoded/internal type
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Base58<T = never> = string;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Base64<T = never> = string;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type UTF8<T = never> = string;
+export type Base58<_T = never> = string;
+export type Base64<_T = never> = string;
+export type UTF8<_T = never> = string;
 
 export type TransactionId = Base58<H256>;

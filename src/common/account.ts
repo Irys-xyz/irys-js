@@ -1,7 +1,7 @@
-import type { IrysClient } from "./irys";
-import type { Base58, U64 } from "./dataTypes";
-import { toExecAddr, toIrysAddr } from "./utils";
 import { Wallet } from "ethers/wallet";
+import type { Base58, U64 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import { toExecAddr, toIrysAddr } from "./utils";
 
 export class Account {
   public irys: IrysClient;
