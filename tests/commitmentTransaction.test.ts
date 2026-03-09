@@ -623,7 +623,7 @@ describe("SignedCommitmentTransaction", () => {
           mockIrysClient,
           {} as SignedCommitmentTransactionInterface
         );
-      }).toThrow(/Unable to build signed transaction - missing field version/);
+      }).toThrow(/Missing required properties: version/);
     });
   });
 
