@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Wallet } from "ethers";
-import { concatBuffers, encodeBase58, sleep } from "../src/common/utils";
-import IrysClient from "../src/node";
 import { PackedChunk } from "../src/common/chunk";
-import { arrayCompare } from "../src/common/merkle";
 import { CommitmentTypeId } from "../src/common/commitmentTransaction";
+import {
+  arrayCompare,
+  concatBuffers,
+  encodeBase58,
+  sleep,
+} from "../src/common/utils";
+import IrysClient from "../src/node";
 
 async function main() {
   const irys = await new IrysClient().node("http://172.17.0.2:8080");
@@ -52,7 +56,7 @@ async function main() {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const isPromoted = await irys.storageTransactions.getPromotionStatus(
-      signedTx.id
+      signedTx.id,
     );
     if (isPromoted.promotionHeight) break;
     await sleep(100);
@@ -66,10 +70,10 @@ async function main() {
   let downloadedData = new Uint8Array();
   for (let i = 0; i < (signedTx?.chunks?.chunks?.length ?? 0); i++) {
     const chunkReq = await irys.api.get(
-      `v1/chunk/data_root/${tx.ledgerId}/${bs58}/${i}`
+      `v1/chunk/data_root/${tx.ledgerId}/${bs58}/${i}`,
     );
     console.log(
-      `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`
+      `Got chunk ${i}, data, ${JSON.stringify(chunkReq.data, null, 4)}`,
     );
     const packedChunk = PackedChunk.decode(irys, chunkReq.data);
     const unpackedChunk = await packedChunk.unpack();
@@ -80,6 +84,6 @@ async function main() {
   console.log("Done!");
 }
 
-(async function () {
+(async () => {
   await main();
 })();

@@ -1,10 +1,10 @@
 import { chunker } from "./chunker";
 import { MERKLE_HASH_SIZE, MERKLE_NOTE_SIZE } from "./constants";
 import type CryptoInterface from "./cryptoInterface";
-import type { StorageConfig } from "./storageConfig";
 import type { Chunks } from "./dataTransaction";
+import type { StorageConfig } from "./storageConfig";
 import type { Data } from "./types";
-import { arrayCompare, concatBuffers, promisePool } from "./utils";
+import { concatBuffers, constantTimeEqual, promisePool } from "./utils";
 
 export type MerkleChunk = {
   dataHash: Uint8Array;
@@ -17,8 +17,8 @@ type BranchNode = {
   readonly type: "branch";
   readonly byteRange: number;
   readonly maxByteRange: number;
-  readonly leftChild?: MerkleNode;
-  readonly rightChild?: MerkleNode;
+  readonly leftChild: MerkleNode;
+  readonly rightChild: MerkleNode;
 };
 
 type LeafNode = {
@@ -58,11 +58,10 @@ export class Merkle {
    * from the chunking process.
    */
   public async chunkData(
-    data: Data
+    data: Data,
   ): Promise<{ chunks: MerkleChunk[]; dataSize: number }> {
     const chunks: MerkleChunk[] = [];
 
-    // let rest = data as Uint8Array;
     let cursor = 0;
 
     for await (const chunk of chunker(+this.storageConfig.chunkSize, {
@@ -77,36 +76,11 @@ export class Merkle {
       });
     }
     return { chunks, dataSize: cursor };
-
-    // while (rest.byteLength >= this.storageConfig.chunkSize) {
-    //   const chunkSize = this.storageConfig.chunkSize;
-
-    //   // If the total bytes left will produce a chunk < MIN_CHUNK_SIZE,
-    //   // then adjust the amount we put in this 2nd last chunk.
-
-    //   // const nextChunkSize = rest.byteLength - this.storageConfig.chunkSize;
-    //   // if (nextChunkSize > 0 && nextChunkSize < MIN_CHUNK_SIZE) {
-    //   //   chunkSize = Math.ceil(rest.byteLength / 2);
-    //   //   // console.log(`Last chunk will be: ${nextChunkSize} which is below ${MIN_CHUNK_SIZE}, adjusting current to ${chunkSize} with ${rest.byteLength} left.`)
-    //   // }
-
-    //   const chunk = rest.slice(0, chunkSize);
-
-    //   rest = rest.slice(chunkSize);
-    // }
-
-    // chunks.push({
-    //   dataHash: await this.deps.crypto.hash(rest),
-    //   minByteRange: cursor,
-    //   maxByteRange: cursor + rest.byteLength,
-    // });
-
-    // return chunks;
   }
 
   public async generateLeaves(
     chunks: MerkleChunk[],
-    concurrency = 10
+    concurrency = 10,
   ): Promise<LeafNode[]> {
     return await promisePool(
       chunks,
@@ -117,14 +91,14 @@ export class Merkle {
             await Promise.all([
               this.hash(dataHash),
               this.hash(intToBuffer(maxByteRange)),
-            ])
+            ]),
           ),
           dataHash: dataHash,
           minByteRange,
           maxByteRange,
         };
       },
-      { concurrency }
+      { concurrency },
     );
   }
 
@@ -145,19 +119,12 @@ export class Merkle {
   }
 
   public async generateTransactionChunks(
-    data: Data
+    data: Data,
   ): Promise<{ chunks: Chunks; dataSize: number }> {
     const { chunks, dataSize } = await this.chunkData(data);
     const leaves = await this.generateLeaves(chunks);
     const root = await this.buildLayers(leaves);
     const proofs = await this.generateProofs(root);
-
-    // // Discard the last chunk & proof if it's zero length.
-    // const lastChunk = chunks.slice(-1)[0];
-    // if (lastChunk.maxByteRange - lastChunk.minByteRange === 0) {
-    //   chunks.splice(chunks.length - 1, 1);
-    //   proofs.splice(proofs.length - 1, 1);
-    // }
 
     return {
       chunks: {
@@ -177,24 +144,25 @@ export class Merkle {
    */
   public async buildLayers(
     nodes: MerkleNode[],
-    level = 0
+    level = 0,
   ): Promise<MerkleNode> {
-    // If there is only 1 node left, this is going to be the root node
-    if (nodes.length < 2) {
-      const root = nodes[0];
+    if (nodes.length === 0) {
+      throw new Error("Cannot build Merkle tree from empty node list");
+    }
 
-      // console.log("Root layer", root);
-
-      return root;
+    if (nodes.length === 1) {
+      return nodes[0];
     }
 
     const nextLayer: MerkleNode[] = [];
 
     for (let i = 0; i < nodes.length; i += 2) {
-      nextLayer.push(await this.hashBranch(nodes[i], nodes[i + 1]));
+      if (i + 1 < nodes.length) {
+        nextLayer.push(await this.hashBranch(nodes[i], nodes[i + 1]));
+      } else {
+        nextLayer.push(nodes[i]);
+      }
     }
-
-    // console.log("Layer", nextLayer);
 
     return this.buildLayers(nextLayer, level + 1);
   }
@@ -208,13 +176,13 @@ export class Merkle {
     if (!Array.isArray(proofs)) {
       return [proofs];
     }
-    return arrayFlatten<MerkleProof>(proofs);
+    return proofs.flat(Infinity) as MerkleProof[];
   }
 
   public resolveBranchProofs(
     node: MerkleNode,
     proof: Uint8Array = new Uint8Array(),
-    depth = 0
+    depth = 0,
   ): MerkleProof | MerkleProof[] {
     if (node.type === "leaf") {
       return {
@@ -230,13 +198,13 @@ export class Merkle {
     if (node.type === "branch") {
       const partialProof = concatBuffers([
         proof,
-        node.leftChild!.id!,
-        node.rightChild!.id!,
+        node.leftChild.id,
+        node.rightChild.id,
         intToBuffer(node.byteRange),
       ]);
       return [
-        this.resolveBranchProofs(node.leftChild!, partialProof, depth + 1),
-        this.resolveBranchProofs(node.rightChild!, partialProof, depth + 1),
+        this.resolveBranchProofs(node.leftChild, partialProof, depth + 1),
+        this.resolveBranchProofs(node.rightChild, partialProof, depth + 1),
       ] as [MerkleProof, MerkleProof];
     }
 
@@ -248,7 +216,7 @@ export class Merkle {
     dest: number,
     leftBound: number,
     rightBound: number,
-    path: Uint8Array
+    path: Uint8Array,
   ): Promise<
     | false
     | {
@@ -274,14 +242,17 @@ export class Merkle {
       const pathData = path.slice(0, MERKLE_HASH_SIZE);
       const endOffsetBuffer = path.slice(
         pathData.length,
-        pathData.length + MERKLE_NOTE_SIZE
+        pathData.length + MERKLE_NOTE_SIZE,
       );
 
       const pathDataHash = await this.hash([
         await this.hash(pathData),
         await this.hash(endOffsetBuffer),
       ]);
-      const result = arrayCompare(id, pathDataHash);
+      const result = constantTimeEqual(
+        new Uint8Array(id),
+        new Uint8Array(pathDataHash),
+      );
       if (result) {
         return {
           offset: rightBound - 1,
@@ -297,12 +268,12 @@ export class Merkle {
     const right = path.slice(left.length, left.length + MERKLE_HASH_SIZE);
     const offsetBuffer = path.slice(
       left.length + right.length,
-      left.length + right.length + MERKLE_NOTE_SIZE
+      left.length + right.length + MERKLE_NOTE_SIZE,
     );
     const offset = bufferToInt(offsetBuffer);
 
     const remainder = path.slice(
-      left.length + right.length + offsetBuffer.length
+      left.length + right.length + offsetBuffer.length,
     );
 
     const pathHash = await this.hash([
@@ -311,14 +282,14 @@ export class Merkle {
       await this.hash(offsetBuffer),
     ]);
 
-    if (arrayCompare(id, pathHash)) {
+    if (constantTimeEqual(new Uint8Array(id), new Uint8Array(pathHash))) {
       if (dest < offset) {
         return await this.validatePath(
           left,
           dest,
           leftBound,
           Math.min(rightBound, offset),
-          remainder
+          remainder,
         );
       }
       return await this.validatePath(
@@ -326,7 +297,7 @@ export class Merkle {
         dest,
         Math.max(leftBound, offset),
         rightBound,
-        remainder
+        remainder,
       );
     }
 
@@ -335,11 +306,8 @@ export class Merkle {
 
   public async hashBranch(
     left: MerkleNode,
-    right: MerkleNode
+    right: MerkleNode,
   ): Promise<MerkleNode> {
-    if (!right) {
-      return left as BranchNode;
-    }
     const branch = {
       type: "branch",
       id: await this.hash([
@@ -379,12 +347,12 @@ export class Merkle {
     const right = proof.slice(left.length, left.length + MERKLE_HASH_SIZE);
     const offsetBuffer = proof.slice(
       left.length + right.length,
-      left.length + right.length + MERKLE_NOTE_SIZE
+      left.length + right.length + MERKLE_NOTE_SIZE,
     );
     const offset = bufferToInt(offsetBuffer);
 
     const remainder = proof.slice(
-      left.length + right.length + offsetBuffer.length
+      left.length + right.length + offsetBuffer.length,
     );
 
     const pathHash = await this.hash([
@@ -394,15 +362,11 @@ export class Merkle {
     ]);
 
     const updatedOutput = `${output}\n${JSON.stringify(left)},${JSON.stringify(
-      right
+      right,
     )},${offset} => ${JSON.stringify(pathHash)}`;
 
     return this.debug(remainder, updatedOutput);
   }
-}
-
-export function arrayFlatten<T = any>(input: T[]): T[] {
-  return input.flat(Infinity) as T[];
 }
 
 export function intToBuffer(note: number): Uint8Array {
@@ -419,9 +383,9 @@ export function intToBuffer(note: number): Uint8Array {
 
 export function bufferToInt(buffer: Uint8Array): number {
   let value = 0;
-  for (let i = 0; i < buffer.length; i++) {
+  for (const byte of buffer) {
     value *= 256;
-    value += buffer[i];
+    value += byte;
   }
   return value;
 }

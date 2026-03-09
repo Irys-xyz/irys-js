@@ -1,18 +1,17 @@
+import { Account } from "./account";
 import type { ApiConfig } from "./api";
 import Api from "./api";
-import type CryptoInterface from "./cryptoInterface";
-import type { U64 } from "./dataTypes";
-import Merkle from "./merkle";
-import { ProgrammableData } from "./programmableData";
-import { StorageConfig } from "./storageConfig";
-import type { UnsignedDataTransactionInterface } from "./dataTransaction";
-import { UnsignedDataTransaction } from "./dataTransaction";
-import { Utils } from "./utilities";
-import { Account } from "./account";
-import { Network } from "./network";
-import { StorageTransactions } from "./storageTransactions";
 import type { UnsignedCommitmentTransactionInterface } from "./commitmentTransaction";
 import { UnsignedCommitmentTransaction } from "./commitmentTransaction";
+import type CryptoInterface from "./cryptoInterface";
+import type { UnsignedDataTransactionInterface } from "./dataTransaction";
+import { UnsignedDataTransaction } from "./dataTransaction";
+import type { U64 } from "./dataTypes";
+import Merkle from "./merkle";
+import { Network } from "./network";
+import { ProgrammableData } from "./programmableData";
+import { StorageConfig } from "./storageConfig";
+import { StorageTransactions } from "./storageTransactions";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -21,50 +20,18 @@ export type IrysConfig = {
   storageConfig?: StorageConfig;
 };
 
-// // eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unsafe-declaration-merging
-// export declare interface IrysClient {
-//   on<U extends keyof IrysClientEvents>(
-//     event: U,
-//     listener: IrysClientEvents[U]
-//   ): this;
-
-//   emit<U extends keyof IrysClientEvents>(
-//     event: U,
-//     ...args: Parameters<IrysClientEvents[U]>
-//   ): boolean;
-// }
-
-// type IrysClientEvents = {
-//   chunkUpload: ({
-//     txId,
-//     offset,
-//     index,
-//   }: {
-//     txId: TransactionId;
-//     offset: bigint;
-//     index: number;
-//   }) => void;
-//   debugLog: (msg: string, meta?: any) => void;
-//   infoLog: (msg: string, meta?: any) => void;
-//   warnLog: (msg: string, meta?: any) => void;
-//   errorLog: (msg: string, meta?: any) => void;
-// };
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-export class IrysClient /* extends EventEmitter */ {
+export class IrysClient {
   public config: IrysConfig;
   public api!: Api;
   public merkle!: Merkle;
   public storageConfig!: StorageConfig;
   public cryptoDriver: CryptoInterface;
   public programmableData!: ProgrammableData;
-  public utils!: Utils;
   public account!: Account;
   public network!: Network;
   public storageTransactions!: StorageTransactions;
 
   constructor(config: IrysConfig) {
-    // super({ captureRejections: true });
     this.config = config;
     this.cryptoDriver = config.cryptoDriver;
     if (config.storageConfig) this.storageConfig = config.storageConfig;
@@ -74,12 +41,10 @@ export class IrysClient /* extends EventEmitter */ {
     this.api = new Api(this.config.api);
     this.network = new Network(this.api);
     this.storageTransactions = new StorageTransactions(this.api);
-    // get storage config
     // TODO: validate chainID, remove/rework this
     this.storageConfig ??= StorageConfig.decode(
-      await this.network.getConsensusConfig()
+      await this.network.getConsensusConfig(),
     );
-    this.utils = new Utils(this);
     this.account = new Account(this);
 
     this.merkle = new Merkle({
@@ -94,18 +59,22 @@ export class IrysClient /* extends EventEmitter */ {
     return this;
   }
 
+  public get chainId(): U64 {
+    return this.config.chainId;
+  }
+
   public get executionRpcUrl(): URL {
     return this.api.executionRpcUrl;
   }
 
   public createDataTransaction(
-    attributes?: Partial<UnsignedDataTransactionInterface>
+    attributes?: Partial<UnsignedDataTransactionInterface>,
   ): UnsignedDataTransaction {
     return new UnsignedDataTransaction(this, attributes);
   }
 
   public createCommitmentTransaction(
-    attributes?: Partial<UnsignedCommitmentTransactionInterface>
+    attributes?: Partial<UnsignedCommitmentTransactionInterface>,
   ): UnsignedCommitmentTransaction {
     return new UnsignedCommitmentTransaction(this, attributes);
   }

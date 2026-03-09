@@ -1,5 +1,5 @@
-import { StorageConfig } from "../src/common/storageConfig";
 import { SignedDataTransaction } from "../src/common/dataTransaction";
+import { StorageConfig } from "../src/common/storageConfig";
 import IrysClient from "../src/node";
 
 async function testSignedTxEncodeDecode(): Promise<void> {
@@ -20,13 +20,13 @@ async function testSignedTxEncodeDecode(): Promise<void> {
     .prepareChunks(data)
     .then((r) =>
       r.sign(
-        "0xdb793353b633df950842415065f769699541160845d73db902eadee6bc5042d0"
-      )
+        "0xdb793353b633df950842415065f769699541160845d73db902eadee6bc5042d0",
+      ),
     );
   const encoded = signedTx.encode();
   const decoded = SignedDataTransaction.decode(irys, encoded);
   console.log(await decoded.validateSignature());
 }
-(async function () {
+(async () => {
   await testSignedTxEncodeDecode();
 })();

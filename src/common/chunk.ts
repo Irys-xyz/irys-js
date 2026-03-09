@@ -8,6 +8,8 @@ import type {
   TxRelativeChunkOffset,
   U64,
 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import { unpackChunk } from "./packing";
 import {
   b64UrlToBuffer,
   bigIntDivCeil,
@@ -16,14 +18,9 @@ import {
   jsonBigIntSerialize,
   toFixedUint8Array,
 } from "./utils";
-import type { IrysClient } from "./irys";
-import { unpackChunk } from "./packing";
-import { IRYS_TESTNET_CHAIN_ID } from "./constants";
 
 export enum ChunkFormat {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   PackedChunk = "packed",
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   UnpackedChunk = "unpacked",
 }
 
@@ -43,20 +40,12 @@ export type EncodedUnpackedChunkInterface = {
   bytes: Base64Url;
 };
 
-const unpackedChunkProperties = [
-  "dataRoot",
-  "dataSize",
-  "dataPath",
-  "txOffset",
-  "bytes",
-];
-
 // Computes a chunk's end byte offset
 // (this is used for the merkle proof)
 export function chunkEndByteOffset(
   txOffset: number,
   dataSize: U64,
-  chunkSize: number
+  chunkSize: number,
 ): U64 {
   const bnChunkSize = BigInt(chunkSize);
   const biTxOffset = BigInt(txOffset);
@@ -75,11 +64,11 @@ export class UnpackedChunk implements UnpackedChunkInterface {
   public bytes!: Uint8Array; // Raw bytes to be stored. should be network constant `chunk_size` unless it's the very last chunk
 
   constructor(attributes: UnpackedChunkInterface) {
-    for (const k of unpackedChunkProperties) {
-      this[k as keyof this] = attributes[
-        k as keyof UnpackedChunkInterface
-      ] as any;
-    }
+    this.dataRoot = attributes.dataRoot;
+    this.dataSize = attributes.dataSize;
+    this.dataPath = attributes.dataPath;
+    this.txOffset = attributes.txOffset;
+    this.bytes = attributes.bytes;
   }
 
   public byteOffset(chunkSize: number): U64 {
@@ -106,7 +95,6 @@ export class UnpackedChunk implements UnpackedChunkInterface {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return jsonBigIntSerialize(this.encode());
   }
@@ -124,14 +112,6 @@ export type EncodedPackedChunkInterface = EncodedUnpackedChunkInterface & {
   partitionHash: Base58;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const packedChunkProperties = [
-  ...unpackedChunkProperties,
-  "packingAddress",
-  "partitionOffset",
-  "partitionHash",
-];
-
 export class PackedChunk implements PackedChunkInterface {
   public dataRoot!: H256;
   public dataSize!: bigint;
@@ -144,8 +124,18 @@ export class PackedChunk implements PackedChunkInterface {
   public irys: IrysClient;
 
   constructor(irys: IrysClient, attributes: Partial<PackedChunkInterface>) {
-    Object.assign(this, attributes);
     this.irys = irys;
+    if (attributes.dataRoot !== undefined) this.dataRoot = attributes.dataRoot;
+    if (attributes.dataSize !== undefined) this.dataSize = attributes.dataSize;
+    if (attributes.dataPath !== undefined) this.dataPath = attributes.dataPath;
+    if (attributes.txOffset !== undefined) this.txOffset = attributes.txOffset;
+    if (attributes.bytes !== undefined) this.bytes = attributes.bytes;
+    if (attributes.packingAddress !== undefined)
+      this.packingAddress = attributes.packingAddress;
+    if (attributes.partitionOffset !== undefined)
+      this.partitionOffset = attributes.partitionOffset;
+    if (attributes.partitionHash !== undefined)
+      this.partitionHash = attributes.partitionHash;
   }
 
   public encode(): EncodedPackedChunkInterface {
@@ -161,14 +151,13 @@ export class PackedChunk implements PackedChunkInterface {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   public toJSON(): string {
     return jsonBigIntSerialize(this.encode());
   }
 
   public static decode(
     irys: IrysClient,
-    data: EncodedPackedChunkInterface
+    data: EncodedPackedChunkInterface,
   ): PackedChunk {
     return new PackedChunk(irys, {
       dataRoot: toFixedUint8Array(decodeBase58(data.dataRoot), 32),
@@ -184,10 +173,11 @@ export class PackedChunk implements PackedChunkInterface {
 
   public async unpack(): Promise<UnpackedChunk> {
     return unpackChunk(
+      this.irys.cryptoDriver,
       this,
       this.irys.storageConfig.chunkSize,
       this.irys.storageConfig.entropyPackingIterations,
-      IRYS_TESTNET_CHAIN_ID
+      this.irys.chainId,
     );
   }
 }

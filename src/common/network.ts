@@ -3,22 +3,6 @@ import type Api from "./api";
 import type { ApiRequestConfig, BlockParam } from "./api";
 import { BlockTag, V1_API_ROUTES } from "./api";
 import type {
-  Address,
-  Base58,
-  BlockHash,
-  EpochTimestampMs,
-  H256,
-  TransactionId,
-  U256,
-  U32,
-  U64,
-  U8,
-  UTF8,
-} from "./dataTypes";
-import type { EncodedStorageConfigInterface } from "./storageConfig";
-import { Utils } from "./utilities";
-import { decodeBase58ToFixed, encodeAddress } from "./utils";
-import type {
   CommitmentType,
   EncodedSignedCommitmentTransactionInterface,
 } from "./commitmentTransaction";
@@ -26,8 +10,23 @@ import {
   EncodedCommitmentTypeId,
   encodeCommitmentType,
 } from "./commitmentTransaction";
-import type { FixMe } from "./types";
 import type { EncodedSignedDataTransactionInterface } from "./dataTransaction";
+import type {
+  Address,
+  Base58,
+  BlockHash,
+  EpochTimestampMs,
+  H256,
+  TransactionId,
+  U8,
+  U32,
+  U64,
+  U256,
+  UTF8,
+} from "./dataTypes";
+import type { EncodedStorageConfigInterface } from "./storageConfig";
+import { Utils } from "./utilities";
+import { decodeBase58ToFixed, encodeAddress } from "./utils";
 
 // TODO: return a "request builder" that allows for more modification?
 export class Network {
@@ -38,13 +37,13 @@ export class Network {
   }
 
   public async getConsensusConfig(
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
     // TODO: move this to the full consensus config
   ): Promise<EncodedStorageConfigInterface> {
     return (
       await this.api.get<EncodedStorageConfigInterface>(
         V1_API_ROUTES.GET_NETWORK_CONSENSUS_CONFIG,
-        config
+        config,
       )
     ).data;
   }
@@ -54,7 +53,7 @@ export class Network {
   }
 
   public async getInfo(
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<EncodedInfoInterface> {
     return this.api
       .get<EncodedInfoInterface>(V1_API_ROUTES.GET_INFO, config)
@@ -63,7 +62,7 @@ export class Network {
 
   public async getLatestBlock(
     withPoa = false,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
     return this.getBlock(BlockTag.LATEST, withPoa, config);
   }
@@ -71,21 +70,23 @@ export class Network {
   public async getBlock(
     param: BlockParam,
     withPoa = false,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<EncodedCombinedBlockHeader>> {
     return await Utils.wrapError(
       this.api.get<EncodedCombinedBlockHeader>(
-        V1_API_ROUTES.GET_BLOCK.replace("{blockParam}", param.toString()) +
-        (withPoa ? "/full" : ""),
-        config
+        V1_API_ROUTES.GET_BLOCK.replace(
+          "{blockParam}",
+          encodeURIComponent(param.toString()),
+        ) + (withPoa ? "/full" : ""),
+        config,
       ),
-      `getting block by param: ${param.toString()}`
+      `getting block by param: ${param.toString()}`,
     );
   }
 
   public async getTransaction(
     id: TransactionId,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<
     AxiosResponse<
       | EncodedSignedCommitmentTransactionInterface
@@ -96,8 +97,14 @@ export class Network {
       this.api.get<
         | EncodedSignedCommitmentTransactionInterface
         | EncodedSignedDataTransactionInterface
-      >(V1_API_ROUTES.GET_TX.replace("{txId}", id.toString()), config),
-      `getting tx by ID: ${id.toString()}`
+      >(
+        V1_API_ROUTES.GET_TX.replace(
+          "{txId}",
+          encodeURIComponent(id.toString()),
+        ),
+        config,
+      ),
+      `getting tx by ID: ${id.toString()}`,
     );
   }
 
@@ -105,7 +112,7 @@ export class Network {
     const encoded = (
       await Utils.wrapError(
         this.api.get<EncodedAnchorInfo>(V1_API_ROUTES.GET_ANCHOR, config),
-        "getting latest anchor"
+        "getting latest anchor",
       )
     ).data;
     return {
@@ -116,24 +123,24 @@ export class Network {
   public async getPrice(
     size: number | bigint,
     ledgerId: bigint | number = 0,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<PriceInfo> {
     const encoded = (
       await Utils.wrapError(
         this.api.get<EncodedPriceInfo>(
           V1_API_ROUTES.GET_TX_PRICE.replace(
             "{ledgerId}",
-            ledgerId.toString()
-          ).replace("{size}", size.toString()),
-          config
+            encodeURIComponent(ledgerId.toString()),
+          ).replace("{size}", encodeURIComponent(size.toString())),
+          config,
         ),
-        "getting price for data transaction"
+        "getting price for data transaction",
       )
     ).data;
     return {
       permFee: BigInt(encoded.permFee),
       termFee: BigInt(encoded.termFee),
-      ledger: Number(encoded.termFee),
+      ledger: Number(encoded.ledger),
       bytes: BigInt(encoded.bytes),
     };
   }
@@ -141,31 +148,31 @@ export class Network {
   public async getCommitmentPrice(
     address: Address,
     type: CommitmentType,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<PledgePriceInfo | StakePriceInfo> {
     const encodedType = encodeCommitmentType(type);
-    let url;
+    let url: string;
     if (
       encodedType.type === EncodedCommitmentTypeId.PLEDGE ||
       encodedType.type === EncodedCommitmentTypeId.UNPLEDGE
     ) {
       url = V1_API_ROUTES.GET_COMMITMENT_PLEDGE_PRICE.replace(
         "{type}",
-        encodedType.type
-      ).replace("{userAddress}", encodeAddress(address));
+        encodeURIComponent(encodedType.type),
+      ).replace("{userAddress}", encodeURIComponent(encodeAddress(address)));
     } else {
       url = V1_API_ROUTES.GET_COMMITMENT_PRICE.replace(
         "{type}",
-        encodedType.type
+        encodeURIComponent(encodedType.type),
       );
     }
     const encoded = (
       await Utils.wrapError(
         this.api.get<EncodedPledgePriceInfo | EncodedStakePriceInfo>(
           url,
-          config
+          config,
         ),
-        "getting price for commitment transaction"
+        "getting price for commitment transaction",
       )
     ).data;
     return {
@@ -181,18 +188,18 @@ export class Network {
   public async getBlockIndex(
     fromHeight: number | U64,
     pageSize = 100,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<EncodedBlockIndexEntry[]> {
     return (
       await Utils.wrapError(
         this.api.get(
           V1_API_ROUTES.GET_BLOCK_INDEX.replace(
             "{height}",
-            fromHeight.toString()
-          ).replace("{limit}", pageSize.toString()),
-          config
+            encodeURIComponent(fromHeight.toString()),
+          ).replace("{limit}", encodeURIComponent(pageSize.toString())),
+          config,
         ),
-        "Getting block index page"
+        "Getting block index page",
       )
     ).data;
   }
@@ -258,7 +265,7 @@ export type EncodedDataLedger = {
   txIds: Base58<H256>[];
   totalChunks: UTF8<U64>;
   expires?: UTF8<U64>;
-  proofs?: FixMe[]; // TODO
+  proofs?: unknown[]; // TODO
   requiredProofCount?: U8;
 };
 

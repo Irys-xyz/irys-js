@@ -9,7 +9,7 @@ import NodeCryptoDriver from "./cryptoDriver";
 import { NodeIrysClient } from "./irys";
 
 export type NodeConfig = {
-  nodes: ApiConfig[];
+  node: ApiConfig;
   chainId: U64;
   cryptoDriver: CryptoInterface;
   storageConfig?: StorageConfig;
@@ -20,13 +20,11 @@ export class IrysClientBuilder {
 
   constructor(url?: AnyUrl) {
     this.builderConfig = {
-      nodes: [
-        url
-          ? isApiConfig(url)
-            ? url
-            : { url: new URL(url) }
-          : { url: new URL("https://testnet-rpc.irys.xyz/v1/") },
-      ],
+      node: url
+        ? isApiConfig(url)
+          ? url
+          : { url: new URL(url) }
+        : { url: new URL("https://testnet-rpc.irys.xyz/v1/") },
       chainId: IRYS_TESTNET_CHAIN_ID,
       cryptoDriver: new NodeCryptoDriver(),
     };
@@ -36,21 +34,16 @@ export class IrysClientBuilder {
     this.builderConfig = config;
     return this;
   }
-  // TODO: re-enable once we support multiple backing nodes properly
-  //   public nodes(nodes: AnyUrl[]): this {
-  //     this.builderConfig.nodes = nodes;
-  //     return this;
-  //   }
 
   public node(url: AnyUrl): this {
-    this.builderConfig.nodes = [isApiConfig(url) ? url : { url: new URL(url) }];
+    this.builderConfig.node = isApiConfig(url) ? url : { url: new URL(url) };
     return this;
   }
 
   public async build(): Promise<NodeIrysClient> {
     const client = new NodeIrysClient({
       ...this.builderConfig,
-      api: this.builderConfig.nodes[0],
+      api: this.builderConfig.node,
     });
     await client.ready();
     return client;
@@ -58,31 +51,32 @@ export class IrysClientBuilder {
 
   // Promise contract functions, so users can `await` a builder instance to resolve the builder, instead of having to call build().
   // very cool, thanks Knex.
+  // biome-ignore lint/suspicious/noThenProperty: intentional thenable pattern for await support
   public async then<TResult = NodeIrysClient>(
     onFulfilled?:
       | ((value: NodeIrysClient) => TResult | PromiseLike<TResult>)
       | undefined
       | null,
     onRejected?:
-      | ((reason: Error) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
-      | null
+      | null,
   ): Promise<TResult> {
     const res = this.build();
-    return res.then(onFulfilled as any, onRejected as any) as Promise<TResult>;
+    return res.then(onFulfilled, onRejected) as Promise<TResult>;
   }
 
   public async catch<TResult = NodeIrysClient>(
     onRejected?:
-      | ((reason: Error) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
-      | null
+      | null,
   ): Promise<NodeIrysClient | TResult> {
-    return this.then().catch(onRejected as any);
+    return this.then().catch(onRejected);
   }
 
   public async finally(
-    onFinally?: (() => void) | null | undefined
+    onFinally?: (() => void) | null | undefined,
   ): Promise<NodeIrysClient> {
     return this.then().finally(onFinally);
   }

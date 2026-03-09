@@ -1,54 +1,27 @@
 import type { AxiosResponse } from "axios";
-import type { IrysClient } from "./irys";
 import type { Resolvable } from "./types";
 
 export class Utils {
-  public irys: IrysClient;
-
-  constructor(irysClient: IrysClient) {
-    this.irys = irysClient;
-  }
-
-  /**
-   * Throws an error if the provided axios reponse has a status code != 200
-   * @param response an axios response
-   * @returns nothing if the status code is 200
-   */
-  public static async checkAndThrow<T, D>(
-    response: Resolvable<AxiosResponse<T, D>>,
-    context?: string,
-    exceptions?: number[]
-  ): Promise<AxiosResponse<T, D>> {
-    const res = await response;
-    if (
-      res?.status &&
-      !(exceptions ?? []).includes(res.status) &&
-      res.status != 200
-    ) {
-      throw new Error(
-        `HTTP Error: ${context}: ${res.status} ${
-          typeof res.data !== "string" ? res.statusText : res.data
-        }`
-      );
-    }
-    return res;
-  }
-
-  // wraps a HTTP error with some context
   public static async wrapError<T, D>(
     response: Resolvable<AxiosResponse<T, D>>,
-    context?: string
+    context?: string,
   ): Promise<AxiosResponse<T, D>> {
     try {
       return await response;
-    } catch (e: any) {
-      throw new HttpError(e, context);
+    } catch (e: unknown) {
+      throw new HttpError(
+        e instanceof Error ? e : new Error(String(e)),
+        context,
+      );
     }
   }
 }
 
 export class HttpError extends Error {
-  constructor(public inner: Error, ctx?: string) {
+  constructor(
+    public inner: Error,
+    ctx?: string,
+  ) {
     super(`HTTP error:${ctx ? ` ${ctx} -` : ""} ${inner}`);
   }
 }

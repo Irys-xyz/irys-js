@@ -1,29 +1,36 @@
-import { createHash, webcrypto } from "crypto";
-import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
-import { bigIntDivCeil, bigIntToBytes, concatBuffers } from "./utils";
-import { SHA_HASH_SIZE } from "./constants";
 import type { PackedChunk } from "./chunk";
 import { UnpackedChunk } from "./chunk";
+import { SHA_HASH_SIZE } from "./constants";
+import type CryptoInterface from "./cryptoInterface";
+import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
+import {
+  bigIntDivCeil,
+  bigIntToBytes,
+  concatBuffers,
+  safeBigIntToNumber,
+} from "./utils";
 
 export async function computeEntropyChunk(
+  crypto: CryptoInterface,
   packingAddress: Address,
   partitionOffset: bigint,
   partitionHash: FixedUint8Array<32>,
   entropyPackingIterations: number,
   chunkSize: number,
-  chainId: U64
+  chainId: U64,
 ): Promise<Uint8Array> {
   let previousSegment = await computeSeedHash(
+    crypto,
     packingAddress,
     partitionOffset,
     partitionHash,
-    chainId
+    chainId,
   );
   const outputEntropy = new Uint8Array(chunkSize);
   let outputCursor = 0;
   let hashCount = chunkSize / SHA_HASH_SIZE;
   for (let i = 0; i < hashCount; i++) {
-    previousSegment = createHash("sha-256").update(previousSegment).digest();
+    previousSegment = await crypto.hash(previousSegment);
     for (let j = 0; j < SHA_HASH_SIZE; j++) {
       outputEntropy[outputCursor++] = previousSegment[j];
     }
@@ -31,14 +38,12 @@ export async function computeEntropyChunk(
   // 2D hash packing
   while (hashCount < entropyPackingIterations) {
     const i = (hashCount % (chunkSize / SHA_HASH_SIZE)) * SHA_HASH_SIZE;
-    const hasher = createHash("sha-256");
-    if (i === 0) {
-      hasher.update(outputEntropy.subarray(chunkSize - SHA_HASH_SIZE));
-    } else {
-      hasher.update(outputEntropy.subarray(i - SHA_HASH_SIZE, i));
-    }
-    hasher.update(outputEntropy.subarray(i, i + SHA_HASH_SIZE));
-    const hash = hasher.digest();
+    const prefix =
+      i === 0
+        ? outputEntropy.subarray(chunkSize - SHA_HASH_SIZE)
+        : outputEntropy.subarray(i - SHA_HASH_SIZE, i);
+    const suffix = outputEntropy.subarray(i, i + SHA_HASH_SIZE);
+    const hash = await crypto.hash(concatBuffers([prefix, suffix]));
     outputEntropy.set(hash, i);
     hashCount++;
   }
@@ -47,43 +52,50 @@ export async function computeEntropyChunk(
 }
 
 export async function computeSeedHash(
+  crypto: CryptoInterface,
   address: Address,
   offset: U64,
   partitionHash: H256,
-  chainId: U64
+  chainId: U64,
 ): Promise<Uint8Array> {
-  const hasher = createHash("sha-256");
-  hasher.update(address);
-  hasher.update(partitionHash);
-  hasher.update(bigIntToBytes(chainId, 8));
-  hasher.update(bigIntToBytes(offset, 8));
-  return hasher.digest();
+  return crypto.hash(
+    concatBuffers([
+      address,
+      partitionHash,
+      bigIntToBytes(chainId, 8),
+      bigIntToBytes(offset, 8),
+    ]),
+  );
 }
 
 export async function unpackChunk(
+  crypto: CryptoInterface,
   chunk: PackedChunk,
   chunkSize: number,
   entropyPackingIterations: number,
-  chainId: bigint
+  chainId: bigint,
 ): Promise<UnpackedChunk> {
   const entropy = await computeEntropyChunk(
+    crypto,
     chunk.packingAddress,
     BigInt(chunk.partitionOffset),
     chunk.partitionHash,
     entropyPackingIterations,
     chunkSize,
-    chainId
+    chainId,
   );
   // xor and slice
   let data = packingXor(entropy, chunk.bytes, chunkSize);
 
   const bnChunkSize = BigInt(chunkSize);
-  const numChunksInTx = Number(bigIntDivCeil(chunk.dataSize, bnChunkSize));
+  const numChunksInTx = safeBigIntToNumber(
+    bigIntDivCeil(chunk.dataSize, bnChunkSize),
+    "numChunksInTx",
+  );
 
   if (chunk.txOffset === numChunksInTx - 1) {
-    // slice it
     const tail = chunk.dataSize % bnChunkSize;
-    data = data.subarray(0, Number(tail));
+    data = data.subarray(0, safeBigIntToNumber(tail, "tail chunk size"));
   }
 
   return new UnpackedChunk({
@@ -99,7 +111,7 @@ export async function unpackChunk(
 function packingXor(
   entropy: Uint8Array,
   data: Uint8Array,
-  chunkSize: number
+  chunkSize: number,
 ): Uint8Array {
   if (entropy.byteLength !== +chunkSize)
     throw new Error("Entropy needs to be exactly chunkSize bytes");
@@ -110,74 +122,4 @@ function packingXor(
     entropy[i] = entropy[i] ^ data[i];
   }
   return entropy;
-}
-
-export async function computeEntropyChunkWebCrypto(
-  packingAddress: Address,
-  partitionOffset: bigint,
-  partitionHash: FixedUint8Array<32>,
-  entropyPackingIterations: number,
-  chunkSize: number,
-  chainId: U64
-): Promise<Uint8Array> {
-  let previousSegment = await computeSeedHashWebCrypto(
-    packingAddress,
-    partitionOffset,
-    partitionHash, //  toFixedUnint8Array(decodeBase58ToBuf(chunk.partitionHash), 32)
-    chainId
-  );
-  //   console.log("PSEG", previousSegment);
-  const outputEntropy = new Uint8Array(chunkSize);
-  let outputCursor = 0;
-  let hashCount = chunkSize / SHA_HASH_SIZE;
-  for (let i = 0; i < hashCount; i++) {
-    previousSegment = createHash("sha-256").update(previousSegment).digest();
-    for (let j = 0; j < SHA_HASH_SIZE; j++) {
-      outputEntropy[outputCursor++] = previousSegment[j];
-    }
-  }
-  // 2D hash packing
-  const hashComponents = new Uint8Array(2 * SHA_HASH_SIZE);
-  while (hashCount < entropyPackingIterations) {
-    const i = (hashCount % (chunkSize / SHA_HASH_SIZE)) * SHA_HASH_SIZE;
-
-    if (i === 0) {
-      hashComponents.set(outputEntropy.subarray(chunkSize - SHA_HASH_SIZE), 0);
-    } else {
-      hashComponents.set(outputEntropy.subarray(i - SHA_HASH_SIZE, i), 0);
-    }
-    hashComponents.set(
-      outputEntropy.subarray(i, i + SHA_HASH_SIZE),
-      SHA_HASH_SIZE
-    );
-
-    const hash3 = new Uint8Array(
-      await webcrypto.subtle.digest("SHA-256", hashComponents)
-    );
-
-    outputEntropy.set(hash3, i);
-    hashCount++;
-  }
-
-  return outputEntropy;
-}
-
-export async function computeSeedHashWebCrypto(
-  address: Address,
-  offset: U64,
-  partitionHash: H256,
-  chainId: U64
-): Promise<Uint8Array> {
-  const res2 = new Uint8Array(
-    await webcrypto.subtle.digest(
-      "SHA-256",
-      concatBuffers([
-        address,
-        partitionHash,
-        bigIntToBytes(chainId, 8),
-        bigIntToBytes(offset, 8),
-      ])
-    )
-  );
-  return res2;
 }

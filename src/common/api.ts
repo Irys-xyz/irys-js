@@ -1,13 +1,13 @@
-import type {
-  AxiosResponse,
-  AxiosRequestConfig,
-  AxiosInstance,
-  InternalAxiosRequestConfig,
-} from "axios";
-import Axios, { AxiosError } from "axios";
 import http from "node:http";
 import https from "node:https";
 import AsyncRetry from "async-retry";
+import type {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from "axios";
+import Axios, { AxiosError } from "axios";
 import { JsonRpcProvider } from "ethers";
 import type { Base58, H256, U64 } from "./dataTypes";
 
@@ -40,14 +40,13 @@ export type ApiRequestConfig = {
 } & AxiosRequestConfig;
 
 // This exists primarily to make route/API changes a lot easier
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export enum V1_API_ROUTES {
-  GET_TX_HEADER = "/v1/tx/#",
-  GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
+  GET_TX_HEADER = "/v1/tx/{txId}",
+  GET_PROMOTION_STATUS = "/v1/tx/{txId}/promotion-status",
   GET_NETWORK_CONSENSUS_CONFIG = "/v1/network/config",
   GET_INFO = "/",
   EXECUTION_RPC = "/v1/execution-rpc",
-  GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data-start-offset",
+  GET_LOCAL_DATA_START_OFFSET = "/v1/tx/{txId}/local/data-start-offset",
   GET_TX = "/v1/tx/{txId}",
   GET_BLOCK = "/v1/block/{blockParam}",
   GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
@@ -58,7 +57,6 @@ export enum V1_API_ROUTES {
   GET_COMMITMENT_PRICE = "/v1/price/commitment/{type}",
   GET_ANCHOR = "/v1/anchor",
   GET_BLOCK_INDEX = "/v1/block-index?height={height}&limit={limit}",
-  GET_ASSIGNMENTS = "/v1/ledger/{address}/assignments",
 }
 
 export enum BlockTag {
@@ -69,13 +67,11 @@ export enum BlockTag {
 
 export type BlockParam = number | Base58<H256> | U64 | BlockTag;
 
-export const API_VERSIONS = ["v1"];
-
 export default class Api {
   protected _instance?: AxiosInstance;
   protected rpcInstance?: JsonRpcProvider;
 
-  public cookieMap = new Map();
+  private cookieMap = new Map<string, string[]>();
 
   public config!: ApiConfig;
 
@@ -97,20 +93,16 @@ export default class Api {
     this._instance = undefined;
   }
 
-  public getConfig(): ApiConfig {
-    return this.config;
-  }
-
   private async requestInterceptor(
-    request: InternalAxiosRequestConfig
+    request: InternalAxiosRequestConfig,
   ): Promise<InternalAxiosRequestConfig> {
     const cookies = this.cookieMap.get(new URL(request.baseURL ?? "").host);
-    if (cookies) request.headers!.cookie = cookies;
+    if (cookies && request.headers) request.headers.cookie = cookies;
     return request;
   }
 
   private async responseInterceptor(
-    response: AxiosResponse
+    response: AxiosResponse,
   ): Promise<AxiosResponse> {
     const setCookie = response.headers?.["set-cookie"];
     if (setCookie) this.cookieMap.set(response.request.host, setCookie);
@@ -131,22 +123,23 @@ export default class Api {
     };
   }
 
-  public async get<T = any>(
+  public async get<T = unknown>(
     path: string,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     try {
       return await this.request(path, { ...config, method: "GET" });
-    } catch (error: any) {
-      if (error.response?.status) return error.response;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status)
+        return error.response;
       throw error;
     }
   }
 
-  public async post<T = any>(
+  public async post<T = unknown>(
     path: string,
     body: Buffer | string | object | null,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     try {
       return await this.request(path, {
@@ -154,13 +147,13 @@ export default class Api {
         ...config,
         method: "POST",
         retry: {
-          retries: 0, // default to 0 so the user gets the actual error
-          // TODO: only retry for specific status codes (non 200, 400, i.e 500, 429, etc.)
+          retries: 0,
           ...config?.retry,
         },
       });
-    } catch (error: any) {
-      if (error.response?.status) return error.response;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status)
+        return error.response;
       throw error;
     }
   }
@@ -176,6 +169,7 @@ export default class Api {
       baseURL: this.config.url.toString(),
       timeout: this.config.timeout,
       maxContentLength: 1024 * 1024 * 512,
+      maxBodyLength: 1024 * 1024 * 512,
       headers: this.config.headers,
       withCredentials: this.config.withCredentials,
       httpAgent,
@@ -189,24 +183,25 @@ export default class Api {
 
     if (this.config.logging) {
       instance.interceptors.request.use((request) => {
-        this.config.logger!(`Requesting: ${request.baseURL}/${request.url}`);
+        this.config.logger?.(`Requesting: ${request.baseURL}/${request.url}`);
         return request;
       });
 
       instance.interceptors.response.use((response) => {
-        this.config.logger!(
-          `Response: ${response.config.url} - ${response.status}`
+        this.config.logger?.(
+          `Response: ${response.config.url} - ${response.status}`,
         );
         return response;
       });
     }
 
-    return (this._instance = instance);
+    this._instance = instance;
+    return this._instance;
   }
 
-  public async request<T = any>(
+  public async request<T = unknown>(
     path: string,
-    config?: ApiRequestConfig
+    config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
     const instance = this.instance;
     const url = config?.url ?? buildUrl(this.config.url, [path]).toString();
@@ -236,7 +231,7 @@ export default class Api {
       {
         ...this.config.retry,
         ...config?.retry,
-      }
+      },
     );
   }
 }
@@ -244,7 +239,7 @@ export default class Api {
 export function normalizeUrl(url: URL): URL {
   const pathComponents = url.pathname.split("/");
   // strip the "v<number>" suffix if it exists - the client implementation decides what version to use
-  if (/v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
+  if (/^v[0-9]+$/.test(url.pathname.split("/").at(-1) ?? ""))
     pathComponents.pop();
   return buildUrl(new URL(url.origin), [...pathComponents]);
 }

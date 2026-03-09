@@ -1,9 +1,9 @@
 import { hexlify } from "ethers";
 import type { Base58, U8 } from "./dataTypes";
-import { ByteRangeSpecifier, ChunkRangeSpecifier } from "./rangeSpecifier";
-import { jsonBigIntSerialize } from "./utils";
 import type { IrysClient } from "./irys";
+import { ByteRangeSpecifier, ChunkRangeSpecifier } from "./rangeSpecifier";
 import { Utils } from "./utilities";
+import { jsonBigIntSerialize } from "./utils";
 
 export const PD_PRECOMPILE_ADDRESS =
   "0x0000000000000000000000000000000000000500";
@@ -30,7 +30,7 @@ export class ReadBuilder {
   }> {
     const { chunkRanges, byteRanges } = await this.build();
     const storageKeys = [...chunkRanges, ...byteRanges].map((r) =>
-      hexlify(r.encode())
+      hexlify(r.encode()),
     );
     return { address: PD_PRECOMPILE_ADDRESS, storageKeys };
   }
@@ -45,21 +45,25 @@ export class ReadBuilder {
 
     for (const { txId, start, length } of this.readRanges) {
       // get the data start for this tx from cache, populating if we haven't seen this tx before.
-      let dataStart = 0n;
-      if (dataStartCache.has(txId)) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        dataStart = dataStartCache.get(txId)!;
-      } else {
+      let dataStart = dataStartCache.get(txId);
+      if (dataStart === undefined) {
         const txMeta = (
           await Utils.wrapError(this.irys.storageTransactions.getHeader(txId))
         ).data;
         if (txMeta.ledgerId !== 0)
           throw new Error(
-            `Transaction ${txId} is not permanent (ledger 0) and cannot be used.`
+            `Transaction ${txId} is not permanent (ledger 0) and cannot be used.`,
           );
-        dataStart = await Utils.wrapError(
-          await this.irys.storageTransactions.getLocalDataStartOffset(txId)
-        ).then((r) => BigInt(r.data.dataStartOffset as string));
+        const offsetRes = await Utils.wrapError(
+          await this.irys.storageTransactions.getLocalDataStartOffset(txId),
+        );
+        const rawOffset = offsetRes.data.dataStartOffset;
+        if (typeof rawOffset !== "string") {
+          throw new Error(
+            `Expected dataStartOffset to be a string, got ${typeof rawOffset}`,
+          );
+        }
+        dataStart = BigInt(rawOffset);
         dataStartCache.set(txId, dataStart);
       }
 
@@ -82,25 +86,25 @@ export class ReadBuilder {
 
     const indexed = byteRanges.map((r) => {
       const index = merged.findIndex(
-        (i) => i[0] <= r.absoluteChunkOffset && i[1] >= r.absoluteChunkOffset
+        (i) => i[0] <= r.absoluteChunkOffset && i[1] >= r.absoluteChunkOffset,
       );
       if (index === -1)
         throw new Error(
           `Unable to resolve merged chunk range for byte read - please report this!\n ${jsonBigIntSerialize(
-            r
-          )}`
+            r,
+          )}`,
         );
       return new ByteRangeSpecifier(
         index,
         r.chunkOffset,
         r.byteOffset,
-        r.length
+        r.length,
       );
     });
     const chunkSpecifiers = merged.map((r) => {
       const [start, end] = r;
       const chunksPerPart = BigInt(
-        this.irys.storageConfig.numChunksInPartition
+        this.irys.storageConfig.numChunksInPartition,
       );
       // bigint division rounds down
       const partitionIndex = start / chunksPerPart;
@@ -110,7 +114,7 @@ export class ReadBuilder {
         partitionIndex,
         chunks,
         // safety: the chunk range length should never be higher than 2^53
-        Number(end - start)
+        Number(end - start),
       );
     });
 

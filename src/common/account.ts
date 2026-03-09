@@ -1,9 +1,9 @@
-import type { IrysClient } from "./irys";
-import type { Base58, U64 } from "./dataTypes";
-import { toExecAddr, toIrysAddr } from "./utils";
 import { Wallet } from "ethers/wallet";
+import type { Base58, U64 } from "./dataTypes";
+import type { IrysClient } from "./irys";
+import { toExecAddr, toIrysAddr } from "./utils";
 
-export class Account /* extends ExecWallet */ {
+export class Account {
   public irys: IrysClient;
 
   constructor(irys: IrysClient) {
@@ -18,9 +18,4 @@ export class Account /* extends ExecWallet */ {
     const wallet = new Wallet(key);
     return { irys: toIrysAddr(wallet.address), exec: wallet.address };
   }
-
-  //   public transfer(to: string, amount: bigint, wallet: Wallet | string) {
-  //     const _wallet: Wallet = typeof wallet === "string" ? new Wallet(wallet) : wallet;
-  //    _wallet.populateTransaction
-  //   }
 }

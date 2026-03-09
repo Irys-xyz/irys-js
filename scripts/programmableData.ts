@@ -1,7 +1,7 @@
-import { Contract, Wallet, ethers } from "ethers";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { Contract, ethers, Wallet } from "ethers";
 import { sleep } from "../src/common/utils";
-import path from "path";
-import { readFileSync } from "fs";
 import { IrysClient } from "../src/node";
 
 async function main(): Promise<void> {
@@ -83,10 +83,10 @@ async function main(): Promise<void> {
   const read2 = await contract.getStorage();
 
   console.log(
-    `retrieved data: ${Buffer.from(read2.slice(2), "hex").toString()}`
+    `retrieved data: ${Buffer.from(read2.slice(2), "hex").toString()}`,
   );
 }
 
-(async function () {
+(async () => {
   await main();
 })();
