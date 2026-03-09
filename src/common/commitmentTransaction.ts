@@ -1,5 +1,4 @@
 import type { AxiosResponse } from "axios";
-import type { BytesLike } from "ethers";
 import {
   computeAddress,
   encodeBase58,
@@ -237,7 +236,7 @@ function validateCommitmentVersion(
   }
 }
 
-const encodeBase58Nullish = (v: BytesLike | undefined): string | undefined => {
+const encodeBase58Nullish = (v: Uint8Array | undefined): string | undefined => {
   if (v === undefined) return undefined;
   return encodeBase58(v);
 };

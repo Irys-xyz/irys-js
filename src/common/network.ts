@@ -25,7 +25,6 @@ import type {
   UTF8,
 } from "./dataTypes";
 import type { EncodedStorageConfigInterface } from "./storageConfig";
-import type { FixMe } from "./types";
 import { Utils } from "./utilities";
 import { decodeBase58ToFixed, encodeAddress } from "./utils";
 
@@ -266,7 +265,7 @@ export type EncodedDataLedger = {
   txIds: Base58<H256>[];
   totalChunks: UTF8<U64>;
   expires?: UTF8<U64>;
-  proofs?: FixMe[]; // TODO
+  proofs?: unknown[]; // TODO
   requiredProofCount?: U8;
 };
 

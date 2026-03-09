@@ -12,7 +12,6 @@ import { Network } from "./network";
 import { ProgrammableData } from "./programmableData";
 import { StorageConfig } from "./storageConfig";
 import { StorageTransactions } from "./storageTransactions";
-import { Utils } from "./utilities";
 
 export type IrysConfig = {
   api: ApiConfig;
@@ -28,7 +27,6 @@ export class IrysClient {
   public storageConfig!: StorageConfig;
   public cryptoDriver: CryptoInterface;
   public programmableData!: ProgrammableData;
-  public utils!: Utils;
   public account!: Account;
   public network!: Network;
   public storageTransactions!: StorageTransactions;
@@ -43,12 +41,10 @@ export class IrysClient {
     this.api = new Api(this.config.api);
     this.network = new Network(this.api);
     this.storageTransactions = new StorageTransactions(this.api);
-    // get storage config
     // TODO: validate chainID, remove/rework this
     this.storageConfig ??= StorageConfig.decode(
       await this.network.getConsensusConfig(),
     );
-    this.utils = new Utils(this);
     this.account = new Account(this);
 
     this.merkle = new Merkle({

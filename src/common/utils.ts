@@ -5,8 +5,6 @@ import { recoverAddress } from "ethers";
 import { getBytes, hexlify } from "ethers/utils";
 import type { Address, Base58, FixedUint8Array } from "./dataTypes";
 
-export type Base64UrlString = string;
-
 export function concatBuffers(
   buffers: Uint8Array[] | ArrayBuffer[],
 ): Uint8Array {
@@ -42,12 +40,8 @@ export function b64UrlToBuffer(b64UrlString: string): Uint8Array {
   return new Uint8Array(toByteArray(b64UrlDecode(b64UrlString)));
 }
 
-export function bufferTob64(buffer: Uint8Array): string {
-  return fromByteArray(new Uint8Array(buffer));
-}
-
 export function bufferTob64Url(buffer: Uint8Array): string {
-  return b64UrlEncode(bufferTob64(buffer));
+  return b64UrlEncode(fromByteArray(new Uint8Array(buffer)));
 }
 
 export function b64UrlEncode(b64UrlString: string): string {
@@ -115,6 +109,18 @@ export function jsonBigIntSerialize(obj: unknown): string {
   return JSON.stringify(obj, (_, v) =>
     typeof v === "bigint" ? v.toString() : v,
   );
+}
+
+export function safeBigIntToNumber(value: bigint, context?: string): number {
+  if (
+    value > BigInt(Number.MAX_SAFE_INTEGER) ||
+    value < BigInt(Number.MIN_SAFE_INTEGER)
+  ) {
+    throw new RangeError(
+      `BigInt value ${value} exceeds safe integer range${context ? ` (${context})` : ""}`,
+    );
+  }
+  return Number(value);
 }
 
 // div_ceil, implemented manually due to BigInt / BigInt flooring by default

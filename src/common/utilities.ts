@@ -1,15 +1,7 @@
 import type { AxiosResponse } from "axios";
-import type { IrysClient } from "./irys";
 import type { Resolvable } from "./types";
 
 export class Utils {
-  public irys: IrysClient;
-
-  constructor(irysClient: IrysClient) {
-    this.irys = irysClient;
-  }
-
-  // wraps a HTTP error with some context
   public static async wrapError<T, D>(
     response: Resolvable<AxiosResponse<T, D>>,
     context?: string,

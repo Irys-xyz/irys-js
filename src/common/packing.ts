@@ -3,7 +3,12 @@ import { UnpackedChunk } from "./chunk";
 import { SHA_HASH_SIZE } from "./constants";
 import type CryptoInterface from "./cryptoInterface";
 import type { Address, FixedUint8Array, H256, U64 } from "./dataTypes";
-import { bigIntDivCeil, bigIntToBytes, concatBuffers } from "./utils";
+import {
+  bigIntDivCeil,
+  bigIntToBytes,
+  concatBuffers,
+  safeBigIntToNumber,
+} from "./utils";
 
 export async function computeEntropyChunk(
   crypto: CryptoInterface,
@@ -83,11 +88,14 @@ export async function unpackChunk(
   let data = packingXor(entropy, chunk.bytes, chunkSize);
 
   const bnChunkSize = BigInt(chunkSize);
-  const numChunksInTx = Number(bigIntDivCeil(chunk.dataSize, bnChunkSize));
+  const numChunksInTx = safeBigIntToNumber(
+    bigIntDivCeil(chunk.dataSize, bnChunkSize),
+    "numChunksInTx",
+  );
 
   if (chunk.txOffset === numChunksInTx - 1) {
     const tail = chunk.dataSize % bnChunkSize;
-    data = data.subarray(0, Number(tail));
+    data = data.subarray(0, safeBigIntToNumber(tail, "tail chunk size"));
   }
 
   return new UnpackedChunk({

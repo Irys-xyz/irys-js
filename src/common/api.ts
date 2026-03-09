@@ -41,12 +41,12 @@ export type ApiRequestConfig = {
 
 // This exists primarily to make route/API changes a lot easier
 export enum V1_API_ROUTES {
-  GET_TX_HEADER = "/v1/tx/#",
-  GET_PROMOTION_STATUS = "/v1/tx/#/promotion-status",
+  GET_TX_HEADER = "/v1/tx/{txId}",
+  GET_PROMOTION_STATUS = "/v1/tx/{txId}/promotion-status",
   GET_NETWORK_CONSENSUS_CONFIG = "/v1/network/config",
   GET_INFO = "/",
   EXECUTION_RPC = "/v1/execution-rpc",
-  GET_LOCAL_DATA_START_OFFSET = "/v1/tx/#/local/data-start-offset",
+  GET_LOCAL_DATA_START_OFFSET = "/v1/tx/{txId}/local/data-start-offset",
   GET_TX = "/v1/tx/{txId}",
   GET_BLOCK = "/v1/block/{blockParam}",
   GET_TX_PRICE = "/v1/price/{ledgerId}/{size}",
@@ -97,7 +97,7 @@ export default class Api {
     request: InternalAxiosRequestConfig,
   ): Promise<InternalAxiosRequestConfig> {
     const cookies = this.cookieMap.get(new URL(request.baseURL ?? "").host);
-    if (cookies) request.headers!.cookie = cookies;
+    if (cookies && request.headers) request.headers.cookie = cookies;
     return request;
   }
 
@@ -123,7 +123,7 @@ export default class Api {
     };
   }
 
-  public async get<T = any>(
+  public async get<T = unknown>(
     path: string,
     config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {
@@ -136,7 +136,7 @@ export default class Api {
     }
   }
 
-  public async post<T = any>(
+  public async post<T = unknown>(
     path: string,
     body: Buffer | string | object | null,
     config?: ApiRequestConfig,
@@ -199,7 +199,7 @@ export default class Api {
     return this._instance;
   }
 
-  public async request<T = any>(
+  public async request<T = unknown>(
     path: string,
     config?: ApiRequestConfig,
   ): Promise<AxiosResponse<T>> {

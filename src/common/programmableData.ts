@@ -57,7 +57,13 @@ export class ReadBuilder {
         const offsetRes = await Utils.wrapError(
           await this.irys.storageTransactions.getLocalDataStartOffset(txId),
         );
-        dataStart = BigInt(offsetRes.data.dataStartOffset as string);
+        const rawOffset = offsetRes.data.dataStartOffset;
+        if (typeof rawOffset !== "string") {
+          throw new Error(
+            `Expected dataStartOffset to be a string, got ${typeof rawOffset}`,
+          );
+        }
+        dataStart = BigInt(rawOffset);
         dataStartCache.set(txId, dataStart);
       }
 

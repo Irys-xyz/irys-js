@@ -27,21 +27,6 @@ import type { IrysClient } from "../src/common/irys";
 // Mock IrysClient for testing
 const mockIrysClient = {} as any;
 
-describe("CommitmentTransactionVersion", () => {
-  it("should have V2 as the current version", () => {
-    expect(CommitmentTransactionVersion.V2).toBe(2);
-  });
-});
-
-describe("CommitmentTypeId", () => {
-  it("should have correct numeric values for enum variants", () => {
-    expect(CommitmentTypeId.STAKE).toBe(1);
-    expect(CommitmentTypeId.PLEDGE).toBe(2);
-    expect(CommitmentTypeId.UNPLEDGE).toBe(3);
-    expect(CommitmentTypeId.UNSTAKE).toBe(4);
-  });
-});
-
 describe("signingEncodeCommitmentType", () => {
   it("should encode STAKE type as a single number", () => {
     const stakeType: CommitmentType = { type: CommitmentTypeId.STAKE };

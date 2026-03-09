@@ -8,31 +8,19 @@ import {
   NUM_PARTITIONS_PER_SLOT,
 } from "./constants";
 
-// fragment of the Node's StorageConfig
-// only concensus relevant parameters
 export type StorageConfigInterface = {
-  // Size of each chunk in bytes
   chunkSize: number;
-  // Number of chunks in a partition
   numChunksInPartition: number;
-  // Number of chunks in a recall range
   numChunksInRecallRange: number;
-  // Number of partition replicas in a ledger slot
   numPartitionsInSlot: number;
-  // Number of sha256 iterations required to pack a chunk
   entropyPackingIterations: number;
 };
 
 export type EncodedStorageConfigInterface = {
-  // Size of each chunk in bytes
   chunkSize: string;
-  // Number of chunks in a partition
   numChunksInPartition: string;
-  // Number of chunks in a recall range
   numChunksInRecallRange: string;
-  // Number of partition replicas in a ledger slot
   numPartitionsInSlot: string;
-  // Number of sha256 iterations required to pack a chunk
   entropyPackingIterations: string;
 };
 

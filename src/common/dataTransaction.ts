@@ -34,6 +34,7 @@ import {
   decodeBase58ToFixed,
   getMissingProperties,
   promisePool,
+  safeBigIntToNumber,
   throwOnMissingProperties,
   toFixedUint8Array,
   validateSignature,
@@ -96,6 +97,44 @@ export type Chunks = {
   chunks: MerkleChunk[];
   proofs: MerkleProof[];
 };
+
+function validateChunksShape(parsed: unknown): Chunks {
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("Invalid chunks: expected an object");
+  }
+  const obj = parsed as Record<string, unknown>;
+
+  if (!obj.dataRoot || typeof obj.dataRoot !== "object") {
+    throw new Error("Invalid chunks: missing or invalid dataRoot");
+  }
+  if (!Array.isArray(obj.chunks)) {
+    throw new Error("Invalid chunks: chunks must be an array");
+  }
+  if (!Array.isArray(obj.proofs)) {
+    throw new Error("Invalid chunks: proofs must be an array");
+  }
+
+  for (let i = 0; i < obj.chunks.length; i++) {
+    const c = obj.chunks[i];
+    if (
+      typeof c !== "object" ||
+      c === null ||
+      typeof c.minByteRange !== "number" ||
+      typeof c.maxByteRange !== "number"
+    ) {
+      throw new Error(`Invalid chunks: chunk at index ${i} has invalid shape`);
+    }
+  }
+
+  for (let i = 0; i < obj.proofs.length; i++) {
+    const p = obj.proofs[i];
+    if (typeof p !== "object" || p === null || typeof p.offset !== "number") {
+      throw new Error(`Invalid chunks: proof at index ${i} has invalid shape`);
+    }
+  }
+
+  return parsed as Chunks;
+}
 
 const requiredUnsignedDataTxHeaderProps = [
   "version",
@@ -442,7 +481,9 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
         ? BigInt(encoded.bundleFormat)
         : undefined,
       permFee: encoded.permFee ? BigInt(encoded.permFee) : undefined,
-      chunks: encoded.chunks ? JSON.parse(encoded.chunks) : undefined,
+      chunks: encoded.chunks
+        ? validateChunksShape(JSON.parse(encoded.chunks))
+        : undefined,
     });
   }
 
@@ -460,15 +501,16 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
     if (
       !(await this.irys.merkle.validatePath(
         this.dataRoot,
-        Number(
+        safeBigIntToNumber(
           chunkEndByteOffset(
             idx,
             this.dataSize,
             this.irys.storageConfig.chunkSize,
           ),
+          "chunkEndByteOffset",
         ),
         0,
-        Number(this.dataSize),
+        safeBigIntToNumber(this.dataSize, "dataSize"),
         proof.proof,
       ))
     )
@@ -496,15 +538,16 @@ export class SignedDataTransaction implements SignedDataTransactionInterface {
     if (
       !(await this.irys.merkle.validatePath(
         this.dataRoot,
-        Number(
+        safeBigIntToNumber(
           chunkEndByteOffset(
             idx,
             this.dataSize,
             this.irys.storageConfig.chunkSize,
           ),
+          "chunkEndByteOffset",
         ),
         0,
-        Number(this.dataSize),
+        safeBigIntToNumber(this.dataSize, "dataSize"),
         proof.proof,
       ))
     )
